@@ -1,0 +1,44 @@
+{% extends 'base.html' %}
+
+{% block title %}Accueil - Educalim{% endblock %}
+
+{% block content %}
+<div class="text-center py-5">
+    <h1 class="display-4 fw-bold mb-4">Bienvenue sur Educalim</h1>
+    <p class="lead mb-4">
+        Votre plateforme éducative complète pour les collégiens et lycéens.
+    </p>
+    <a href="{% url 'educalims:disciplines_list' %}" class="btn btn-primary btn-lg">
+        <i class="fas fa-book-open"></i> Explorer les disciplines
+    </a>
+</div>
+
+<div class="container mt-5">
+    <div class="row text-center">
+        <div class="col-md-4">
+            <div class="card bg-light border-0">
+                <div class="card-body">
+                    <h2 class="text-primary">{{ stats.disciplines_count|default:0 }}</h2>
+                    <p class="mb-0">Disciplines</p>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-4">
+            <div class="card bg-light border-0">
+                <div class="card-body">
+                    <h2 class="text-success">{{ stats.unites_count|default:0 }}</h2>
+                    <p class="mb-0">Leçons</p>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-4">
+            <div class="card bg-light border-0">
+                <div class="card-body">
+                    <h2 class="text-info">{{ stats.contenus_count|default:0 }}</h2>
+                    <p class="mb-0">Documents</p>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

@@ -1,0 +1,201 @@
+{% extends 'base.html' %}
+
+{% block title %}Accueil - Educalim{% endblock %}
+
+{% block content %}
+<!-- Hero Section -->
+<section class="hero bg-primary text-white py-5 mb-5">
+    <div class="container">
+        <div class="row align-items-center">
+            <div class="col-lg-6">
+                <h1 class="display-4 fw-bold mb-4">Bienvenue sur Educalim</h1>
+                <p class="lead mb-4">
+                    Votre plateforme éducative complète pour les collégiens et lycéens.
+                    Accédez à des fiches, sujets et cahiers types pour toutes les disciplines.
+                </p>
+                <a href="{% url 'educalims:disciplines_list'' %}" class="btn btn-light btn-lg">
+                    <i class="fas fa-book-open"></i> Explorer les disciplines
+                </a>
+            </div>
+            <div class="col-lg-6 text-center">
+                <i class="fas fa-graduation-cap" style="font-size: 8rem; opacity: 0.8;"></i>
+            </div>
+        </div>
+    </div>
+</section>
+
+<!-- Statistiques -->
+<section class="stats py-4 mb-5">
+    <div class="container">
+        <div class="row text-center">
+            <div class="col-md-4">
+                <div class="card bg-light border-0">
+                    <div class="card-body">
+                        <h2 class="text-primary">{{ stats.disciplines_count|default:0 }}</h2>
+                        <p class="mb-0">Disciplines</p>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-4">
+                <div class="card bg-light border-0">
+                    <div class="card-body">
+                        <h2 class="text-success">{{ stats.unites_count|default:0 }}</h2>
+                        <p class="mb-0">Leçons et Chapitres</p>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-4">
+                <div class="card bg-light border-0">
+                    <div class="card-body">
+                        <h2 class="text-info">{{ stats.contenus_count|default:0 }}</h2>
+                        <p class="mb-0">Documents disponibles</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</section>
+
+<!-- Dernières unités d'enseignement -->
+{% if recent_unites %}
+<section class="recent-unites mb-5">
+    <div class="container">
+        <h2 class="mb-4">
+            <i class="fas fa-clock"></i>
+            Dernières leçons et chapitres ajoutés
+        </h2>
+        <div class="row">
+            {% for unite in recent_unites %}
+            <div class="col-md-6 col-lg-4 mb-4">
+                <div class="card h-100">
+                    <div class="card-header">
+                        <small class="text-light">
+                            {{ unite.niveau.cycle.discipline.nom }} -
+                            {{ unite.niveau.nom }}
+                        </small>
+                    </div>
+                    <div class="card-body">
+                        <h5 class="card-title">{{ unite.titre }}</h5>
+                        <p class="card-text">
+                            <span class="badge bg-secondary">{{ unite.type_unite }}</span>
+                        </p>
+                    </div>
+                    <div class="card-footer">
+                        <a href="{% url 'educalims:unite_detail'' unite.id %}" class="btn btn-primary btn-sm">
+                            <i class="fas fa-eye"></i> Voir les contenus
+                        </a>
+                    </div>
+                </div>
+            </div>
+            {% endfor %}
+        </div>
+        <div class="text-center mt-4">
+            <a href="{% url 'educalims:disciplines_list'' %}" class="btn btn-outline-primary">
+                <i class="fas fa-list"></i> Voir toutes les disciplines
+            </a>
+        </div>
+    </div>
+</section>
+{% endif %}
+
+<!-- Disciplines principales -->
+<section class="main-disciplines mb-5">
+    <div class="container">
+        <h2 class="mb-4">
+            <i class="fas fa-book"></i>
+            Disciplines principales
+        </h2>
+        <div class="row">
+            <div class="col-md-6 col-lg-4 mb-4">
+                <div class="card discipline-card h-100 text-center">
+                    <div class="card-body">
+                        <div class="discipline-icon">
+                            <i class="fas fa-dna"></i>
+                        </div>
+                        <h5 class="card-title">Sciences de la Vie et de la Terre</h5>
+                        <p class="card-text">Explorez le monde du vivant et de la Terre</p>
+                        <a href="{% url 'educalims:discipline'' 'svt' %}" class="btn btn-primary">
+                            <i class="fas fa-arrow-right"></i> Explorer
+                        </a>
+                    </div>
+                </div>
+            </div>
+
+            <div class="col-md-6 col-lg-4 mb-4">
+                <div class="card discipline-card h-100 text-center">
+                    <div class="card-body">
+                        <div class="discipline-icon">
+                            <i class="fas fa-flask"></i>
+                        </div>
+                        <h5 class="card-title">Physique-Chimie</h5>
+                        <p class="card-text">Découvrez les lois de la physique et de la chimie</p>
+                        <a href="{% url 'educalims:discipline'' 'physique' %}" class="btn btn-primary">
+                            <i class="fas fa-arrow-right"></i> Explorer
+                        </a>
+                    </div>
+                </div>
+            </div>
+
+            <div class="col-md-6 col-lg-4 mb-4">
+                <div class="card discipline-card h-100 text-center">
+                    <div class="card-body">
+                        <div class="discipline-icon">
+                            <i class="fas fa-calculator"></i>
+                        </div>
+                        <h5 class="card-title">Mathématiques</h5>
+                        <p class="card-text">Maîtrisez les concepts mathématiques</p>
+                        <a href="{% url 'educalims:discipline'' 'maths' %}" class="btn btn-primary">
+                            <i class="fas fa-arrow-right"></i> Explorer
+                        </a>
+                    </div>
+                </div>
+            </div>
+
+            <div class="col-md-6 col-lg-4 mb-4">
+                <div class="card discipline-card h-100 text-center">
+                    <div class="card-body">
+                        <div class="discipline-icon">
+                            <i class="fas fa-brain"></i>
+                        </div>
+                        <h5 class="card-title">Philosophie</h5>
+                        <p class="card-text">Développez votre pensée critique</p>
+                        <a href="{% url 'educalims:discipline'' 'philosophie' %}" class="btn btn-primary">
+                            <i class="fas fa-arrow-right"></i> Explorer
+                        </a>
+                    </div>
+                </div>
+            </div>
+
+            <div class="col-md-6 col-lg-4 mb-4">
+                <div class="card discipline-card h-100 text-center">
+                    <div class="card-body">
+                        <div class="discipline-icon">
+                            <i class="fas fa-globe"></i>
+                        </div>
+                        <h5 class="card-title">Histoire-Géographie</h5>
+                        <p class="card-text">Voyagez à travers le temps et l'espace</p>
+                        <a href="{% url 'educalims:discipline'' 'histoire' %}" class="btn btn-primary">
+                            <i class="fas fa-arrow-right"></i> Explorer
+                        </a>
+                    </div>
+                </div>
+            </div>
+
+            <div class="col-md-6 col-lg-4 mb-4">
+                <div class="card discipline-card h-100 text-center">
+                    <div class="card-body">
+                        <div class="discipline-icon">
+                            <i class="fas fa-ellipsis-h"></i>
+                        </div>
+                        <h5 class="card-title">Autres disciplines</h5>
+                        <p class="card-text">Découvrez toutes les matières disponibles</p>
+                        <a href="{% url 'educalims:disciplines_list'' %}" class="btn btn-primary">
+                            <i class="fas fa-arrow-right"></i> Voir tout
+                        </a>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</section>
+{% endblock %}

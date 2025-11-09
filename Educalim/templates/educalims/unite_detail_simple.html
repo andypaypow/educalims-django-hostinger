@@ -1,0 +1,98 @@
+{% extends 'base.html' %}
+
+{% block title %}{{ unite.titre }} - Educalim{% endblock %}
+
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <div>
+        <h1>
+            <i class="fas fa-book-open"></i>
+            {{ unite.titre }}
+        </h1>
+        <nav aria-label="breadcrumb">
+            <ol class="breadcrumb">
+                <li class="breadcrumb-item"><a href="{% url 'educalims:home' %}">Accueil</a></li>
+                <li class="breadcrumb-item"><a href="{% url 'educalims:disciplines_list' %}">Disciplines</a></li>
+                <li class="breadcrumb-item">
+                    <a href="{% url 'educalims:discipline_detail' unite.niveau.cycle.discipline.id %}">
+                        {{ unite.niveau.cycle.discipline.nom }}
+                    </a>
+                </li>
+                <li class="breadcrumb-item">
+                    <a href="{% url 'educalims:niveau_detail' unite.niveau.id %}">
+                        {{ unite.niveau.nom }}
+                    </a>
+                </li>
+                <li class="breadcrumb-item active">{{ unite.titre }}</li>
+            </ol>
+        </nav>
+    </div>
+    <div>
+        <span class="badge bg-primary fs-6">{{ unite.type_unite }}</span>
+    </div>
+</div>
+
+<div class="row mb-4">
+    <div class="col-12">
+        <div class="card bg-light">
+            <div class="card-body">
+                <div class="row align-items-center">
+                    <div class="col-md-8">
+                        <h5 class="card-title mb-1">{{ unite.titre }}</h5>
+                        <p class="card-text text-muted mb-0">
+                            <i class="fas fa-graduation-cap"></i>
+                            {{ unite.niveau.cycle.discipline.nom }} -
+                            {{ unite.niveau.cycle.nom }} -
+                            {{ unite.niveau.nom }}
+                        </p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+{% if contenus %}
+<h3 class="mb-4">
+    <i class="fas fa-folder-open"></i>
+    Contenus disponibles ({{ contenus.count }})
+</h3>
+
+<div class="row">
+    {% for contenu in contenus %}
+    <div class="col-lg-6 mb-4">
+        <div class="card h-100">
+            <div class="card-header d-flex justify-content-between align-items-center">
+                <h6 class="mb-0">
+                    {% if contenu.type_contenu == 'Fiche' %}
+                        <i class="fas fa-file-alt"></i>
+                    {% elif contenu.type_contenu == 'Sujet' %}
+                        <i class="fas fa-tasks"></i>
+                    {% elif contenu.type_contenu == 'CahierType' %}
+                        <i class="fas fa-book"></i>
+                    {% endif %}
+                    {{ contenu.type_contenu }}
+                </h6>
+            </div>
+            <div class="card-body">
+                <h5 class="card-title">{{ contenu.nom }}</h5>
+            </div>
+            <div class="card-footer">
+                {% if contenu.fichier %}
+                <a href="{{ contenu.fichier.url }}" class="btn btn-primary btn-sm" target="_blank">
+                    <i class="fas fa-download"></i> Télécharger
+                </a>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+    {% endfor %}
+</div>
+{% endif %}
+
+<div class="mt-4">
+    <a href="{% url 'educalims:niveau_detail' unite.niveau.id %}" class="btn btn-outline-secondary">
+        <i class="fas fa-arrow-left"></i> Retour à {{ unite.niveau.nom }}
+    </a>
+</div>
+{% endblock %}
