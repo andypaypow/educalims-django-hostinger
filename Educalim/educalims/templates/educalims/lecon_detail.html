@@ -1,0 +1,99 @@
+{% extends "educalims/base_simple.html" %}
+
+{% block title %}{{ lecon.titre }}{% endblock %}
+
+{% block content %}
+<div class="container mt-4">
+    <nav aria-label="breadcrumb">
+        <ol class="breadcrumb">
+            <li class="breadcrumb-item"><a href="{% url 'home' %}">Accueil</a></li>
+            <li class="breadcrumb-item"><a href="{% url 'disciplines_list' %}">Disciplines</a></li>
+            <li class="breadcrumb-item">
+                <a href="{% url 'discipline_detail' lecon.chapitre.palier.niveau.cycle.discipline.id %}">
+                    {{ lecon.chapitre.palier.niveau.cycle.discipline.nom }}
+                </a>
+            </li>
+            <li class="breadcrumb-item">
+                <a href="{% url 'niveau_detail' lecon.chapitre.palier.niveau.id %}">
+                    {{ lecon.chapitre.palier.niveau.nom }}
+                </a>
+            </li>
+            <li class="breadcrumb-item">
+                {% if lecon.chapitre.palier %}
+                    <a href="{% url 'palier_detail' lecon.chapitre.palier.id %}">
+                        {{ lecon.chapitre.palier.titre }}
+                    </a>
+                {% elif lecon.chapitre.partie %}
+                    <a href="{% url 'partie_detail' lecon.chapitre.partie.id %}">
+                        {{ lecon.chapitre.partie.titre }}
+                    </a>
+                {% endif %}
+            </li>
+            <li class="breadcrumb-item">
+                <a href="{% url 'chapitre_detail' lecon.chapitre.id %}">
+                    {{ lecon.chapitre.titre }}
+                </a>
+            </li>
+            <li class="breadcrumb-item active">{{ lecon.titre }}</li>
+        </ol>
+    </nav>
+
+    <div class="card">
+        <div class="card-header bg-primary text-white">
+            <h2 class="mb-0">{{ lecon.titre }}</h2>
+        </div>
+        <div class="card-body">
+            <div class="row">
+                <div class="col-md-8">
+                    <h5>Description</h5>
+                    <p>{{ lecon.description|safe }}</p>
+                    
+                    {% if lecon.objectifs %}
+                    <h5>Objectifs</h5>
+                    <p>{{ lecon.objectifs|safe }}</p>
+                    {% endif %}
+                </div>
+                <div class="col-md-4">
+                    <div class="card">
+                        <div class="card-header bg-info text-white">
+                            <h6 class="mb-0">Informations</h6>
+                        </div>
+                        <div class="card-body">
+                            <p><strong>Numéro:</strong> {{ lecon.numero }}</p>
+                            <p><strong>Chapitre:</strong> {{ lecon.chapitre.titre }}</p>
+                            {% if lecon.chapitre.palier %}
+                            <p><strong>Palier:</strong> {{ lecon.chapitre.palier.titre }}</p>
+                            {% elif lecon.chapitre.partie %}
+                            <p><strong>Partie:</strong> {{ lecon.chapitre.partie.titre }}</p>
+                            {% endif %}
+                            <p><strong>Niveau:</strong> {{ lecon.chapitre.palier.niveau.nom }}</p>
+                            <p><strong>Cycle:</strong> {{ lecon.chapitre.palier.niveau.cycle.nom }}</p>
+                            <p><strong>Discipline:</strong> {{ lecon.chapitre.palier.niveau.cycle.discipline.nom }}</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            
+            {% if contenus %}
+            <h5 class="mt-4">Contenus associés</h5>
+            <div class="list-group">
+                {% for contenu in contenus %}
+                <a href="{% url 'contenu_detail' contenu.id %}" class="list-group-item list-group-item-action">
+                    <div class="d-flex w-100 justify-content-between">
+                        <h6 class="mb-1">{{ contenu.titre }}</h6>
+                        <small class="text-muted">{{ contenu.type_contenu }}</small>
+                    </div>
+                    <p class="mb-1">{{ contenu.description|truncatewords:20 }}</p>
+                    {% if contenu.fichier %}
+                    <small class="text-muted">
+                        <i class="fas fa-file"></i> Fichier disponible
+                    </small>
+                    {% endif %}
+                </a>
+                {% endfor %}
+            </div>
+            {% endif %}
+        </div>
+    </div>
+</div>
+{% endblock %}

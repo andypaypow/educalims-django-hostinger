@@ -1,0 +1,38 @@
+<div style="margin-top: 15px; padding: 15px; border: 1px solid #ddd; border-radius: 4px; background: #f9f9f9;">
+    <h4 style="margin-top: 0; color: #333;">Aperçu du contenu</h4>
+
+    {% if widget.value and contenu_instance.fichier %}
+        <div style="background: #e3f2fd; padding: 10px; border-radius: 4px; margin-bottom: 15px; border-left: 4px solid #2196f3;">
+            <strong>Fichier:</strong> {{ widget.value }}<br>
+            <strong>Type:</strong> Fichier associé
+        </div>
+
+        <div style="text-align: center; padding: 20px;">
+            <p style="color: #666; margin-bottom: 15px;">
+                {% if contenu_instance.type_contenu == 'document' %}
+                    📄 Document texte
+                {% elif contenu_instance.type_contenu == 'pdf' %}
+                    📕 Fichier PDF
+                {% elif contenu_instance.type_contenu == 'image' %}
+                    🖼️ Image
+                {% elif contenu_instance.type_contenu == 'video' %}
+                    🎥 Vidéo
+                {% elif contenu_instance.type_contenu == 'audio' %}
+                    🎵 Audio
+                {% else %}
+                    📁 Fichier
+                {% endif %}
+            </p>
+
+            {% if contenu_instance.fichier.url %}
+                <a href="{{ contenu_instance.fichier.url }}" target="_blank" style="display: inline-block; background: #2196f3; color: white; padding: 12px 24px; text-decoration: none; border-radius: 4px; font-weight: bold;">
+                    👁️ Afficher / Télécharger le fichier
+                </a>
+            {% endif %}
+        </div>
+    {% else %}
+        <p style="color: #666; text-align: center; font-style: italic;">
+            Aucun fichier associé
+        </p>
+    {% endif %}
+</div>

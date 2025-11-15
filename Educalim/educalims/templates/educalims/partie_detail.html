@@ -1,0 +1,75 @@
+{% extends "educalims/base_simple.html" %}
+
+{% block title %}{{ partie.titre }}{% endblock %}
+
+{% block content %}
+<div class="container mt-4">
+    <nav aria-label="breadcrumb">
+        <ol class="breadcrumb">
+            <li class="breadcrumb-item"><a href="{% url 'home' %}">Accueil</a></li>
+            <li class="breadcrumb-item"><a href="{% url 'disciplines_list' %}">Disciplines</a></li>
+            <li class="breadcrumb-item">
+                <a href="{% url 'discipline_detail' partie.niveau.cycle.discipline.id %}">
+                    {{ partie.niveau.cycle.discipline.nom }}
+                </a>
+            </li>
+            <li class="breadcrumb-item">
+                <a href="{% url 'discipline_detail' partie.niveau.cycle.discipline.id %}">
+                    {{ partie.niveau.cycle.nom }}
+                </a>
+            </li>
+            <li class="breadcrumb-item">
+                <a href="{% url 'niveau_detail' partie.niveau.id %}">
+                    {{ partie.niveau.nom }}
+                </a>
+            </li>
+            <li class="breadcrumb-item active">{{ partie.titre }}</li>
+        </ol>
+    </nav>
+
+    <div class="card">
+        <div class="card-header bg-primary text-white">
+            <h2 class="mb-0">{{ partie.titre }}</h2>
+        </div>
+        <div class="card-body">
+            <div class="row">
+                <div class="col-md-8">
+                    <h5>Description</h5>
+                    <p>{{ partie.description|safe }}</p>
+                </div>
+                <div class="col-md-4">
+                    <div class="card">
+                        <div class="card-header bg-info text-white">
+                            <h6 class="mb-0">Informations</h6>
+                        </div>
+                        <div class="card-body">
+                            <p><strong>Niveau:</strong> {{ partie.niveau.nom }}</p>
+                            <p><strong>Cycle:</strong> {{ partie.niveau.cycle.nom }}</p>
+                            <p><strong>Discipline:</strong> {{ partie.niveau.cycle.discipline.nom }}</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            
+            {% if chapitres %}
+            <h5 class="mt-4">Chapitres de la partie</h5>
+            <div class="list-group">
+                {% for chapitre in chapitres %}
+                <a href="{% url 'chapitre_detail' chapitre.id %}" class="list-group-item list-group-item-action">
+                    <div class="d-flex w-100 justify-content-between">
+                        <h6 class="mb-1">{{ chapitre.numero }}. {{ chapitre.titre }}</h6>
+                        <small class="text-muted">
+                            {% if chapitre.lecons.all %}
+                            {{ chapitre.lecons.all|length }} leçon(s)
+                            {% endif %}
+                        </small>
+                    </div>
+                    <p class="mb-1">{{ chapitre.description|truncatewords:20 }}</p>
+                </a>
+                {% endfor %}
+            </div>
+            {% endif %}
+        </div>
+    </div>
+</div>
+{% endblock %}

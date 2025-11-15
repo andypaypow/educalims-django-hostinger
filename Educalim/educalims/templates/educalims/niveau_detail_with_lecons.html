@@ -1,0 +1,161 @@
+{% extends "educalims/base_simple.html" %}
+
+{% block title %}{{ niveau.nom }}{% endblock %}
+
+{% block content %}
+<div class="container mt-4">
+    <nav aria-label="breadcrumb">
+        <ol class="breadcrumb">
+            <li class="breadcrumb-item"><a href="{% url 'home' %}">Accueil</a></li>
+            <li class="breadcrumb-item"><a href="{% url 'disciplines_list' %}">Disciplines</a></li>
+            <li class="breadcrumb-item">
+                <a href="{% url 'discipline_detail' niveau.cycle.discipline.id %}">
+                    {{ niveau.cycle.discipline.nom }}
+                </a>
+            </li>
+            <li class="breadcrumb-item">
+                <a href="{% url 'discipline_detail' niveau.cycle.discipline.id %}">
+                    {{ niveau.cycle.nom }}
+                </a>
+            </li>
+            <li class="breadcrumb-item active">{{ niveau.nom }}</li>
+        </ol>
+    </nav>
+
+    <div class="card">
+        <div class="card-header bg-primary text-white">
+            <h2 class="mb-0">{{ niveau.nom }} - {{ niveau.cycle.discipline.nom }}</h2>
+        </div>
+        <div class="card-body">
+            <p class="card-text">{{ niveau.description }}</p>
+            
+            <!-- Paliers -->
+            {% if niveau.paliers.all %}
+            <h4 class="mt-4">Paliers</h4>
+            <div class="list-group">
+                {% for palier in niveau.paliers.all %}
+                <a href="{% url 'palier_detail' palier.id %}" class="list-group-item list-group-item-action">
+                    <div class="d-flex w-100 justify-content-between">
+                        <h6 class="mb-1">{{ palier.numero }}. {{ palier.titre }}</h6>
+                        <small class="text-muted">
+                            {% if palier.chapitres.all %}
+                            {{ palier.chapitres.all|length }} chapitre(s)
+                            {% endif %}
+                        </small>
+                    </div>
+                    <p class="mb-1">{{ palier.description|truncatewords:15 }}</p>
+                </a>
+                {% endfor %}
+            </div>
+            {% endif %}
+            
+            <!-- Parties -->
+            {% if niveau.parties.all %}
+            <h4 class="mt-4">Parties</h4>
+            <div class="accordion" id="partiesAccordion">
+                {% for partie in niveau.parties.all %}
+                <div class="card">
+                    <div class="card-header" id="partie{{ partie.id }}Header">
+                        <h5 class="mb-0">
+                            <button class="btn btn-link collapsed" type="button" data-toggle="collapse" data-target="#partie{{ partie.id }}Collapse" aria-expanded="false" aria-controls="partie{{ partie.id }}Collapse">
+                                {{ partie.titre }}
+                            </button>
+                        </h5>
+                    </div>
+                    
+                    <div id="partie{{ partie.id }}Collapse" class="collapse" aria-labelledby="partie{{ partie.id }}Header" data-parent="#partiesAccordion">
+                        <div class="card-body">
+                            <p>{{ partie.description }}</p>
+                            
+                            <!-- Chapitres de la partie -->
+                            {% if partie.chapitres.all %}
+                            <h6>Chapitres</h6>
+                            <div class="list-group">
+                                {% for chapitre in partie.chapitres.all %}
+                                <a href="{% url 'chapitre_detail' chapitre.id %}" class="list-group-item list-group-item-action">
+                                    <div class="d-flex w-100 justify-content-between">
+                                        <h6 class="mb-1">{{ chapitre.numero }}. {{ chapitre.titre }}</h6>
+                                        <small class="text-muted">
+                                            {% if chapitre.lecons.all %}
+                                            {{ chapitre.lecons.all|length }} leçon(s)
+                                            {% endif %}
+                                        </small>
+                                    </div>
+                                    <p class="mb-1">{{ chapitre.description|truncatewords:15 }}</p>
+                                </a>
+                                {% endfor %}
+                            </div>
+                            {% endif %}
+                        </div>
+                    </div>
+                </div>
+                {% endfor %}
+            </div>
+            {% endif %}
+            
+            <!-- Parties -->
+            {% if niveau.parties.all %}
+            <h4 class="mt-4">Parties</h4>
+            <div class="list-group">
+                {% for partie in niveau.parties.all %}
+                <a href="{% url 'partie_detail' partie.id %}" class="list-group-item list-group-item-action">
+                    <div class="d-flex w-100 justify-content-between">
+                        <h6 class="mb-1">{{ partie.titre }}</h6>
+                        <small class="text-muted">
+                            {% if partie.chapitres.all %}
+                            {{ partie.chapitres.all|length }} chapitre(s)
+                            {% endif %}
+                        </small>
+                    </div>
+                    <p class="mb-1">{{ partie.description|truncatewords:15 }}</p>
+                </a>
+                {% endfor %}
+            </div>
+            {% endif %}
+            
+            <!-- Leçons disponibles -->
+            {% if lecons_disponibles %}
+            <h4 class="mt-4">Toutes les leçons</h4>
+            <div class="list-group">
+                {% for lecon in lecons_disponibles %}
+                <a href="{% url 'lecon_detail' lecon.id %}" class="list-group-item list-group-item-action">
+                    <div class="d-flex w-100 justify-content-between">
+                        <h6 class="mb-1">{{ lecon.numero }}. {{ lecon.titre }}</h6>
+                        <small class="text-muted">
+                            {% if lecon.chapitre.palier %}
+                            Palier: {{ lecon.chapitre.palier.titre }}
+                            {% elif lecon.chapitre.partie %}
+                            Partie: {{ lecon.chapitre.partie.titre }}
+                            {% endif %}
+                        </small>
+                    </div>
+                    <p class="mb-1">{{ lecon.description|truncatewords:15 }}</p>
+                </a>
+                {% endfor %}
+            </div>
+            {% endif %}
+            
+            <!-- Contenus disponibles -->
+            {% if contenus %}
+            <h4 class="mt-4">Tous les contenus</h4>
+            <div class="list-group">
+                {% for contenu in contenus %}
+                <a href="{% url 'contenu_detail' contenu.id %}" class="list-group-item list-group-item-action">
+                    <div class="d-flex w-100 justify-content-between">
+                        <h6 class="mb-1">{{ contenu.titre }}</h6>
+                        <small class="text-muted">{{ contenu.type_contenu }}</small>
+                    </div>
+                    <p class="mb-1">{{ contenu.description|truncatewords:15 }}</p>
+                    {% if contenu.fichier %}
+                    <small class="text-muted">
+                        <i class="fas fa-file"></i> Fichier disponible
+                    </small>
+                    {% endif %}
+                </a>
+                {% endfor %}
+            </div>
+            {% endif %}
+        </div>
+    </div>
+</div>
+{% endblock %}

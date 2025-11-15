@@ -8,9 +8,47 @@
     <p class="lead mb-4">
         Votre plateforme éducative complète pour les collégiens et lycéens.
     </p>
-    <a href="{% url 'educalims:disciplines_list' %}" class="btn btn-primary btn-lg">
+    <a href="{% url 'educalims:disciplines_list' %}" class="btn btn-primary btn-lg me-3">
         <i class="fas fa-book-open"></i> Explorer les disciplines
     </a>
+</div>
+
+
+<!-- Accès rapide SVT -->
+<div class="container mt-5">
+    <div class="row justify-content-center">
+        <div class="col-md-8">
+            <div class="card border-primary">
+                <div class="card-header bg-primary text-white">
+                    <h4 class="mb-0">
+                        <i class="fas fa-dna"></i>
+                        Sciences de la Vie et de la Terre (SVT)
+                    </h4>
+                </div>
+                <div class="card-body">
+                    <p class="card-text">
+                        Accédez rapidement aux ressources SVT pour tous les niveaux.
+                    </p>
+                    <div class="row text-center">
+                        <div class="col-md-6 mb-3">
+                            <a href="{% url 'educalims:discipline_cycle' 'svt' 'college' %}" class="btn btn-success btn-lg w-100">
+                                <i class="fas fa-school"></i>
+                                <div>Collège SVT</div>
+                                <small>6ème - 5ème - 4ème - 3ème</small>
+                            </a>
+                        </div>
+                        <div class="col-md-6 mb-3">
+                            <a href="{% url 'educalims:discipline_cycle' 'svt' 'lycee' %}" class="btn btn-info btn-lg w-100">
+                                <i class="fas fa-university"></i>
+                                <div>Lycée SVT</div>
+                                <small>Seconde - 1ère - Terminale</small>
+                            </a>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
 </div>
 
 <div class="container mt-5">
@@ -41,4 +79,56 @@
         </div>
     </div>
 </div>
+
+<!-- Styles de base pour les cartes -->
+<style>
+.card {
+    transition: all 0.4s cubic-bezier(0.25, 0.46, 0.45, 0.94);
+    border-width: 2px;
+}
+
+.card:hover {
+    transform: translateY(-8px);
+    box-shadow: 0 12px 30px rgba(0,0,0,0.18);
+    border-color: #0d6efd;
+}
+
+.btn {
+    transition: all 0.3s cubic-bezier(0.25, 0.46, 0.45, 0.94);
+    border-width: 2px;
+}
+
+.btn:hover {
+    transform: translateY(-3px);
+    box-shadow: 0 6px 15px rgba(0,0,0,0.15);
+}
+
+.btn:active {
+    transform: translateY(-1px);
+}
+
+/* Animation pour l'icône d'horloge */
+.fa-clock {
+    animation: smoothPulse 3s infinite ease-in-out;
+}
+
+@keyframes smoothPulse {
+    0%, 100% {
+        transform: scale(1);
+        opacity: 0.8;
+    }
+    50% {
+        transform: scale(1.15);
+        opacity: 1;
+    }
+}
+
+/* Responsive */
+@media (max-width: 768px) {
+    .card:hover {
+        transform: translateY(-4px);
+    }
+}
+</style>
+
 {% endblock %}

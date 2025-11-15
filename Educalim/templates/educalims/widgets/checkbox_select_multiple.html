@@ -1,0 +1,31 @@
+{% include "django/forms/widgets/multiple_input.html" %}
+{% with widget.id=widget.id %}<div{% if widget.attrs.id %} id="{{ widget.attrs.id }}"{% endif %}{% if widget.attrs.class %} class="{{ widget.attrs.class }}"{% endif %}>
+<div class="checkbox-container">
+    {% for group_name, group_choices, group_index in widget.optgroups %}
+        {% if group_name %}
+            <div class="checkbox-group">
+                <h4 class="group-title">{{ group_name }}</h4>
+                <div class="checkbox-list">
+        {% endif %}
+        {% for option in group_choices %}
+            <div class="checkbox-item">
+                <label class="checkbox-label">
+                    <input type="checkbox"
+                           name="{{ widget.name }}{{ widget.index }}"
+                           value="{{ option.value }}"
+                           {% if option.selected %}checked{% endif %}
+                           {% if widget.attrs.disabled %}disabled{% endif %}
+                           class="custom-checkbox-input"
+                           data-value="{{ option.value }}"
+                           data-label="{{ option.label }}">
+                    <span class="checkbox-text">{{ option.label }}</span>
+                </label>
+            </div>
+        {% endfor %}
+        {% if group_name %}
+                </div>
+            </div>
+        {% endif %}
+    {% endfor %}
+</div>
+</div>{% endwith %}

@@ -1,0 +1,472 @@
+{% extends 'base.html' %}
+
+{% block title %}{{ niveau.nom }} - Contenus détaillés - Educalim{% endblock %}
+
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <h1>
+        <i class="fas fa-graduation-cap"></i>
+        {{ niveau.nom }}
+        {% if niveau.type_enseignement %}
+        <span class="badge bg-info text-dark ms-2">{{ niveau.type_enseignement }}</span>
+        {% endif %}
+        <span class="badge bg-secondary text-dark ms-2">{{ niveau.cycle.nom }}</span>
+    </h1>
+    <nav aria-label="breadcrumb">
+        <ol class="breadcrumb">
+            <li class="breadcrumb-item"><a href="{% url 'educalims:home' %}">Accueil</a></li>
+            <li class="breadcrumb-item"><a href="{% url 'educalims:disciplines_list' %}">Disciplines</a></li>
+            <li class="breadcrumb-item"><a href="{% url 'educalims:discipline_detail' niveau.discipline.id %}">{{ niveau.discipline.nom }}</a></li>
+            <li class="breadcrumb-item active">{{ niveau.nom }}</li>
+        </ol>
+    </nav>
+</div>
+
+<div class="row">
+    <div class="col-12">
+        <div class="card mb-4">
+            <div class="card-body">
+                <p class="card-text">
+                    Explorez tous les contenus pédagogiques disponibles pour le niveau
+                    <strong>{{ niveau.nom }}</strong> en {{ niveau.discipline.nom }}.
+                </p>
+
+                {% if niveau.description %}
+                <div class="alert alert-info mt-3">
+                    <i class="fas fa-info-circle"></i>
+                    {{ niveau.description }}
+                </div>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Navigation hiérarchique -->
+<div class="row mb-4">
+    <div class="col-12">
+        <div class="card">
+            <div class="card-header bg-light">
+                <h5 class="mb-0">
+                    <i class="fas fa-sitemap"></i> Navigation hiérarchique
+                </h5>
+            </div>
+            <div class="card-body">
+                <!-- Niveau parent -->
+                {% if niveau.parent %}
+                <div class="mb-3">
+                    <small class="text-muted">Niveau parent:</small>
+                    <div>
+                        <a href="{% url 'educalims:niveau_detail' niveau.parent.id %}" class="btn btn-sm btn-outline-primary">
+                            <i class="fas fa-level-up-alt"></i> {{ niveau.parent.nom }}
+                        </a>
+                        {% if niveau.parent.type_enseignement %}
+                        <span class="badge bg-info text-dark ms-2">{{ niveau.parent.type_enseignement }}</span>
+                        {% endif %}
+                    </div>
+                </div>
+                {% endif %}
+
+                <!-- Niveaux frères -->
+                {% if niveaux_freres %}
+                <div class="mb-3">
+                    <small class="text-muted">Autres niveaux du même cycle:</small>
+                    <div class="btn-group" role="group">
+                        {% for frere in niveaux_freres %}
+                        <a href="{% url 'educalims:niveau_detail' frere.id %}" class="btn btn-sm btn-outline-secondary">
+                            {{ frere.nom }}
+                        </a>
+                        {% endfor %}
+                    </div>
+                </div>
+                {% endif %}
+
+                <!-- Niveaux enfants -->
+                {% if niveaux_enfants %}
+                <div class="mb-3">
+                    <small class="text-muted">Sous-niveaux disponibles:</small>
+                    <div class="btn-group" role="group">
+                        {% for enfant in niveaux_enfants %}
+                        <a href="{% url 'educalims:niveau_detail' enfant.id %}" class="btn btn-sm btn-success">
+                            {{ enfant.nom }}
+                            {% if enfant.type_enseignement and enfant.type_enseignement != niveau.type_enseignement %}
+                            <span class="badge bg-warning text-dark ms-1">{{ enfant.type_enseignement }}</span>
+                            {% endif %}
+                        </a>
+                        {% endfor %}
+                    </div>
+                </div>
+                {% endif %}
+
+                <!-- Liens rapides -->
+                <hr>
+                <div class="d-flex flex-wrap gap-2">
+                    <a href="{% url 'educalims:niveau_hierarchie' niveau.id %}" class="btn btn-sm btn-primary">
+                        <i class="fas fa-sitemap"></i> Navigation complète
+                    </a>
+                    <a href="{% url 'educalims:discipline_cycle' niveau.discipline.slug|default:'svt' niveau.cycle.nom|lower %}" class="btn btn-sm btn-info">
+                        <i class="fas fa-layer-group"></i> Voir {{ niveau.cycle.nom }}
+                    </a>
+                    <a href="{% url 'educalims:discipline_detail' niveau.discipline.id %}" class="btn btn-sm btn-outline-secondary">
+                        <i class="fas fa-book-open"></i> Voir discipline
+                    </a>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Contenus organisés par structure -->
+{% if contenus %}
+<div class="row">
+    <div class="col-12">
+        <h4 class="mb-4">
+            <i class="fas fa-file-alt"></i>
+            Contenus disponibles ({{ contenus.count }})
+        </h4>
+
+        <!-- Organisation par Paliers (Collège) -->
+        {% if niveau.cycle.nom == 'Collège' %}
+        {% regroup contenus by lecons.first.chapitre.palier as palier_list %}
+        {% for palier in palier_list %}
+        <div class="card mb-4">
+            <div class="card-header bg-success text-white">
+                <h5 class="mb-0">
+                    <i class="fas fa-layer-group"></i>
+                    {{ palier.grouper.titre }} - {{ palier.grouper.numero }}
+                    <span class="badge bg-light text-dark ms-2">{{ palier.list|length }} contenu{{ palier.list|length|pluralize }}</span>
+                </h5>
+            </div>
+            <div class="card-body">
+                <div class="row">
+                    {% for contenu in palier.list %}
+                    <div class="col-md-6 col-lg-4 mb-3">
+                        <div class="card border-secondary h-100">
+                            <div class="card-body">
+                                <h6 class="card-title">
+                                    {{ contenu.titre|truncatechars:50 }}
+                                    <span class="badge bg-primary ms-1">{{ contenu.get_type_contenu_display }}</span>
+                                </h6>
+
+                                {% if contenu.description %}
+                                <p class="card-text small text-muted">
+                                    {{ contenu.description|truncatechars:100 }}
+                                </p>
+                                {% endif %}
+
+                                {% for lecon in contenu.lecons.all %}
+                                <p class="card-text small text-info">
+                                    <i class="fas fa-book"></i>
+                                    Leçon {{ lecon.numero }}: {{ lecon.titre|truncatechars:30 }}
+                                    {% if lecon.chapitre %}
+                                    (Chapitre {{ lecon.chapitre.numero }})
+                                    {% endif %}
+                                </p>
+                                {% endfor %}
+
+                                <div class="d-flex justify-content-between align-items-center mt-2">
+                                    <small class="text-muted">
+                                        <i class="fas fa-clock"></i>
+                                        {{ contenu.date_creation|date:"d/m/Y" }}
+                                    </small>
+                                    <a href="{% url 'educalims:contenu_detail' contenu.id %}" class="btn btn-sm btn-outline-primary">
+                                        <i class="fas fa-eye"></i> Voir
+                                    </a>
+                                </div>
+
+                                {% if contenu.has_file %}
+                                <div class="mt-2">
+                                    {% if contenu.type_contenu == 'pdf' %}
+                                    <a href="{{ contenu.fichier.url }}" class="btn btn-sm btn-danger" target="_blank">
+                                        <i class="fas fa-file-pdf"></i> PDF
+                                    </a>
+                                    {% elif contenu.type_contenu == 'video' %}
+                                    <a href="{{ contenu.fichier.url }}" class="btn btn-sm btn-danger" target="_blank">
+                                        <i class="fas fa-video"></i> Vidéo
+                                    </a>
+                                    {% else %}
+                                    <a href="{{ contenu.fichier.url }}" class="btn btn-sm btn-secondary" target="_blank">
+                                        <i class="fas fa-download"></i> Télécharger
+                                    </a>
+                                    {% endif %}
+                                </div>
+                                {% endif %}
+                            </div>
+                        </div>
+                    </div>
+                    {% endfor %}
+                </div>
+            </div>
+        </div>
+        {% endfor %}
+
+        <!-- Organisation par Parties (Lycée) -->
+        {% elif niveau.cycle.nom == 'Lycée' %}
+        {% regroup contenus by chapitres.first.partie as partie_list %}
+        {% for partie in partie_list %}
+        <div class="card mb-4">
+            <div class="card-header bg-warning text-dark">
+                <h5 class="mb-0">
+                    <i class="fas fa-bookmark"></i>
+                    {{ partie.grouper.titre }}
+                    <span class="badge bg-light text-dark ms-2">{{ partie.list|length }} contenu{{ partie.list|length|pluralize }}</span>
+                </h5>
+            </div>
+            <div class="card-body">
+                <!-- Grouper par chapitre pour Lycée (pas de lecon) -->
+                {% regroup partie.list by chapitres.first as chapitre_list %}
+                {% for chapitre in chapitre_list %}
+                <div class="mb-4">
+                    <h6 class="text-primary mb-3">
+                        <i class="fas fa-book"></i>
+                        Chapitre {{ chapitre.grouper.numero }}: {{ chapitre.grouper.titre }}
+                        <span class="badge bg-info text-dark ms-2">{{ chapitre.list|length }} contenu{{ chapitre.list|length|pluralize }}</span>
+                    </h6>
+                    <div class="row">
+                        {% for contenu in chapitre.list %}
+                        <div class="col-md-6 col-lg-4 mb-3">
+                            <div class="card border-secondary h-100">
+                                <div class="card-body">
+                                    <h6 class="card-title">
+                                        {{ contenu.titre|truncatechars:50 }}
+                                        <span class="badge bg-primary ms-1">{{ contenu.get_type_contenu_display }}</span>
+                                    </h6>
+
+                                    {% if contenu.description %}
+                                    <p class="card-text small text-muted">
+                                        {{ contenu.description|truncatechars:100 }}
+                                    </p>
+                                    {% endif %}
+
+                                    <div class="d-flex justify-content-between align-items-center mt-2">
+                                        <small class="text-muted">
+                                            <i class="fas fa-clock"></i>
+                                            {{ contenu.date_creation|date:"d/m/Y" }}
+                                        </small>
+                                        <a href="{% url 'educalims:contenu_detail' contenu.id %}" class="btn btn-sm btn-outline-primary">
+                                            <i class="fas fa-eye"></i> Voir
+                                        </a>
+                                    </div>
+
+                                    {% if contenu.has_file %}
+                                    <div class="mt-2">
+                                        {% if contenu.type_contenu == 'pdf' %}
+                                        <a href="{{ contenu.fichier.url }}" class="btn btn-sm btn-danger" target="_blank">
+                                            <i class="fas fa-file-pdf"></i> PDF
+                                        </a>
+                                        {% elif contenu.type_contenu == 'video' %}
+                                        <a href="{{ contenu.fichier.url }}" class="btn btn-sm btn-danger" target="_blank">
+                                            <i class="fas fa-video"></i> Vidéo
+                                        </a>
+                                        {% else %}
+                                        <a href="{{ contenu.fichier.url }}" class="btn btn-sm btn-secondary" target="_blank">
+                                            <i class="fas fa-download"></i> Télécharger
+                                        </a>
+                                        {% endif %}
+                                    </div>
+                                    {% endif %}
+                                </div>
+                            </div>
+                        </div>
+                        {% endfor %}
+                    </div>
+                </div>
+                {% endfor %}
+            </div>
+        </div>
+        {% endfor %}
+
+        <!-- Contenus sans structure spécifique -->
+        {% if niveau.cycle.nom != 'Collège' and niveau.cycle.nom != 'Lycée' %}
+        <div class="row">
+            {% for contenu in contenus %}
+            <div class="col-md-6 col-lg-4 mb-3">
+                <div class="card border-secondary h-100">
+                    <div class="card-body">
+                        <h6 class="card-title">
+                            {{ contenu.titre|truncatechars:50 }}
+                            <span class="badge bg-primary ms-1">{{ contenu.get_type_contenu_display }}</span>
+                        </h6>
+
+                        {% if contenu.description %}
+                        <p class="card-text small text-muted">
+                            {{ contenu.description|truncatechars:100 }}
+                        </p>
+                        {% endif %}
+
+                        {% for lecon in contenu.lecons.all %}
+                        <p class="card-text small text-info">
+                            <i class="fas fa-book"></i>
+                            Leçon {{ lecon.numero }}: {{ lecon.titre|truncatechars:30 }}
+                        </p>
+                        {% endfor %}
+
+                        <div class="d-flex justify-content-between align-items-center mt-2">
+                            <small class="text-muted">
+                                <i class="fas fa-clock"></i>
+                                {{ contenu.date_creation|date:"d/m/Y" }}
+                            </small>
+                            <a href="{% url 'educalims:contenu_detail' contenu.id %}" class="btn btn-sm btn-outline-primary">
+                                <i class="fas fa-eye"></i> Voir
+                            </a>
+                        </div>
+
+                        {% if contenu.has_file %}
+                        <div class="mt-2">
+                            {% if contenu.type_contenu == 'pdf' %}
+                            <a href="{{ contenu.fichier.url }}" class="btn btn-sm btn-danger" target="_blank">
+                                <i class="fas fa-file-pdf"></i> PDF
+                            </a>
+                            {% elif contenu.type_contenu == 'video' %}
+                            <a href="{{ contenu.fichier.url }}" class="btn btn-sm btn-danger" target="_blank">
+                                <i class="fas fa-video"></i> Vidéo
+                            </a>
+                            {% else %}
+                            <a href="{{ contenu.fichier.url }}" class="btn btn-sm btn-secondary" target="_blank">
+                                <i class="fas fa-download"></i> Télécharger
+                            </a>
+                            {% endif %}
+                        </div>
+                        {% endif %}
+                    </div>
+                </div>
+            </div>
+            {% endfor %}
+        </div>
+        {% endif %}
+
+        <!-- Statistiques détaillées -->
+        <div class="row mt-4">
+            <div class="col-md-3">
+                <div class="card bg-light">
+                    <div class="card-body text-center">
+                        <h4 class="text-primary">{{ contenus.count }}</h4>
+                        <p class="mb-0">Contenus total</p>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-3">
+                <div class="card bg-light">
+                    <div class="card-body text-center">
+                        <h4 class="text-success">
+                            {% for contenu in contenus %}
+                                {% if contenu.has_file %}{% if forloop.first %}{% endif %}{% endfor %}
+                            {{ contenus|select_related:"fichier"|exclude:fichier__isnull=True|length }}
+                        </h4>
+                        <p class="mb-0">Avec fichiers</p>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-3">
+                <div class="card bg-light">
+                    <div class="card-body text-center">
+                        <h4 class="text-info">{{ lecons_disponibles }}</h4>
+                        <p class="mb-0">Leçons</p>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-3">
+                <div class="card bg-light">
+                    <div class="card-body text-center">
+                        <h4 class="text-warning">
+                            {% if niveaux_enfants %}
+                                {{ niveaux_enfants.count }}
+                            {% else %}
+                                0
+                            {% endif %}
+                        </h4>
+                        <p class="mb-0">Sous-niveaux</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Répartition par type de contenu -->
+        {% if contenus_par_type %}
+        <div class="row mt-3">
+            <div class="col-12">
+                <div class="card">
+                    <div class="card-header bg-light">
+                        <h6 class="mb-0">
+                            <i class="fas fa-chart-pie"></i> Répartition par type de contenu
+                        </h6>
+                    </div>
+                    <div class="card-body">
+                        <div class="row text-center">
+                            {% for type, count in contenus_par_type.items %}
+                            <div class="col-md-2 mb-2">
+                                <div class="badge bg-primary p-2">
+                                    {{ type }}: {{ count }}
+                                </div>
+                            </div>
+                            {% endfor %}
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        {% endif %}
+
+    </div>
+</div>
+
+{% else %}
+<div class="row">
+    <div class="col-12">
+        <div class="card">
+            <div class="card-body text-center py-5">
+                <i class="fas fa-file-alt fa-3x text-muted mb-3"></i>
+                <h5 class="text-muted">Aucun contenu disponible</h5>
+                <p class="text-muted">
+                    Il n'y a pas encore de contenu pédagogique pour ce niveau.
+                </p>
+            </div>
+        </div>
+    </div>
+</div>
+{% endif %}
+
+<div class="mt-4">
+    <a href="{% url 'educalims:discipline_detail' niveau.discipline.id %}" class="btn btn-outline-secondary me-2">
+        <i class="fas fa-arrow-left"></i> Retour à {{ niveau.discipline.nom }}
+    </a>
+    <a href="{% url 'educalims:niveau_hierarchie' niveau.id %}" class="btn btn-outline-primary me-2">
+        <i class="fas fa-sitemap"></i> Navigation hiérarchique
+    </a>
+    {% if niveau.parent %}
+    <a href="{% url 'educalims:niveau_detail' niveau.parent.id %}" class="btn btn-outline-info">
+        <i class="fas fa-level-up-alt"></i> Voir {{ niveau.parent.nom }}
+    </a>
+    {% endif %}
+</div>
+
+<style>
+.card {
+    transition: transform 0.2s ease, box-shadow 0.2s ease;
+}
+
+.card:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 4px 8px rgba(0,0,0,0.1);
+}
+
+.card-header {
+    border-bottom: 2px solid rgba(0,0,0,0.1);
+}
+
+.btn-sm {
+    font-size: 0.875rem;
+}
+
+.badge {
+    font-size: 0.75rem;
+}
+
+.text-truncate {
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+</style>
+
+{% endblock %}

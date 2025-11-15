@@ -1,0 +1,308 @@
+{% extends "admin/change_form.html" %}
+{% load static %}
+
+{% block extrahead %}
+{{ block.super }}
+<script src="{% static 'admin/js/contenu_admin.js' %}"></script>
+<link rel="stylesheet" href="{% static 'admin/css/contenu_admin.css' %}">
+<link rel="stylesheet" href="{% static 'admin/css/checkbox_widgets.css' %}">
+<script>
+// Confirmation que les fichiers sont chargés
+console.log('Contenu Admin JS et CSS chargés');
+</script>
+{% endblock %}
+
+{% block content %}
+<div id="contenu_form">
+{{ block.super }}
+</div>
+
+<script>
+// Script inline de secours si le fichier externe ne se charge pas
+document.addEventListener('DOMContentLoaded', function() {
+    console.log('DOM chargé, initialisation du formulaire de contenu');
+
+    var disciplineField = document.getElementById('id_discipline');
+    var niveauField = document.getElementById('id_niveau');
+    var leconsField = document.getElementById('id_lecons');
+    var chapitresField = document.getElementById('id_chapitres');
+
+    if (!disciplineField || !niveauField) {
+        console.error('Champs du formulaire non trouvés');
+        return;
+    }
+
+    console.log('Champs trouvés:', {
+        discipline: !!disciplineField,
+        niveau: !!niveauField,
+        lecons: !!leconsField,
+        chapitres: !!chapitresField
+    });
+
+    // Fonction pour charger les niveaux selon la discipline
+    function loadNiveaux(disciplineId) {
+        if (!disciplineId) {
+            niveauField.innerHTML = '<option value="">---------</option>';
+            return;
+        }
+
+        fetch('/get-niveaux-by-discipline/?discipline_id=' + disciplineId)
+            .then(response => response.json())
+            .then(data => {
+                niveauField.innerHTML = '<option value="">---------</option>';
+
+                if (data.niveaux && data.niveaux.length > 0) {
+                    // Grouper par cycle
+                    var cycles = {};
+                    data.niveaux.forEach(function(niveau) {
+                        if (!cycles[niveau.cycle]) {
+                            cycles[niveau.cycle] = [];
+                        }
+                        cycles[niveau.cycle].push(niveau);
+                    });
+
+                    Object.keys(cycles).sort().forEach(function(cycleName) {
+                        var optgroup = document.createElement('optgroup');
+                        optgroup.label = cycleName;
+                        cycles[cycleName].forEach(function(niveau) {
+                            var option = document.createElement('option');
+                            option.value = niveau.id;
+                            option.textContent = niveau.nom;
+                            optgroup.appendChild(option);
+                        });
+                        niveauField.appendChild(optgroup);
+                    });
+                }
+            })
+            .catch(error => {
+                console.error('Erreur:', error);
+                niveauField.innerHTML = '<option value="">Erreur de chargement</option>';
+            });
+    }
+
+    // Fonction pour charger les unités d'apprentissage selon le niveau
+    function loadUnitesApprentissage(niveauId) {
+        if (!niveauId) {
+            // Vider les conteneurs de cases à cocher
+            clearCheckboxes('lecons');
+            clearCheckboxes('chapitres');
+            return;
+        }
+
+        fetch('/get-unites-apprentissage-by-niveau/?niveau_id=' + niveauId)
+            .then(response => response.json())
+            .then(data => {
+                // Vider les deux conteneurs
+                clearCheckboxes('lecons');
+                clearCheckboxes('chapitres');
+
+                if (data.unites && data.unites.length > 0) {
+                    if (data.cycle === 'collège') {
+                        // Pour le collège: charger les leçons
+                        populateCheckboxes('lecons', data.unites);
+
+                        // Désactiver le champ chapitre pour le collège
+                        disableCheckboxSection('chapitres');
+                        enableCheckboxSection('lecons');
+
+                    } else if (data.cycle === 'lycée') {
+                        // Pour le lycée: charger les chapitres
+                        populateCheckboxes('chapitres', data.unites);
+
+                        // Désactiver le champ leçon pour le lycée
+                        disableCheckboxSection('lecons');
+                        enableCheckboxSection('chapitres');
+                    }
+                } else {
+                    enableCheckboxSection('lecons');
+                    enableCheckboxSection('chapitres');
+                }
+            })
+            .catch(error => {
+                console.error('Erreur:', error);
+                clearCheckboxes('lecons');
+                clearCheckboxes('chapitres');
+                enableCheckboxSection('lecons');
+                enableCheckboxSection('chapitres');
+            });
+    }
+
+    // Fonction pour vider un conteneur de cases à cocher
+    function clearCheckboxes(fieldName) {
+        // Trouver le conteneur du widget
+        var widgetContainer = document.getElementById('id_' + fieldName);
+        if (widgetContainer) {
+            var checkboxContainer = widgetContainer.querySelector('.checkbox-container');
+            if (checkboxContainer) {
+                checkboxContainer.innerHTML = '';
+            }
+        }
+    }
+
+    // Fonction pour peupler les cases à cocher
+    function populateCheckboxes(fieldName, unites) {
+        var widgetContainer = document.getElementById('id_' + fieldName);
+        if (!widgetContainer) {
+            console.error('Conteneur de cases à cocher non trouvé pour:', fieldName);
+            return;
+        }
+
+        var checkboxContainer = widgetContainer.querySelector('.checkbox-container');
+        if (!checkboxContainer) {
+            // Créer le conteneur s'il n'existe pas
+            checkboxContainer = document.createElement('div');
+            checkboxContainer.className = 'checkbox-container';
+            widgetContainer.appendChild(checkboxContainer);
+        }
+
+        unites.forEach(function(unite) {
+            var displayText = unite.titre;
+            if (unite.numero) {
+                displayText = unite.numero + '. ' + displayText;
+            }
+            if (unite.parent_info) {
+                displayText += ' (' + unite.parent_info + ')';
+            }
+
+            var checkboxItem = document.createElement('div');
+            checkboxItem.className = 'checkbox-item';
+
+            var label = document.createElement('label');
+            label.className = 'checkbox-label';
+
+            var input = document.createElement('input');
+            input.type = 'checkbox';
+            input.name = fieldName;
+            input.value = unite.id;
+            input.className = 'custom-checkbox-input';
+            input.setAttribute('data-value', unite.id);
+            input.setAttribute('data-label', displayText);
+
+            var span = document.createElement('span');
+            span.className = 'checkbox-text';
+            span.textContent = displayText;
+
+            label.appendChild(input);
+            label.appendChild(span);
+            checkboxItem.appendChild(label);
+            checkboxContainer.appendChild(checkboxItem);
+        });
+
+        // Mettre à jour le champ hidden pour Django
+        updateHiddenField(fieldName);
+
+        // Ajouter les écouteurs d'événements pour les nouvelles cases à cocher
+        addCheckboxListeners(fieldName);
+    }
+
+    // Fonction pour désactiver une section de cases à cocher
+    function disableCheckboxSection(fieldName) {
+        var widgetContainer = document.getElementById('id_' + fieldName);
+        if (widgetContainer) {
+            widgetContainer.classList.add('disabled');
+            var checkboxes = widgetContainer.querySelectorAll('input[type="checkbox"]');
+            checkboxes.forEach(function(checkbox) {
+                checkbox.disabled = true;
+            });
+        }
+    }
+
+    // Fonction pour activer une section de cases à cocher
+    function enableCheckboxSection(fieldName) {
+        var widgetContainer = document.getElementById('id_' + fieldName);
+        if (widgetContainer) {
+            widgetContainer.classList.remove('disabled');
+            var checkboxes = widgetContainer.querySelectorAll('input[type="checkbox"]');
+            checkboxes.forEach(function(checkbox) {
+                checkbox.disabled = false;
+            });
+        }
+    }
+
+    // Fonction pour mettre à jour le champ hidden pour Django
+    function updateHiddenField(fieldName) {
+        var widgetContainer = document.getElementById('id_' + fieldName);
+        if (widgetContainer) {
+            var checkedValues = [];
+            var checkboxes = widgetContainer.querySelectorAll('input[type="checkbox"]:checked');
+            checkboxes.forEach(function(checkbox) {
+                checkedValues.push(checkbox.value);
+            });
+
+            // Supprimer les anciens champs cachés
+            var oldHiddenFields = widgetContainer.querySelectorAll('input[type="hidden"][name="' + fieldName + '"]');
+            oldHiddenFields.forEach(function(field) {
+                field.remove();
+            });
+
+            // Ajouter les nouveaux champs cachés pour chaque valeur sélectionnée
+            checkedValues.forEach(function(value) {
+                var hiddenField = document.createElement('input');
+                hiddenField.type = 'hidden';
+                hiddenField.name = fieldName;
+                hiddenField.value = value;
+                widgetContainer.appendChild(hiddenField);
+            });
+
+            // Mettre à jour le champ de synchronisation
+            var syncField = document.getElementById('id_' + fieldName + '_hidden');
+            if (syncField) {
+                syncField.value = checkedValues.join(',');
+            }
+            
+            // Debug: afficher les valeurs dans la console
+            console.log('Champ ' + fieldName + ' mis à jour avec:', checkedValues);
+        }
+    }
+
+    // Ajouter des écouteurs d'événements pour les changements de cases à cocher
+    function addCheckboxListeners(fieldName) {
+        var widgetContainer = document.getElementById('id_' + fieldName);
+        if (widgetContainer) {
+            var checkboxes = widgetContainer.querySelectorAll('input[type="checkbox"]');
+            checkboxes.forEach(function(checkbox) {
+                checkbox.addEventListener('change', function() {
+                    updateHiddenField(fieldName);
+                });
+            });
+        }
+    }
+
+    // Écouteurs d'événements
+    disciplineField.addEventListener('change', function() {
+        var disciplineId = this.value;
+        console.log('Discipline changée:', disciplineId);
+        loadNiveaux(disciplineId);
+
+        // Vider les champs dépendants (cases à cocher)
+        clearCheckboxes('lecons');
+        clearCheckboxes('chapitres');
+        loadUnitesApprentissage('');
+    });
+
+    niveauField.addEventListener('change', function() {
+        var niveauId = this.value;
+        console.log('Niveau changé:', niveauId);
+        loadUnitesApprentissage(niveauId);
+
+        // Vider les champs d'unités (cases à cocher)
+        clearCheckboxes('lecons');
+        clearCheckboxes('chapitres');
+    });
+
+    // Initialiser au chargement de la page
+    if (disciplineField.value) {
+        console.log('Initialisation avec discipline:', disciplineField.value);
+        loadNiveaux(disciplineField.value);
+    }
+
+    if (niveauField.value) {
+        console.log('Initialisation avec niveau:', niveauField.value);
+        loadUnitesApprentissage(niveauField.value);
+    }
+
+    // Ajouter une classe visuelle pour montrer que le script est chargé
+    document.getElementById('contenu_form').classList.add('contenu-admin-loaded');
+});
+</script>
+{% endblock %}

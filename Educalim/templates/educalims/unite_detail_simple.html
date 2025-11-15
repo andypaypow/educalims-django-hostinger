@@ -28,7 +28,14 @@
         </nav>
     </div>
     <div>
-        <span class="badge bg-primary fs-6">{{ unite.type_unite }}</span>
+        <span class="badge bg-primary fs-6">
+            <i class="fas fa-book"></i> Unité d'enseignement
+        </span>
+        {% if unite.lecons.all %}
+            <span class="badge bg-info ms-1" title="{{ unite.lecons.all.count }} leçon(s) associée(s)">
+                <i class="fas fa-graduation-cap"></i> {{ unite.lecons.all.count }} leçon(s)
+            </span>
+        {% endif %}
     </div>
 </div>
 
@@ -52,41 +59,115 @@
     </div>
 </div>
 
-{% if contenus %}
-<h3 class="mb-4">
-    <i class="fas fa-folder-open"></i>
-    Contenus disponibles ({{ contenus.count }})
-</h3>
-
-<div class="row">
-    {% for contenu in contenus %}
-    <div class="col-lg-6 mb-4">
-        <div class="card h-100">
-            <div class="card-header d-flex justify-content-between align-items-center">
-                <h6 class="mb-0">
-                    {% if contenu.type_contenu == 'Fiche' %}
-                        <i class="fas fa-file-alt"></i>
-                    {% elif contenu.type_contenu == 'Sujet' %}
-                        <i class="fas fa-tasks"></i>
-                    {% elif contenu.type_contenu == 'CahierType' %}
-                        <i class="fas fa-book"></i>
-                    {% endif %}
-                    {{ contenu.type_contenu }}
-                </h6>
+{% if unite.fichier %}
+<div class="row mb-4">
+    <div class="col-12">
+        <div class="card border-success">
+            <div class="card-header bg-success text-white">
+                <h5 class="mb-0">
+                    <i class="fas fa-file-download"></i>
+                    Fichier disponible
+                </h5>
             </div>
             <div class="card-body">
-                <h5 class="card-title">{{ contenu.nom }}</h5>
-            </div>
-            <div class="card-footer">
-                {% if contenu.fichier %}
-                <a href="{{ contenu.fichier.url }}" class="btn btn-primary btn-sm" target="_blank">
-                    <i class="fas fa-download"></i> Télécharger
-                </a>
-                {% endif %}
+                <div class="row align-items-center">
+                    <div class="col-md-8">
+                        <p class="card-text mb-0">
+                            <strong>Fichier :</strong> {{ unite.fichier.name|split:"/"|last }}
+                        </p>
+                    </div>
+                    <div class="col-md-4 text-md-end">
+                        <a href="{{ unite.fichier.url }}" class="btn btn-success" target="_blank">
+                            <i class="fas fa-download"></i> Télécharger le fichier
+                        </a>
+                    </div>
+                </div>
             </div>
         </div>
     </div>
-    {% endfor %}
+</div>
+{% else %}
+<div class="row mb-4">
+    <div class="col-12">
+        <div class="card border-warning">
+            <div class="card-body text-center">
+                <i class="fas fa-exclamation-triangle text-warning fa-2x mb-3"></i>
+                <p class="card-text mb-0">
+                    Aucun fichier n'a été associé à cette unité d'enseignement.
+                </p>
+            </div>
+        </div>
+    </div>
+</div>
+{% endif %}
+
+<!-- Leçons associées -->
+{% if unite.lecons.all %}
+<div class="row mb-4">
+    <div class="col-12">
+        <div class="card">
+            <div class="card-header bg-info text-white">
+                <h5 class="mb-0">
+                    <i class="fas fa-graduation-cap"></i>
+                    Leçons associées ({{ unite.lecons.all.count }})
+                </h5>
+            </div>
+            <div class="card-body">
+                {% regroup unite.lecons.all by chapitre.palier as palier_list %}
+                {% for palier in palier_list %}
+                <div class="mb-4">
+                    <h6 class="text-primary fw-bold">
+                        <i class="fas fa-layer-group"></i> {{ palier.grouper.titre }}
+                    </h6>
+                    {% regroup palier.list by chapitre as chapitre_list %}
+                    {% for chapitre in chapitre_list %}
+                    <div class="mb-3 ms-3">
+                        <h6 class="text-secondary fw-bold">
+                            <i class="fas fa-book-open"></i> {{ chapitre.grouper.titre }}
+                        </h6>
+                        <div class="row">
+                            {% for lecon in chapitre.list %}
+                            <div class="col-md-6 mb-2">
+                                <div class="card border-secondary">
+                                    <div class="card-body py-2">
+                                        <div class="d-flex align-items-center">
+                                            <span class="badge bg-secondary me-2">{{ lecon.numero }}</span>
+                                            <strong class="me-2">{{ lecon.titre }}</strong>
+                                        </div>
+                                        {% if lecon.description %}
+                                            <small class="text-muted d-block mt-1 ms-4">{{ lecon.description }}</small>
+                                        {% endif %}
+                                    </div>
+                                </div>
+                            </div>
+                            {% endfor %}
+                        </div>
+                    </div>
+                    {% endfor %}
+                </div>
+                {% endfor %}
+            </div>
+        </div>
+    </div>
+</div>
+{% endif %}
+
+<!-- Description -->
+{% if unite.description %}
+<div class="row mb-4">
+    <div class="col-12">
+        <div class="card">
+            <div class="card-header">
+                <h5 class="mb-0">
+                    <i class="fas fa-info-circle"></i>
+                    Description
+                </h5>
+            </div>
+            <div class="card-body">
+                <p class="card-text">{{ unite.description|linebreaks }}</p>
+            </div>
+        </div>
+    </div>
 </div>
 {% endif %}
 

@@ -1,0 +1,344 @@
+{% extends 'base.html' %}
+
+{% block title %}{{ niveau.nom }} - Navigation complète - Educalim{% endblock %}
+
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <h1>
+        <i class="fas fa-sitemap"></i>
+        Navigation : {{ niveau.nom }}
+    </h1>
+    <nav aria-label="breadcrumb">
+        <ol class="breadcrumb">
+            <li class="breadcrumb-item"><a href="{% url 'educalims:home' %}">Accueil</a></li>
+            <li class="breadcrumb-item"><a href="{% url 'educalims:disciplines_list' %}">Disciplines</a></li>
+            <li class="breadcrumb-item"><a href="{% url 'educalims:discipline_detail' niveau.discipline.id %}">{{ niveau.discipline.nom }}</a></li>
+            <li class="breadcrumb-item active">{{ niveau.nom }}</li>
+        </ol>
+    </nav>
+</div>
+
+<div class="row mb-4">
+    <div class="col-12">
+        <div class="card bg-light">
+            <div class="card-body">
+                <div class="row text-center">
+                    {% if niveau.cycle.nom == 'Collège' %}
+                        {# Collège : afficher seulement les paliers #}
+                        <div class="col-md-4">
+                            <h4 class="text-primary">{{ niveau.paliers.count }}</h4>
+                            <p class="mb-0">Paliers</p>
+                        </div>
+                        <div class="col-md-4">
+                            <h4 class="text-info">
+                                {% with total_chapitres=0 %}
+                                    {% for palier in niveau.paliers.all %}
+                                        {% with total_chapitres=total_chapitres|add:palier.chapitres.count %}
+                                        {% endwith %}
+                                    {% endfor %}
+                                {% endwith %}
+                                {{ total_chapitres }}
+                            </h4>
+                            <p class="mb-0">Chapitres</p>
+                        </div>
+                        <div class="col-md-4">
+                            <h4 class="text-warning">
+                                {% with total_lecons=0 %}
+                                    {% for palier in niveau.paliers.all %}
+                                        {% for chapitre in palier.chapitres.all %}
+                                            {% with total_lecons=total_lecons|add:chapitre.lecons.count %}
+                                            {% endwith %}
+                                        {% endfor %}
+                                    {% endfor %}
+                                {% endwith %}
+                                {{ total_lecons }}
+                            </h4>
+                            <p class="mb-0">Leçons</p>
+                        </div>
+                    {% elif niveau.cycle.nom == 'Lycée' %}
+                        {# Lycée : afficher seulement les parties #}
+                        <div class="col-md-4">
+                            <h4 class="text-success">{{ niveau.parties.count }}</h4>
+                            <p class="mb-0">Parties</p>
+                        </div>
+                        <div class="col-md-4">
+                            <h4 class="text-info">
+                                {% with total_chapitres=0 %}
+                                    {% for partie in niveau.parties.all %}
+                                        {% with total_chapitres=total_chapitres|add:partie.chapitres.count %}
+                                        {% endwith %}
+                                    {% endfor %}
+                                {% endwith %}
+                                {{ total_chapitres }}
+                            </h4>
+                            <p class="mb-0">Chapitres</p>
+                        </div>
+                        <div class="col-md-4">
+                            <h4 class="text-warning">0</h4>
+                            <p class="mb-0">Contenus</p>
+                        </div>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Paliers -->
+{% if niveau.paliers.exists and niveau.cycle.nom == 'Collège' %}
+<div class="row mb-4">
+    <div class="col-12">
+        <h2 class="h3 mb-3">
+            <i class="fas fa-layer-group text-primary"></i>
+            Paliers
+        </h2>
+
+        <div class="accordion" id="paliersAccordion">
+            {% for palier in niveau.paliers.all %}
+            <div class="accordion-item">
+                <h2 class="accordion-header" id="palier{{ palier.id }}Heading">
+                    <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#palier{{ palier.id }}Collapse">
+                        <span class="badge bg-primary me-3">{{ palier.numero }}</span>
+                        <strong>{{ palier.titre }}</strong>
+                        <span class="badge bg-secondary ms-auto me-2">{{ palier.chapitres.count }} chapitres</span>
+                    </button>
+                </h2>
+                <div id="palier{{ palier.id }}Collapse" class="accordion-collapse collapse" data-bs-parent="#paliersAccordion">
+                    <div class="accordion-body">
+                        {% if palier.description %}
+                        <p class="text-muted mb-3">{{ palier.description }}</p>
+                        {% endif %}
+
+                        <div class="row">
+                            {% for chapitre in palier.chapitres.all %}
+                            <div class="col-md-6 mb-3">
+                                <a href="{% url 'educalims:chapitre_detail' chapitre.id %}" class="text-decoration-none">
+                                    <div class="card border-success hover-card">
+                                        <div class="card-header bg-light">
+                                            <h6 class="mb-0">
+                                                <i class="fas fa-book text-success"></i>
+                                                Chapitre {{ chapitre.numero }}: {{ chapitre.titre }}
+                                            </h6>
+                                        </div>
+                                        <div class="card-body">
+                                        {% if chapitre.description %}
+                                        <p class="card-text small text-muted">{{ chapitre.description|truncatewords:20 }}</p>
+                                        {% endif %}
+
+                                        <h6 class="small text-info mb-2">
+                                            <i class="fas fa-graduation-cap"></i>
+                                            {{ chapitre.lecons.count }} leçon{{ chapitre.lecons.count|pluralize }}
+                                        </h6>
+
+                                        {% if chapitre.lecons.exists %}
+                                        <div class="list-group list-group-flush small">
+                                            {% for lecon in chapitre.lecons.all %}
+                                            <div class="list-group-item px-0">
+                                                <div class="d-flex justify-content-between align-items-center">
+                                                    <div>
+                                                        <i class="fas fa-file-alt text-primary"></i>
+                                                        Leçon {{ lecon.numero }}: {{ lecon.titre }}
+                                                    </div>
+                                                    <div>
+                                                        {% if lecon.contenus.exists %}
+                                                        <span class="badge bg-success">{{ lecon.contenus.count }} contenus</span>
+                                                        {% endif %}
+                                                        <a href="{% url 'educalims:lecon_detail' lecon.id %}" class="btn btn-sm btn-outline-primary ms-1">
+                                                            <i class="fas fa-eye"></i>
+                                                        </a>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                            {% endfor %}
+                                        </div>
+                                        {% endif %}
+                                    </div>
+                                </div>
+                                </a>
+                            </div>
+                            {% endfor %}
+                        </div>
+                    </div>
+                </div>
+            </div>
+            {% endfor %}
+        </div>
+    </div>
+</div>
+{% endif %}
+
+<!-- Parties -->
+{% if niveau.parties.exists and niveau.cycle.nom == 'Lycée' %}
+<div class="row">
+    <div class="col-12">
+        <h2 class="h3 mb-3">
+            <i class="fas fa-shapes text-success"></i>
+            Parties thématiques
+        </h2>
+
+        <div class="accordion" id="partiesAccordion">
+            {% for partie in niveau.parties.all %}
+            <div class="accordion-item">
+                <h2 class="accordion-header" id="partie{{ partie.id }}Heading">
+                    <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#partie{{ partie.id }}Collapse">
+                        <i class="fas fa-shapes text-success me-3"></i>
+                        <strong>{{ partie.titre }}</strong>
+                        <span class="badge bg-success ms-auto me-2">{{ partie.chapitres.count }} chapitres</span>
+                    </button>
+                </h2>
+                <div id="partie{{ partie.id }}Collapse" class="accordion-collapse collapse" data-bs-parent="#partiesAccordion">
+                    <div class="accordion-body">
+                        {% if partie.description %}
+                        <p class="text-muted mb-3">{{ partie.description }}</p>
+                        {% endif %}
+
+                        <div class="row">
+                            {% for chapitre in partie.chapitres.all %}
+                            <div class="col-md-6 mb-3">
+                                <a href="{% url 'educalims:chapitre_detail' chapitre.id %}" class="text-decoration-none">
+                                    <div class="card border-info hover-card">
+                                        <div class="card-header bg-light">
+                                            <h6 class="mb-0">
+                                                <i class="fas fa-book text-info"></i>
+                                                Chapitre {{ chapitre.numero }}: {{ chapitre.titre }}
+                                            </h6>
+                                        </div>
+                                        <div class="card-body">
+                                        {% if chapitre.description %}
+                                        <p class="card-text small text-muted">{{ chapitre.description|truncatewords:20 }}</p>
+                                        {% endif %}
+
+                                        <h6 class="small text-info mb-2">
+                                            <i class="fas fa-folder-open"></i>
+                                            {{ chapitre.contenus_directs.count }} contenu{{ chapitre.contenus_directs.count|pluralize }}
+                                        </h6>
+
+                                        {% if chapitre.contenus_directs.exists %}
+                                        <div class="list-group list-group-flush small">
+                                            {% for contenu in chapitre.contenus_directs.all %}
+                                            <div class="list-group-item px-0">
+                                                <div class="d-flex justify-content-between align-items-center">
+                                                    <div>
+                                                        <i class="fas {% if contenu.type_contenu == 'pdf' %}fa-file-pdf text-danger{% elif contenu.type_contenu == 'video' %}fa-video text-purple{% elif contenu.type_contenu == 'audio' %}fa-audio text-warning{% elif contenu.type_contenu == 'image' %}fa-image text-success{% else %}fa-file-alt text-info{% endif %}"></i>
+                                                        {{ contenu.titre }}
+                                                    </div>
+                                                    <div>
+                                                        <span class="badge bg-{% if contenu.type_contenu == 'pdf' %}danger{% elif contenu.type_contenu == 'video' %}dark{% elif contenu.type_contenu == 'audio' %}warning{% elif contenu.type_contenu == 'image' %}success{% else %}info{% endif %}">
+                                                            {{ contenu.type_contenu|upper }}
+                                                        </span>
+                                                        <a href="{% url 'educalims:contenu_detail' contenu.id %}" class="btn btn-sm btn-outline-primary ms-1">
+                                                            <i class="fas fa-eye"></i>
+                                                        </a>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                            {% endfor %}
+                                        </div>
+                                        {% endif %}
+                                    </div>
+                                </div>
+                                </a>
+                            </div>
+                            {% endfor %}
+                        </div>
+                    </div>
+                </div>
+            </div>
+            {% endfor %}
+        </div>
+    </div>
+</div>
+{% endif %}
+
+<!-- Navigation -->
+<div class="mt-4">
+    <a href="{% url 'educalims:discipline_detail' niveau.discipline.id %}" class="btn btn-outline-secondary">
+        <i class="fas fa-arrow-left"></i> Retour à {{ niveau.discipline.nom }}
+    </a>
+    <a href="{% url 'educalims:niveau_detail' niveau.id %}" class="btn btn-outline-primary">
+        <i class="fas fa-list"></i> Vue contenus détaillés
+    </a>
+</div>
+
+<style>
+.hover-card {
+    transition: transform 0.2s ease-in-out, box-shadow 0.2s ease-in-out;
+}
+.hover-card:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 4px 15px rgba(0,0,0,0.1);
+}
+.text-decoration-none:hover .hover-card {
+    transform: translateY(-2px);
+    box-shadow: 0 4px 15px rgba(0,0,0,0.1);
+}
+.clickable-chapter {
+    cursor: pointer;
+    transition: transform 0.2s ease-in-out, box-shadow 0.2s ease-in-out;
+}
+.clickable-chapter:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 4px 15px rgba(0,0,0,0.1);
+}
+</style>
+
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    // Rendre toutes les cartes de chapitres cliquables
+    const chapterCards = document.querySelectorAll('.card.border-info');
+
+    chapterCards.forEach(function(card) {
+        // Ajouter la classe clickable
+        card.classList.add('clickable-chapter');
+
+        // Rendre la carte cliquable
+        card.addEventListener('click', function(e) {
+            // Ne pas cliquer si on clique sur un autre lien dans la carte
+            if (e.target.closest('a')) {
+                return;
+            }
+
+            // Trouver le numéro du chapitre dans le titre
+            const titleElement = card.querySelector('h6');
+            if (titleElement) {
+                const titleText = titleElement.textContent;
+                const match = titleText.match(/Chapitre (\d+):/);
+                if (match) {
+                    const chapterNumber = match[1];
+
+                    // Mapping des chapitres avec les vrais IDs de la base de données
+                    const chapterMap = {
+                        '1': '150',  // Chapitre 1. L'exploitation du gaz naturel...
+                        '2': '151',  // Chapitre 2. L'exploitation du manganèse...
+                        '3': '152',  // Chapitre 3. La gestion des ressources en eau...
+                        '4': '153',  // Chapitre 4. Les relations et les styles de vie
+                        '5': '154',  // Chapitre 5. La communication nerveuse
+                        '6': '155',  // Chapitre 6. La communication hormonale
+                        '7': '156',  // Chapitre 7. La cellule chlorophyllienne...
+                        '8': '157',  // Chapitre 8. L'organisation fonctionnelle...
+                        '9': '158',  // Chapitre 9. La production des plantes...
+                        '10': '159', // Chapitre 10. La production végétale...
+                        '11': '160'  // Chapitre 11. Les sols et le cycle...
+                    };
+
+                    const chapterId = chapterMap[chapterNumber];
+                    if (chapterId) {
+                        window.location.href = '/chapitre/' + chapterId + '/';
+                    }
+                }
+            }
+        });
+    });
+});
+</script>
+
+<script>
+// Script pour ouvrir automatiquement le premier palier ou partie si disponible
+document.addEventListener('DOMContentLoaded', function() {
+    const firstButton = document.querySelector('.accordion-button');
+    if (firstButton) {
+        // Ne pas ouvrir automatiquement pour laisser l'utilisateur choisir
+    }
+});
+</script>
+{% endblock %}
