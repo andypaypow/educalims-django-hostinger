@@ -1,0 +1,103 @@
+{% extends "base.html" %}
+
+{% block title %}{{ unite.titre }} - EDUCALIMS{% endblock %}
+
+{% block breadcrumb %}
+<nav aria-label="breadcrumb">
+    <ol class="breadcrumb">
+        <li class="breadcrumb-item"><a href="/"><i class="bi bi-house-door"></i> Accueil</a></li>
+        <li class="breadcrumb-item"><a href="/cycle/{{ unite.niveau.discipline.cycle.pk }}/">{{ unite.niveau.discipline.cycle.nom }}</a></li>
+        <li class="breadcrumb-item"><a href="/discipline/{{ unite.niveau.discipline.pk }}/">{{ unite.niveau.discipline.nom }}</a></li>
+        <li class="breadcrumb-item"><a href="/niveau/{{ unite.niveau.pk }}/">{{ unite.niveau.nom }}</a></li>
+        <li class="breadcrumb-item active">{{ unite.titre|truncatewords:5 }}</li>
+    </ol>
+</nav>
+{% endblock %}
+
+{% block content %}
+<div class="row">
+    <div class="col-12">
+        <div class="card mb-4">
+            <div class="card-body">
+                <h1><i class="bi bi-folder-fill text-warning"></i> {{ unite.titre }}</h1>
+                <p class="text-muted mb-0">
+                    <i class="bi bi-layers"></i> {{ unite.niveau.nom }}
+                </p>
+                {% if unite.description %}
+                <p class="mt-3">{{ unite.description }}</p>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+</div>
+
+{% if enfants %}
+<h3 class="mb-3">Sous-unites</h3>
+<div class="row mb-4">
+    {% for enfant in enfants %}
+    <div class="col-12 mb-3">
+        <a href="/unite/{{ enfant.pk }}/" class="text-decoration-none">
+            <div class="card">
+                <div class="card-body">
+                    <div class="d-flex align-items-center">
+                        <i class="bi bi-folder-fill fs-4 me-3" style="color: #f39c12;"></i>
+                        <div>
+                            <h5 class="card-title mb-1">{{ enfant.titre }}</h5>
+                            {% if enfant.description %}
+                            <p class="card-text text-muted small mb-0">{{ enfant.description }}</p>
+                            {% endif %}
+                        </div>
+                        <i class="bi bi-chevron-right ms-auto text-muted"></i>
+                    </div>
+                </div>
+            </div>
+        </a>
+    </div>
+    {% endfor %}
+</div>
+<hr>
+{% endif %}
+
+<h3 class="mb-3">Fichiers pedagogiques</h3>
+{% if fichiers %}
+<div class="row">
+    {% for fichier in fichiers %}
+    <div class="col-12 mb-3">
+        <div class="card">
+            <div class="card-body">
+                <div class="d-flex align-items-center">
+                    {% if fichier.type_fichier == 'PDF' %}
+                    <i class="bi bi-file-pdf-fill file-icon file-pdf"></i>
+                    {% elif fichier.type_fichier == 'VIDEO' %}
+                    <i class="bi bi-file-play-fill file-icon file-video"></i>
+                    {% elif fichier.type_fichier == 'AUDIO' %}
+                    <i class="bi bi-file-music-fill file-icon file-audio"></i>
+                    {% elif fichier.type_fichier == 'IMAGE' %}
+                    <i class="bi bi-file-image-fill file-icon file-image"></i>
+                    {% else %}
+                    <i class="bi bi-file-earmark-fill file-icon file-document"></i>
+                    {% endif %}
+                    <div class="flex-grow-1">
+                        <h5 class="card-title mb-1">
+                            <a href="{{ fichier.fichier_upload.url }}" class="text-decoration-none">{{ fichier.titre }}</a>
+                        </h5>
+                        {% if fichier.description %}
+                        <p class="card-text text-muted small mb-1">{{ fichier.description }}</p>
+                        {% endif %}
+                        <span class="badge bg-primary">{{ fichier.get_type_fichier_display }}</span>
+                    </div>
+                    <a href="{{ fichier.fichier_upload.url }}" class="btn btn-primary btn-sm">
+                        <i class="bi bi-download"></i> Telecharger
+                    </a>
+                </div>
+            </div>
+        </div>
+    </div>
+    {% endfor %}
+</div>
+{% else %}
+<div class="alert alert-info">
+    <i class="bi bi-info-circle"></i> Aucun fichier dans cette unite.
+</div>
+{% endif %}
+{% endblock %}

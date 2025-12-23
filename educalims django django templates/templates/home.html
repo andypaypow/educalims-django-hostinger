@@ -1,0 +1,59 @@
+{% extends "base.html" %}
+
+{% block title %}Accueil - EDUCALIMS{% endblock %}
+
+{% block hero %}
+<div class="hero-section text-center">
+    <div class="container">
+        <h1><i class="bi bi-mortarboard-fill"></i> EDUCALIMS</h1>
+        <p class="lead">Plateforme educative pour naviguer dans les contenus pedagogiques</p>
+    </div>
+</div>
+{% endblock %}
+
+{% block content %}
+<div class="row mb-4">
+    <div class="col-12">
+        <h2 class="text-center mb-4">Bienvenue sur EDUCALIMS</h2>
+        <p class="text-center text-muted">Choisissez un cycle pour commencer votre parcours educatif</p>
+    </div>
+</div>
+
+<!-- Bouton d'accès aux abonnements -->
+<div class="row mb-5">
+    <div class="col-12 text-center">
+        <a href="{% url 'educalims_app:abonnement_choix_cycle' %}" class="btn btn-warning btn-lg px-5">
+            <i class="bi bi-stars"></i> Voir les abonnements
+        </a>
+        <p class="text-muted small mt-2">
+            <i class="bi bi-info-circle"></i> Accédez aux fiches, corrigés et séances d'appel
+        </p>
+    </div>
+</div>
+
+{% if cycles %}
+<div class="row">
+    {% for cycle in cycles %}
+    <div class="col-md-4 col-lg-3 mb-4">
+        <a href="/cycle/{{ cycle.pk }}/" class="text-decoration-none">
+            <div class="card h-100">
+                <div class="card-body text-center">
+                    <i class="bi bi-circle-fill fs-1 mb-3" style="color: #3498db;"></i>
+                    <h4 class="card-title">{{ cycle.nom }}</h4>
+                    {% if cycle.description %}
+                    <p class="card-text text-muted small">{{ cycle.description }}</p>
+                    {% endif %}
+                </div>
+            </div>
+        </a>
+    </div>
+    {% endfor %}
+</div>
+{% else %}
+<div class="text-center py-5">
+    <i class="bi bi-inbox fs-1 text-muted"></i>
+    <p class="mt-3">Aucun cycle disponible.</p>
+    <a href="/admin/" class="btn btn-primary">Connectez-vous a l'administration</a>
+</div>
+{% endif %}
+{% endblock %}

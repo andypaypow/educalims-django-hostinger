@@ -1,0 +1,69 @@
+{% extends "base.html" %}
+
+{% block breadcrumb %}
+<nav aria-label="breadcrumb">
+    <ol class="breadcrumb">
+        <li class="breadcrumb-item"><a href="/"><i class="bi bi-house-door"></i> Accueil</a></li>
+        <li class="breadcrumb-item"><a href="{% url 'educalims_app:abonnement_choix_cycle' %}">Abonnements</a></li>
+        {% if cycle %}
+        <li class="breadcrumb-item"><a href="{% url 'educalims_app:abonnement_choix_discipline' cycle.pk %}">{{ cycle.nom }}</a></li>
+        {% endif %}
+        {% if discipline %}
+        <li class="breadcrumb-item"><a href="{% url 'educalims_app:abonnement_choix_niveau' discipline.pk %}">{{ discipline.nom }}</a></li>
+        {% endif %}
+        {% if niveau %}
+        <li class="breadcrumb-item"><a href="{% url 'educalims_app:abonnement_choix_formule' niveau.pk %}">{{ niveau.nom }}</a></li>
+        {% endif %}
+        <li class="breadcrumb-item"><a href="{% url 'educalims_app:mes_abonnements' %}">Confirmation</a></li>
+    </ol>
+</nav>
+{% endblock %}
+
+{% block title %}Paiement réussi - EDUCALIMS{% endblock %}
+
+{% block content %}
+<div class="row justify-content-center">
+    <div class="col-md-8 col-lg-6">
+        <div class="card shadow">
+            <div class="card-body text-center py-5">
+                <div class="mb-4">
+                    <i class="bi bi-check-circle-fill text-success" style="font-size: 5rem;"></i>
+                </div>
+                <h2 class="mb-3">Paiement réussi !</h2>
+                <p class="text-muted mb-4">Votre abonnement est maintenant actif.</p>
+
+                <div class="text-start bg-light p-3 rounded mb-4">
+                    <p class="mb-1"><strong>Référence :</strong> {{ transaction.reference }}</p>
+                    <p class="mb-1"><strong>Montant payé :</strong> {{ transaction.montant|floatformat:0 }} FCFA</p>
+                    <p class="mb-0"><strong>Date :</strong> {{ transaction.date_validation|date:"d/m/Y H:i" }}</p>
+                </div>
+
+                <h5 class="mb-3">Vos abonnements activés :</h5>
+                <ul class="list-group list-group-flush mb-4">
+                    {% for abonnement in abonnements %}
+                    <li class="list-group-item">
+                        <div class="d-flex justify-content-between align-items-center">
+                            <div>
+                                <i class="bi bi-book-fill text-primary"></i>
+                                <strong>{{ abonnement.discipline.nom }}</strong>
+                            </div>
+                            <span class="badge bg-success">{{ abonnement.get_type_abonnement_display }}</span>
+                        </div>
+                        <small class="text-muted">Valide jusqu'au {{ abonnement.date_fin|date:"d/m/Y" }}</small>
+                    </li>
+                    {% endfor %}
+                </ul>
+
+                <div class="d-grid gap-2">
+                    <a href="{% url 'educalims_app:mes_abonnements' %}" class="btn btn-primary">
+                        <i class="bi bi-list-ul"></i> Voir mes abonnements
+                    </a>
+                    <a href="/" class="btn btn-outline-secondary">
+                        <i class="bi bi-house-door"></i> Retour à l'accueil
+                    </a>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

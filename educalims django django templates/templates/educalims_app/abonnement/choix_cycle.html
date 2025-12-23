@@ -1,0 +1,62 @@
+{% extends "base.html" %}
+
+{% block title %}Choisir un cycle - EDUCALIMS{% endblock %}
+
+{% block breadcrumb %}
+<nav aria-label="breadcrumb">
+    <ol class="breadcrumb">
+        <li class="breadcrumb-item"><a href="/"><i class="bi bi-house-door"></i> Accueil</a></li>
+        <li class="breadcrumb-item"><a href="{% url 'educalims_app:abonnement_choix_cycle' %}">Abonnements</a></li>
+    </ol>
+</nav>
+{% endblock %}
+
+{% block content %}
+<div class="row">
+    <div class="col-12">
+        <div class="text-center mb-5">
+            <h1><i class="bi bi-stars text-warning"></i> Choisissez votre cycle</h1>
+            <p class="lead text-muted">Sélectionnez un cycle pour voir les disciplines disponibles</p>
+        </div>
+    </div>
+</div>
+
+<div class="row">
+    {% for cycle in cycles %}
+    <div class="col-md-6 col-lg-4 mb-4">
+        <a href="{% url 'educalims_app:abonnement_choix_discipline' cycle.pk %}" class="text-decoration-none">
+            <div class="card h-100 border-0 shadow-sm hover-lift">
+                <div class="card-body text-center py-4">
+                    <div class="mb-3">
+                        <i class="bi bi-layers fs-1" style="color: {{ cycle.couleur|default:'#6c757d' }};"></i>
+                    </div>
+                    <h5 class="card-title">{{ cycle.nom }}</h5>
+                    {% if cycle.description %}
+                    <p class="card-text text-muted small">{{ cycle.description|truncatewords:15 }}</p>
+                    {% endif %}
+                    <p class="card-text text-muted small">
+                        <i class="bi bi-book"></i> {{ cycle.discipline_set.count }} discipline{{ cycle.discipline_set.count|pluralize }}
+                    </p>
+                    <span class="badge bg-primary">Voir les disciplines</span>
+                </div>
+            </div>
+        </a>
+    </div>
+    {% empty %}
+    <div class="col-12 text-center py-5">
+        <i class="bi bi-inbox fs-1 text-muted"></i>
+        <p class="text-muted mt-3">Aucun cycle disponible pour le moment.</p>
+    </div>
+    {% endfor %}
+</div>
+
+<style>
+.hover-lift {
+    transition: transform 0.3s, box-shadow 0.3s;
+}
+.hover-lift:hover {
+    transform: translateY(-5px);
+    box-shadow: 0 8px 25px rgba(0,0,0,0.15) !important;
+}
+</style>
+{% endblock %}
