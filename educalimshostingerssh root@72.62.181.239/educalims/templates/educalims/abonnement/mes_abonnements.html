@@ -1,0 +1,100 @@
+{% extends 'educalims/base.html' %}
+
+{% block title %}Mes Abonnements - Educalims{% endblock %}
+
+{% block breadcrumb %}
+<nav aria-label="breadcrumb" class="mt-4">
+    <ol class="breadcrumb">
+        <li class="breadcrumb-item"><a href="{% url 'educalims:home' %}"><i class="bi bi-house-door"></i> Accueil</a></li>
+        <li class="breadcrumb-item active"><i class="bi bi-bookmark-star"></i> Mes Abonnements</li>
+    </ol>
+</nav>
+{% endblock %}
+
+{% block content %}
+<div class="row">
+    <div class="col-12">
+        <div class="card">
+            <div class="card-header" style="background: linear-gradient(90deg, var(--gabon-green) 0%, var(--gabon-blue) 100%);">
+                <h2 class="mb-0"><i class="bi bi-bookmark-star"></i> Mes Abonnements</h2>
+            </div>
+            <div class="card-body">
+                {% if abonnements %}
+                <div class="row">
+                    {% for abonnement in abonnements %}
+                    <div class="col-md-6 col-lg-4 mb-4">
+                        <div class="card h-100 {% if abonnement.statut == 'ACTIF' and abonnement.est_valide %}border-success{% elif abonnement.statut == 'ECHOUE' %}border-danger{% else %}border-warning{% endif %}">
+                            <div class="card-header d-flex justify-content-between align-items-center">
+                                <span class="badge {% if abonnement.statut == 'ACTIF' and abonnement.est_valide %}bg-success{% elif abonnement.statut == 'ECHOUE' %}bg-danger{% elif abonnement.statut == 'EN_ATTENTE' %}bg-warning text-dark{% else %}bg-secondary{% endif %}">
+                                    {{ abonnement.get_statut_display }}
+                                </span>
+                                <small class="text-light">{{ abonnement.date_creation|date:"d/m/Y" }}</small>
+                            </div>
+                            <div class="card-body">
+                                <h5 class="card-title">
+                                    <i class="bi bi-diagram-2"></i> {{ abonnement.niveau.nom }}
+                                </h5>
+                                <p class="card-text text-light">
+                                    <strong>Produit:</strong> {{ abonnement.produit.nom }}<br>
+                                    <strong>Prix:</strong> {{ abonnement.produit.prix }} FCFA
+                                </p>
+                                {% if abonnement.statut == 'ACTIF' %}
+                                    {% if abonnement.est_valide %}
+                                        <p class="card-text text-light">
+                                            <i class="bi bi-check-circle text-success"></i> <strong>Valide jusqu'au:</strong><br>
+                                            {{ abonnement.date_fin|date:"d/m/Y H:i" }}
+                                        </p>
+                                        <a href="{% url 'educalims:niveau_detail' abonnement.niveau.id %}" class="btn btn-gabon w-100">
+                                            <i class="bi bi-book"></i> Accéder au contenu
+                                        </a>
+                                    {% else %}
+                                        <p class="card-text text-light">
+                                            <i class="bi bi-x-circle text-danger"></i> Expiré depuis le<br>
+                                            {{ abonnement.date_fin|date:"d/m/Y" }}
+                                        </p>
+                                        <a href="{% url 'educalims:s_abonner' abonnement.niveau.id %}" class="btn btn-gabon w-100">
+                                            <i class="bi bi-arrow-clockwise"></i> Renouveler
+                                        </a>
+                                    {% endif %}
+                                {% elif abonnement.statut == 'EN_ATTENTE' %}
+                                    <p class="card-text text-light">
+                                        <i class="bi bi-hourglass-split text-warning"></i> Paiement en cours de traitement
+                                    </p>
+                                    <a href="{% url 'educalims:s_abonner' abonnement.niveau.id %}" class="btn btn-gabon w-100">
+                                        <i class="bi bi-credit-card"></i> Payer maintenant
+                                    </a>
+                                {% else %}
+                                    <p class="card-text text-light">
+                                        <i class="bi bi-x-circle text-danger"></i> Paiement échoué
+                                    </p>
+                                    <a href="{% url 'educalims:s_abonner' abonnement.niveau.id %}" class="btn btn-gabon w-100">
+                                        <i class="bi bi-arrow-clockwise"></i> Réessayer
+                                    </a>
+                                {% endif %}
+                            </div>
+                            {% if abonnement.merchant_reference_id %}
+                            <div class="card-footer">
+                                <small class="text-light">
+                                    <strong>Ref marchand:</strong> <code>{{ abonnement.merchant_reference_id }}</code>
+                                </small>
+                            </div>
+                            {% endif %}
+                        </div>
+                    </div>
+                    {% endfor %}
+                </div>
+                {% else %}
+                <div class="text-center py-5">
+                    <i class="bi bi-bookmark-x" style="font-size: 4rem; color: var(--gabon-blue);"></i>
+                    <h4 class="mt-3">Aucun abonnement</h4>
+                    <p class="text-light">Vous n'avez pas encore d'abonnement. Découvrez nos disciplines et niveaux!</p>
+                    <a href="{% url 'educalims:disciplines_list' %}" class="btn btn-gabon">
+                        <i class="bi bi-grid"></i> Voir les disciplines
+                    </a>
+                </div>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

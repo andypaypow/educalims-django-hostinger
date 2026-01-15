@@ -1,0 +1,148 @@
+{% extends 'educalims/base.html' %}
+
+{% block title %}{{ unite.nom }} - Educalims{% endblock %}
+
+{% block breadcrumb %}
+<nav aria-label="breadcrumb" class="mt-4">
+    <ol class="breadcrumb">
+        <li class="breadcrumb-item"><a href="{% url 'educalims:home' %}"><i class="bi bi-house-door"></i> Accueil</a></li>
+        <li class="breadcrumb-item"><a href="{% url 'educalims:disciplines_list' %}"><i class="bi bi-grid"></i> Disciplines</a></li>
+        <li class="breadcrumb-item">
+            <a href="{% url 'educalims:discipline_detail' unite.discipline.pk %}">
+                <i class="bi bi-book"></i> {{ unite.discipline.nom }}
+            </a>
+        </li>
+        <li class="breadcrumb-item">
+            <a href="{% url 'educalims:niveau_detail' unite.niveau.pk %}">
+                <i class="bi bi-layers"></i> {{ unite.niveau.nom }}
+            </a>
+        </li>
+        <li class="breadcrumb-item active"><i class="bi bi-folder"></i> {{ unite.nom }}</li>
+    </ol>
+</nav>
+{% endblock %}
+
+{% block content %}
+<div class="card mb-4">
+    <div class="card-header">
+        <div class="d-flex justify-content-between align-items-center">
+            <h3 class="mb-0">
+                <span class="badge badge-gabon-yellow me-2">{{ unite.get_type_unite_display }}</span>
+                {{ unite.nom }}
+            </h3>
+        </div>
+    </div>
+    {% if unite.description %}
+    <div class="card-body">
+        <p class="mb-0 text-light">{{ unite.description }}</p>
+    </div>
+    {% endif %}
+    <div class="card-footer">
+        <small class="text-light">
+            <i class="bi bi-book"></i> {{ unite.discipline.nom }}
+            | <i class="bi bi-layers"></i> {{ unite.niveau.nom }}
+        </small>
+    </div>
+</div>
+
+{% if unite.unite_parent %}
+<div class="alert alert-info">
+    <i class="bi bi-arrow-up"></i> Unité parente:
+    <a href="{% url 'educalims:unite_detail' unite.unite_parent.pk %}">{{ unite.unite_parent.nom }}</a>
+</div>
+{% endif %}
+
+<h4 class="section-title">
+    <i class="bi bi-file-earmark-fill" style="color: var(--gabon-blue);"></i> Fichiers
+</h4>
+
+{% if fichiers %}
+<div class="row g-4">
+    {% for fichier in fichiers %}
+    <div class="col-md-6 col-lg-4">
+        <div class="card h-100">
+            <div class="card-header">
+                <div class="d-flex justify-content-between align-items-center">
+                    <h5 class="mb-0">
+                        {% if fichier.type_fichier == 'PDF' %}
+                        <i class="bi bi-file-pdf-fill text-danger"></i>
+                        {% elif fichier.type_fichier == 'VID' %}
+                        <i class="bi bi-file-play-fill text-primary"></i>
+                        {% elif fichier.type_fichier == 'TXT' %}
+                        <i class="bi bi-file-text-fill text-info"></i>
+                        {% elif fichier.type_fichier == 'LNK' %}
+                        <i class="bi bi-link-45deg text-success"></i>
+                        {% elif fichier.type_fichier == 'IMG' %}
+                        <i class="bi bi-file-image-fill text-warning"></i>
+                        {% else %}
+                        <i class="bi bi-file-earmark"></i>
+                        {% endif %}
+                        {{ fichier.nom }}
+                    </h5>
+                    <span class="badge badge-gabon-green">{{ fichier.get_type_fichier_display }}</span>
+                </div>
+            </div>
+            <div class="card-body">
+                {% if fichier.description %}
+                <p class="card-text">{{ fichier.description }}</p>
+                {% endif %}
+
+                {% if fichier.type_fichier == 'LNK' and fichier.url_lien %}
+                <a href="{{ fichier.url_lien }}" target="_blank" class="btn btn-gabon w-100">
+                    <i class="bi bi-box-arrow-up-right"></i> Ouvrir le lien
+                </a>
+                {% elif fichier.fichier %}
+                <a href="{{ fichier.fichier.url }}" target="_blank" class="btn btn-gabon w-100">
+                    <i class="bi bi-download"></i> Télécharger
+                </a>
+                {% elif fichier.contenu_texte %}
+                <div class="bg-dark p-3 rounded" style="max-height: 200px; overflow-y: auto;">
+                    <pre class="text-light mb-0" style="white-space: pre-wrap;">{{ fichier.contenu_texte|truncatewords:50 }}</pre>
+                </div>
+                {% endif %}
+
+                {% if fichier.duree %}
+                <p class="card-text mt-2 mb-0">
+                    <small class="text-light">
+                        <i class="bi bi-clock"></i> Durée: {{ fichier.duree }} secondes
+                    </small>
+                </p>
+                {% endif %}
+            </div>
+            <div class="card-footer bg-transparent border-0">
+                <small class="text-light">
+                    <i class="bi bi-download"></i> {{ fichier.telechargements }} téléchargement{{ fichier.telechargements|pluralize }}
+                </small>
+            </div>
+        </div>
+    </div>
+    {% endfor %}
+</div>
+{% else %}
+<div class="alert alert-info">
+    <i class="bi bi-info-circle"></i> Aucun fichier disponible pour cette unité.
+</div>
+{% endif %}
+
+{% if sous_unites %}
+<h4 class="section-title mt-5">
+    <i class="bi bi-folder-fill" style="color: var(--gabon-green);"></i> Sous-unités
+</h4>
+
+<div class="list-group">
+    {% for sous_unite in sous_unites %}
+    <a href="{% url 'educalims:unite_detail' sous_unite.pk %}" class="list-group-item list-group-item-action">
+        <div class="d-flex justify-content-between align-items-center">
+            <div>
+                <i class="bi bi-file-earmark me-2"></i> {{ sous_unite.nom }}
+            </div>
+            <div>
+                <span class="badge badge-gabon-blue me-2">{{ sous_unite.get_type_unite_display }}</span>
+                <span class="badge badge-gabon-green">{{ sous_unite.fichiers.count }} fichier{{ sous_unite.fichiers.count|pluralize }}</span>
+            </div>
+        </div>
+    </a>
+    {% endfor %}
+</div>
+{% endif %}
+{% endblock %}

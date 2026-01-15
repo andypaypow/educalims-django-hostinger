@@ -1,0 +1,64 @@
+{% extends 'educalims/base.html' %}
+
+{% block title %}Mon Profil - Educalims{% endblock %}
+
+{% block breadcrumb %}
+<nav aria-label="breadcrumb" class="mt-4">
+    <ol class="breadcrumb">
+        <li class="breadcrumb-item"><a href="{% url 'educalims:home' %}"><i class="bi bi-house-door"></i> Accueil</a></li>
+        <li class="breadcrumb-item active"><i class="bi bi-person"></i> Mon Profil</li>
+    </ol>
+</nav>
+{% endblock %}
+
+{% block content %}
+<div class="row">
+    <div class="col-md-4">
+        <div class="card">
+            <div class="card-body text-center">
+                <div class="mb-3">
+                    <i class="bi bi-person-circle" style="font-size: 5rem; color: var(--gabon-green);"></i>
+                </div>
+                <h4>{{ user.username }}</h4>
+                <p class="text-light">{{ user.email }}</p>
+                <span class="badge badge-gabon-blue">Membre depuis le {{ user.date_joined|date:"d/m/Y" }}</span>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-8">
+        <div class="card">
+            <div class="card-header">
+                <h5 class="mb-0"><i class="bi bi-info-circle"></i> Informations du compte</h5>
+            </div>
+            <div class="card-body">
+                <table class="table table-dark">
+                    <tr>
+                        <th>Nom d'utilisateur</th>
+                        <td>{{ user.username }}</td>
+                    </tr>
+                    <tr>
+                        <th>Email</th>
+                        <td>{{ user.email }}</td>
+                    </tr>
+                    <tr>
+                        <th>Statut</th>
+                        <td>
+                            {% if user.is_superuser %}
+                            <span class="badge badge-gabon-green">Administrateur</span>
+                            {% elif user.is_staff %}
+                            <span class="badge badge-gabon-yellow">Staff</span>
+                            {% else %}
+                            <span class="badge badge-gabon-blue">Utilisateur</span>
+                            {% endif %}
+                        </td>
+                    </tr>
+                    <tr>
+                        <th>Dernière connexion</th>
+                        <td>{% if user.last_login %}{{ user.last_login|date:"d/m/Y H:i" }}{% else %}Jamais{% endif %}</td>
+                    </tr>
+                </table>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

@@ -1,0 +1,67 @@
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+*.egg-info/
+dist/
+build/
+
+# Django
+*.log
+db.sqlite3
+db.sqlite3-journal
+/staticfiles/
+/media/
+
+# Environment
+.env
+.venv
+venv/
+ENV/
+env/
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# OS
+.DS_Store
+Thumbs.db
+*.lnk
+desktop.ini
+
+# Temporary files
+*.tmp
+*.tmp.*
+~$*
+.nul
+
+# Test files
+test_*.py
+*_test.py
+
+# Claude
+.claude/
+
+# SSH keys
+*.pem
+id_ed25519
+id_rsa
+
+# Docker volumes
+docker-volumes/
+
+# Other directories not needed in repo
+Mes apps/
+Educational/
+educalims docker django/
+Authentification supabase/
+Termux/
+.tmp.driveupload/
+lis moi obligatoirement/
+~WRL*.tmp
