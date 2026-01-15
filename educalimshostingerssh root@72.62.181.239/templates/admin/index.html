@@ -1,0 +1,219 @@
+{% extends "admin/index.html" %}
+{% load i18n %}
+
+{% block content %}
+{{ block.super }}
+
+<style>
+.webhook-panel {
+    background: #f8f9fa;
+    border: 1px solid #dee2e6;
+    border-radius: 8px;
+    padding: 20px;
+    margin-bottom: 20px;
+    box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+}
+
+.webhook-panel h2 {
+    margin-top: 0;
+    margin-bottom: 20px;
+    color: #333;
+    font-size: 18px;
+    border-bottom: 2px solid #007bff;
+    padding-bottom: 10px;
+}
+
+.webhook-table {
+    width: 100%;
+    border-collapse: collapse;
+}
+
+.webhook-table th {
+    background: #007bff;
+    color: white;
+    padding: 10px;
+    text-align: left;
+    font-weight: 600;
+}
+
+.webhook-table td {
+    padding: 10px;
+    border-bottom: 1px solid #dee2e6;
+}
+
+.webhook-table tr:hover {
+    background: #f1f3f5;
+}
+
+.badge-success {
+    background: #28a745;
+    color: white;
+    padding: 4px 8px;
+    border-radius: 4px;
+    font-size: 12px;
+}
+
+.badge-failed {
+    background: #dc3545;
+    color: white;
+    padding: 4px 8px;
+    border-radius: 4px;
+    font-size: 12px;
+}
+
+.badge-pending {
+    background: #ffc107;
+    color: #212529;
+    padding: 4px 8px;
+    border-radius: 4px;
+    font-size: 12px;
+}
+
+.no-webhooks {
+    text-align: center;
+    padding: 40px;
+    color: #6c757d;
+    font-style: italic;
+}
+
+.webhook-details {
+    font-size: 12px;
+    color: #6c757d;
+}
+
+.activation-success {
+    color: #28a745;
+    font-weight: bold;
+}
+
+.activation-failed {
+    color: #dc3545;
+    font-weight: bold;
+}
+
+.loader {
+    text-align: center;
+    padding: 20px;
+    color: #6c757d;
+}
+</style>
+
+<div class="webhook-panel">
+    <h2>📊 Derniers Webhooks Cyberschool</h2>
+
+    <div id="webhooks-container">
+        <div class="loader">
+            <p>Chargement des webhooks...</p>
+        </div>
+    </div>
+</div>
+
+<script>
+// Charger les webhooks via API
+function loadWebhooks() {
+    fetch('/admin/educalims/webhooklog/?format=json')
+        .then(response => response.json())
+        .then(data => {
+            const container = document.getElementById('webhooks-container');
+
+            if (!data.objects || data.objects.length === 0) {
+                container.innerHTML = `
+                    <div class="no-webhooks">
+                        <p>Aucun webhook reçu pour le moment.</p>
+                        <p style="font-size: 14px; margin-top: 10px;">Les webhooks de Cyberschool apparaîtront ici après les paiements.</p>
+                    </div>
+                `;
+                return;
+            }
+
+            let html = `
+                <table class="webhook-table">
+                    <thead>
+                        <tr>
+                            <th>Date/Heure</th>
+                            <th>Référence</th>
+                            <th>Statut</th>
+                            <th>Montant</th>
+                            <th>Opérateur</th>
+                            <th>Activation</th>
+                            <th>Voir détails</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+            `;
+
+            data.objects.slice(0, 10).forEach(webhook => {
+                const createdDate = new Date(webhook.created_at);
+                const dateStr = createdDate.toLocaleDateString('fr-FR');
+                const timeStr = createdDate.toLocaleTimeString('fr-FR');
+
+                let statusBadge = '';
+                if (webhook.status === 'SUCCESS') {
+                    statusBadge = '<span class="badge-success">Succès</span>';
+                } else if (webhook.status === 'FAILED') {
+                    statusBadge = '<span class="badge-failed">Échec</span>';
+                } else {
+                    statusBadge = '<span class="badge-pending">En attente</span>';
+                }
+
+                let activationStatus = '';
+                if (webhook.activation_succes) {
+                    activationStatus = '<span class="activation-success">✅ Succès</span>';
+                } else {
+                    activationStatus = '<span class="activation-failed">❌ Échec</span>';
+                }
+
+                html += `
+                    <tr>
+                        <td>
+                            <strong>${dateStr}</strong><br>
+                            <span class="webhook-details">${timeStr}</span>
+                        </td>
+                        <td>
+                            <code>${webhook.merchant_reference_id || 'N/A'}</code>
+                            ${webhook.transaction_id ? `<br><span class="webhook-details">${webhook.transaction_id}</span>` : ''}
+                        </td>
+                        <td>${statusBadge}</td>
+                        <td>
+                            ${webhook.amount ? `<strong>${webhook.amount} FCFA</strong>` : '<span class="webhook-details">N/A</span>'}
+                        </td>
+                        <td>${webhook.operator || 'N/A'}</td>
+                        <td>${activationStatus}</td>
+                        <td>
+                            <a href="/admin/educalims/webhooklog/${webhook.id}/change/" style="color: #007bff; text-decoration: none;">
+                                Voir →
+                            </a>
+                        </td>
+                    </tr>
+                `;
+            });
+
+            html += `
+                    </tbody>
+                </table>
+                <div style="text-align: center; margin-top: 20px;">
+                    <a href="/admin/educalims/webhooklog/" style="background: #007bff; color: white; padding: 10px 20px; border-radius: 4px; text-decoration: none;">
+                        Voir tous les webhooks →
+                    </a>
+                </div>
+            `;
+
+            container.innerHTML = html;
+        })
+        .catch(error => {
+            console.error('Erreur lors du chargement des webhooks:', error);
+            document.getElementById('webhooks-container').innerHTML = `
+                <div class="no-webhooks">
+                    <p>Impossible de charger les webhooks.</p>
+                </div>
+            `;
+        });
+}
+
+// Charger les webhooks au chargement de la page
+document.addEventListener('DOMContentLoaded', loadWebhooks);
+
+// Actualiser automatiquement toutes les 30 secondes
+setInterval(loadWebhooks, 30000);
+</script>
+{% endblock %}
