@@ -1,0 +1,213 @@
+{% extends 'educalims/base.html' %}
+
+{% block title %}{{ niveau.nom }} - Educalims{% endblock %}
+
+{% block breadcrumb %}
+<nav aria-label="breadcrumb" class="mt-4">
+    <ol class="breadcrumb">
+        <li class="breadcrumb-item"><a href="{% url 'educalims:home' %}"><i class="bi bi-house-door"></i> Accueil</a></li>
+        <li class="breadcrumb-item"><a href="{% url 'educalims:disciplines_list' %}"><i class="bi bi-grid"></i> Disciplines</a></li>
+        {% if discipline %}
+        <li class="breadcrumb-item">
+            <a href="{% url 'educalims:discipline_detail' discipline.pk %}">
+                <i class="bi bi-book"></i> {{ discipline.nom }}
+            </a>
+        </li>
+        {% endif %}
+        <li class="breadcrumb-item active"><i class="bi bi-layers"></i> {{ niveau.nom }}</li>
+    </ol>
+</nav>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+// Vérifier l'accès en arrière-plan
+function verifierAcces() {
+    fetch("{% url 'educalims:verifier_acces' niveau.id %}")
+        .then(response => response.json())
+        .then(data => {
+            const accesDiv = document.getElementById('acces-status');
+            if (data.acces) {
+                accesDiv.innerHTML = '<span class="badge bg-success"><i class="bi bi-check-circle"></i> Accès actif</span>';
+            } else {
+                accesDiv.innerHTML = '<a href="{% url 'educalims:s_abonner' niveau.id %}" class="btn btn-gabon btn-sm"><i class="bi bi-star"></i> S\'abonner</a>';
+            }
+        });
+}
+
+// Vérifier au chargement de la page
+document.addEventListener('DOMContentLoaded', verifierAcces);
+</script>
+{% endblock %}
+
+{% block content %}
+<div class="card mb-4">
+    <div class="card-header d-flex justify-content-between align-items-center">
+        <h3 class="mb-0">
+            {% if niveau.est_niveau_enfant %}
+            <i class="bi bi-diagram-3" style="color: var(--gabon-yellow);"></i>
+            {% else %}
+            <i class="bi bi-diagram-2" style="color: var(--gabon-blue);"></i>
+            {% endif %}
+            {{ niveau.nom }}
+            <span class="badge badge-gabon-green ms-2">{{ niveau.get_specialite_display }}</span>
+        </h3>
+        <div id="acces-status">
+            {% if user.is_authenticated %}
+            <a href="{% url 'educalims:s_abonner' niveau.id %}" class="btn btn-gabon">
+                <i class="bi bi-star"></i> S'abonner
+            </a>
+            {% else %}
+            <a href="{% url 'educalims:login' %}" class="btn btn-outline-light btn-sm">
+                <i class="bi bi-person-circle"></i> Connectez-vous pour vous abonner
+            </a>
+            {% endif %}
+        </div>
+    </div>
+    <div class="card-body">
+        <div class="row">
+            <div class="col-md-6">
+                <p class="mb-1"><strong><i class="bi bi-circle"></i> Cycle:</strong> {{ niveau.cycle.nom }}</p>
+                {% if discipline %}
+                <p class="mb-1"><strong><i class="bi bi-book"></i> Discipline:</strong> {{ discipline.nom }}</p>
+                {% endif %}
+            </div>
+            <div class="col-md-6">
+                <p class="mb-1">
+                    <strong><i class="bi bi-file-text"></i> Chapitres:</strong>
+                    {% if niveau.chapitres_count == 1 %}
+                    1 chapitre
+                    {% else %}
+                    {{ niveau.chapitres_count|default:0 }} chapitres
+                    {% endif %}
+                </p>
+            </div>
+        </div>
+    </div>
+</div>
+
+<h4 class="section-title">
+    <i class="bi bi-folder-fill" style="color: var(--gabon-green);"></i> Unités d'enseignement
+</h4>
+
+{% if acces_autorise %}
+    {% if parties %}
+    <div class="accordion" id="unitesAccordion">
+        {% for partie in parties %}
+        <div class="accordion-item">
+            <h2 class="accordion-header" id="heading{{ partie.pk }}">
+                <button class="accordion-button {% if not forloop.first %}collapsed{% endif %}"
+                        type="button"
+                        data-bs-toggle="collapse"
+                        data-bs-target="#collapse{{ partie.pk }}"
+                        style="background: linear-gradient(90deg, var(--gabon-green) 0%, var(--gabon-blue) 100%);">
+                    <i class="bi bi-folder-fill me-2"></i> {{ partie.nom }}
+                </button>
+            </h2>
+            <div id="collapse{{ partie.pk }}"
+                 class="accordion-collapse collapse {% if forloop.first %}show{% endif %}"
+                 data-bs-parent="#unitesAccordion">
+                <div class="accordion-body bg-dark">
+                    <ul class="list-group list-group-flush">
+                        {% for chapitre in partie.unites_enfants.all %}
+                        <li class="list-group-item">
+                            <div class="d-flex justify-content-between align-items-center">
+                                <div>
+                                    <i class="bi bi-file-text me-2"></i>
+                                    <a href="{% url 'educalims:unite_detail' chapitre.pk %}">
+                                        {{ chapitre.nom }}
+                                    </a>
+                                </div>
+                                <small class="text-light">
+                                    <i class="bi bi-file-earmark"></i> {{ chapitre.fichiers.count }} fichier{{ chapitre.fichiers.count|pluralize }}
+                                </small>
+                            </div>
+                        </li>
+                        {% empty %}
+                        <li class="list-group-item">
+                            <em class="text-light">Aucun chapitre pour cette partie.</em>
+                        </li>
+                        {% endfor %}
+                    </ul>
+                </div>
+            </div>
+        </div>
+        {% endfor %}
+    </div>
+    {% else %}
+    <div class="alert alert-info">
+        <i class="bi bi-info-circle"></i> Aucune unité disponible pour ce niveau.
+    </div>
+    {% endif %}
+{% else %}
+    <!-- Contenu bloqué -->
+    <div class="card">
+        <div class="card-body text-center py-5">
+            <i class="bi bi-lock-fill" style="font-size: 4rem; color: var(--gabon-yellow);"></i>
+            <h4 class="mt-3">Contenu protégé</h4>
+            <p class="text-light">Vous devez avoir un abonnement actif pour accéder aux chapitres de ce niveau.</p>
+            {% if user.is_authenticated %}
+                <a href="{% url 'educalims:s_abonner' niveau.id %}" class="btn btn-gabon btn-lg">
+                    <i class="bi bi-star"></i> S'abonner
+                </a>
+            {% else %}
+                <div class="row justify-content-center gap-2">
+                    <a href="{% url 'educalims:login' %}" class="btn btn-outline-light btn-lg col-auto">
+                        <i class="bi bi-person-circle"></i> Se connecter
+                    </a>
+                    <a href="{% url 'educalims:s_abonner' niveau.id %}" class="btn btn-gabon btn-lg col-auto">
+                        <i class="bi bi-star"></i> S'abonner
+                    </a>
+                </div>
+            {% endif %}
+        </div>
+    </div>
+
+    <!-- Aperçu bloqué des chapitres -->
+    {% if parties %}
+    <div class="card mt-4">
+        <div class="card-header">
+            <h5 class="mb-0"><i class="bi bi-eye-slash"></i> Aperçu des chapitres disponibles</h5>
+        </div>
+        <div class="card-body">
+            <div class="accordion" id="unitesAccordionBlocked">
+                {% for partie in parties %}
+                <div class="accordion-item">
+                    <h2 class="accordion-header" id="headingBlocked{{ partie.pk }}">
+                        <button class="accordion-button {% if not forloop.first %}collapsed{% endif %} bg-secondary text-light"
+                                type="button"
+                                data-bs-toggle="collapse"
+                                data-bs-target="#collapseBlocked{{ partie.pk }}">
+                            <i class="bi bi-folder-fill me-2"></i> {{ partie.nom }}
+                            <span class="badge bg-warning text-dark ms-auto">{{ partie.unites_enfants.count }} chapitre{{ partie.unites_enfants.count|pluralize }}</span>
+                        </button>
+                    </h2>
+                    <div id="collapseBlocked{{ partie.pk }}"
+                         class="accordion-collapse collapse {% if forloop.first %}show{% endif %}"
+                         data-bs-parent="#unitesAccordionBlocked">
+                        <div class="accordion-body bg-dark">
+                            <ul class="list-group list-group-flush">
+                                {% for chapitre in partie.unites_enfants.all %}
+                                <li class="list-group-item bg-secondary bg-opacity-25">
+                                    <div class="d-flex justify-content-between align-items-center">
+                                        <div class="text-light text-decoration-line-through">
+                                            <i class="bi bi-lock-fill me-2"></i>
+                                            {{ chapitre.nom }}
+                                        </div>
+                                        <small class="text-light">
+                                            <i class="bi bi-file-earmark"></i> {{ chapitre.fichiers.count }} fichier{{ chapitre.fichiers.count|pluralize }}
+                                        </small>
+                                    </div>
+                                </li>
+                                {% endfor %}
+                            </ul>
+                        </div>
+                    </div>
+                </div>
+                {% endfor %}
+            </div>
+        </div>
+    </div>
+    {% endif %}
+{% endif %}
+{% endblock %}

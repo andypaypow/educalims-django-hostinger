@@ -1,0 +1,45 @@
+version: "3.8"
+
+services:
+  db:
+    image: postgres:16-alpine
+    volumes:
+      - postgres_dev_data:/var/lib/postgresql/data/
+    environment:
+      POSTGRES_DB: educalims_dev
+      POSTGRES_USER: educalims
+      POSTGRES_PASSWORD: educalims_password
+    restart: always
+
+  web:
+    build: .
+    command: gunicorn educalims_project.wsgi:application --bind 0.0.0.0:8000 --workers 2 --reload
+    volumes:
+      - .:/app
+      - static_volume:/app/staticfiles
+      - media_volume:/app/media
+      - ./logs:/app/logs
+    environment:
+      - DEBUG=True
+      - DATABASE_URL=postgresql://educalims:educalims_password@db:5432/educalims_dev
+      - ALLOWED_HOSTS=*
+    depends_on:
+      - db
+    restart: always
+
+  nginx:
+    image: nginx:alpine
+    ports:
+      - "8081:80"
+    volumes:
+      - ./nginx-dev.conf:/etc/nginx/conf.d/default.conf
+      - static_volume:/app/staticfiles
+      - media_volume:/app/media
+    depends_on:
+      - web
+    restart: always
+
+volumes:
+  postgres_dev_data:
+  static_volume:
+  media_volume:

@@ -1,0 +1,154 @@
+{% extends 'educalims/base.html' %}
+
+{% block title %}Connexion / Inscription - Educalims{% endblock %}
+
+{% block breadcrumb %}
+<nav aria-label="breadcrumb" class="mt-4">
+    <ol class="breadcrumb">
+        <li class="breadcrumb-item"><a href="{% url 'educalims:home' %}"><i class="bi bi-house-door"></i> Accueil</a></li>
+        <li class="breadcrumb-item active"><i class="bi bi-person-circle"></i> Connexion / Inscription</li>
+    </ol>
+</nav>
+{% endblock %}
+
+{% block content %}
+<div class="row justify-content-center">
+    <div class="col-md-7 col-lg-5">
+        <div class="card">
+            <div class="card-header">
+                <ul class="nav nav-tabs card-header-tabs" id="authTab" role="tablist">
+                    <li class="nav-item" role="presentation">
+                        <button class="nav-link active" id="login-tab" data-bs-toggle="tab" data-bs-target="#login-tab-pane" type="button" role="tab">
+                            <i class="bi bi-box-arrow-in-right"></i> Connexion
+                        </button>
+                    </li>
+                    <li class="nav-item" role="presentation">
+                        <button class="nav-link" id="register-tab" data-bs-toggle="tab" data-bs-target="#register-tab-pane" type="button" role="tab">
+                            <i class="bi bi-person-plus"></i> Inscription
+                        </button>
+                    </li>
+                </ul>
+            </div>
+            <div class="card-body">
+                <div class="tab-content" id="authTabContent">
+                    <!-- Onglet Connexion -->
+                    <div class="tab-pane fade show active" id="login-tab-pane" role="tabpanel">
+                        {% if form.non_field_errors %}
+                        <div class="alert alert-danger">
+                            <i class="bi bi-exclamation-triangle"></i>
+                            {% for error in form.non_field_errors %}
+                            {{ error }}
+                            {% endfor %}
+                        </div>
+                        {% endif %}
+
+                        <form method="post" action="{% url 'educalims:login' %}">
+                            {% csrf_token %}
+                            <div class="mb-3">
+                                <label for="id_username_login" class="form-label">Nom d'utilisateur</label>
+                                <input type="text" name="username" class="form-control" id="id_username_login" placeholder="Nom d'utilisateur" required>
+                            </div>
+                            <div class="mb-3">
+                                <label for="id_password_login" class="form-label">Mot de passe</label>
+                                <input type="password" name="password" class="form-control" id="id_password_login" placeholder="Mot de passe" required>
+                            </div>
+                            <button type="submit" class="btn btn-gabon w-100">
+                                <i class="bi bi-box-arrow-in-right"></i> Se connecter
+                            </button>
+                        </form>
+                    </div>
+
+                    <!-- Onglet Inscription -->
+                    <div class="tab-pane fade" id="register-tab-pane" role="tabpanel">
+                        {% if form.errors %}
+                        <div class="alert alert-danger">
+                            <i class="bi bi-exclamation-triangle"></i>
+                            {% if form.non_field_errors %}
+                                {% for error in form.non_field_errors %}
+                                    {{ error }}
+                                {% endfor %}
+                            {% else %}
+                                Veuillez corriger les erreurs ci-dessous.
+                            {% endif %}
+                        </div>
+                        {% endif %}
+
+                        <form method="post" action="{% url 'educalims:register' %}">
+                            {% csrf_token %}
+                            <div class="mb-3">
+                                <label for="id_username" class="form-label">Nom d'utilisateur</label>
+                                <input type="text" name="username" class="form-control {% if form.username.errors %}is-invalid{% endif %}" id="id_username" placeholder="Nom d'utilisateur" value="{{ form.username.value|default:'' }}" required>
+                                <small class="text-light">Ex: andy</small>
+                                {% if form.username.errors %}
+                                <div class="text-danger mt-1">
+                                    {% for error in form.username.errors %}
+                                    {{ error }}
+                                    {% endfor %}
+                                </div>
+                                {% endif %}
+                            </div>
+                            <div class="mb-3">
+                                <label for="id_email" class="form-label">Adresse email</label>
+                                <input type="email" name="email" class="form-control {% if form.email.errors %}is-invalid{% endif %}" id="id_email" placeholder="votre@email.com" value="{{ form.email.value|default:'' }}" required>
+                                {% if form.email.errors %}
+                                <div class="text-danger">
+                                    {% for error in form.email.errors %}
+                                    {{ error }}
+                                    {% endfor %}
+                                </div>
+                                {% endif %}
+                            </div>
+                            <div class="mb-3">
+                                <label for="id_password1" class="form-label">Mot de passe</label>
+                                <input type="password" name="password1" class="form-control {% if form.password1.errors %}is-invalid{% endif %}" id="id_password1" placeholder="Mot de passe" required>
+                                <small class="text-light">Minimum 4 caractères. Ex: 123456</small>
+                                {% if form.password1.errors %}
+                                <div class="text-danger">
+                                    {% for error in form.password1.errors %}
+                                    {{ error }}
+                                    {% endfor %}
+                                </div>
+                                {% endif %}
+                            </div>
+                            <div class="mb-3">
+                                <label for="id_password2" class="form-label">Confirmer le mot de passe</label>
+                                <input type="password" name="password2" class="form-control {% if form.password2.errors %}is-invalid{% endif %}" id="id_password2" placeholder="Confirmer le mot de passe" required>
+                                {% if form.password2.errors %}
+                                <div class="text-danger">
+                                    {% for error in form.password2.errors %}
+                                    {{ error }}
+                                    {% endfor %}
+                                </div>
+                                {% endif %}
+                            </div>
+                            <div class="mb-3">
+                                <label for="id_recommande_par" class="form-label">Recommandé par</label>
+                                <select name="recommande_par" class="form-select" id="id_recommande_par" required>
+                                    <option value="">---------</option>
+                                    <option value="gosenmarket">Gosenmarket</option>
+                                    <option value="A01">A01</option>
+                                    <option value="A02">A02</option>
+                                    <option value="A03">A03</option>
+                                    <option value="A04">A04</option>
+                                    <option value="A05">A05</option>
+                                    <option value="aucun" selected>Aucun</option>
+                                </select>
+                                {% if form.recommande_par.errors %}
+                                <div class="text-danger">
+                                    {% for error in form.recommande_par.errors %}
+                                    {{ error }}
+                                    {% endfor %}
+                                </div>
+                                {% endif %}
+                            </div>
+                            <button type="submit" class="btn btn-gabon w-100">
+                                <i class="bi bi-person-plus"></i> Créer mon compte
+                            </button>
+                        </form>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
