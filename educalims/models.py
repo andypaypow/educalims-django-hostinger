@@ -1,6 +1,7 @@
 from django.db import models
 from django.contrib.auth.models import User
 import uuid
+from datetime import date
 
 
 
@@ -214,6 +215,14 @@ class Fichier(models.Model):
 
 # ==================== MODELES D'ABONNEMENT ====================
 
+
+
+def get_default_expiration_date():
+    """Retourne la date d'expiration par défaut (31 août de l'année en cours)"""
+    from datetime import date
+    return date(date.today().year, 8, 31)
+
+
 class Produit(models.Model):
     """Produit d'abonnement avec différents moyens de paiement"""
     TYPE_PAIEMENT_CHOICES = [
@@ -234,9 +243,9 @@ class Produit(models.Model):
         null=True,
         help_text="URL de paiement Moov Money"
     )
-    duree_jours = models.PositiveIntegerField(
-        default=30,
-        help_text="Durée de l'abonnement en jours"
+    date_expiration = models.DateField(
+        default=get_default_expiration_date,
+        help_text="Date d'expiration de l'abonnement (31 août par défaut)"
     )
     est_actif = models.BooleanField(default=True, help_text="Produit disponible à la vente")
     date_creation = models.DateTimeField(auto_now_add=True)
@@ -337,14 +346,23 @@ class Abonnement(models.Model):
             return False
         return True
 
-    def activer_abonnement(self, duree_jours=30):
-        """Active l'abonnement pour la durée spécifiée"""
+    def activer_abonnement(self, date_expiration=None):
+        """Active l'abonnement jusqu'à la date d'expiration spécifiée"""
         from django.utils import timezone
-        from datetime import timedelta
+        from datetime import datetime, time
 
         self.statut = 'ACTIF'
         self.date_debut = timezone.now()
-        self.date_fin = self.date_debut + timedelta(days=duree_jours)
+        
+        if date_expiration:
+            # Utiliser la date d'expiration fournie (fin de journée)
+            self.date_fin = datetime.combine(date_expiration, time.max)
+        else:
+            # Par défaut, 31 août de l'année en cours
+            from datetime import date
+            default_expiration = date(date.today().year, 8, 31)
+            self.date_fin = datetime.combine(default_expiration, time.max)
+        
         self.save()
 
 

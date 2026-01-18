@@ -11,7 +11,7 @@ import uuid
 import random
 import requests
 import logging
-from .models import Cycle, Discipline, Niveau, Unite, Fichier, Produit, Abonnement, WebhookLog
+from .models import Cycle, Discipline, Niveau, Unite, Fichier, Produit, Abonnement, WebhookLog, UserProfile
 from .forms import CustomUserCreationForm, LoginForm
 
 logger = logging.getLogger(__name__)
@@ -52,6 +52,10 @@ def envoyer_notification_telegram(message):
 
 def notifier_paiement_telegram(abonnement, statut="SUCCES", transaction_id="", numero_tel=""):
     """Envoie une notification Telegram pour un paiement"""
+    # Récupérer celui qui a recommandé l'utilisateur
+    profile = abonnement.user.profile if hasattr(abonnement.user, 'profile') else None
+    recommande_par = profile.get_recommande_par_display() if profile else 'N/A'
+    
     emoji = {
         "SUCCES": "✅",
         "ECHEC": "❌",
@@ -63,6 +67,7 @@ def notifier_paiement_telegram(abonnement, statut="SUCCES", transaction_id="", n
     message = f"""{emoji_symbole} <b>Nouveau Paiement - {statut}</b>
 
 👤 <b>Utilisateur:</b> {abonnement.user.username}
+🏷 <b>Recommandé par:</b> {recommande_par}
 📚 <b>Niveau:</b> {abonnement.niveau.nom}
 📦 <b>Produit:</b> {abonnement.produit.nom}
 💰 <b>Montant:</b> {abonnement.montant_paye or abonnement.produit.prix} FCFA
@@ -89,9 +94,13 @@ def notifier_paiement_telegram(abonnement, statut="SUCCES", transaction_id="", n
 
 def notifier_nouveau_abonnement_telegram(abonnement):
     """Envoie une notification Telegram pour un nouvel abonnement créé"""
+    profile = abonnement.user.profile if hasattr(abonnement.user, 'profile') else None
+    recommande_par = profile.get_recommande_par_display() if profile else 'N/A'
+    
     message = f"""🆕 <b>Nouvel Abonnement Initié</b>
 
 👤 <b>Utilisateur:</b> {abonnement.user.username}
+🏷 <b>Recommandé par:</b> {recommande_par}
 📚 <b>Niveau:</b> {abonnement.niveau.nom}
 📦 <b>Produit:</b> {abonnement.produit.nom}
 💰 <b>Prix:</b> {abonnement.produit.prix} FCFA
@@ -390,7 +399,7 @@ def paiement_callback(request):
             abonnement.montant_paye = amount
 
             # Activer l'abonnement
-            abonnement.activer_abonnement(duree_jours=abonnement.produit.duree_jours)
+            abonnement.activer_abonnement(date_expiration=abonnement.produit.date_expiration)
 
             print(f"SUCCESS: Abonnement {abonnement.id} active pour {abonnement.user.username}")
 
@@ -577,9 +586,11 @@ def webhook_cyberschool_simple(request):
                     abonnement.code_paiement = str(code)
 
                     # Calculer la date de fin selon la durée du produit
-                    if abonnement.produit and abonnement.produit.duree_jours:
-                        from datetime import timedelta
-                        abonnement.date_fin = timezone.now() + timedelta(days=abonnement.produit.duree_jours)
+                    if abonnement.produit and abonnement.produit.date_expiration:
+                        # Utiliser la date d'expiration du produit
+                        from datetime import datetime, time
+                        # Combiner la date d'expiration avec l'heure actuelle
+                        abonnement.date_fin = datetime.combine(abonnement.produit.date_expiration, time.max)
 
                     abonnement.save()
 
@@ -604,13 +615,17 @@ def webhook_cyberschool_simple(request):
                         raw_data=data
                     )
 
+                    # Récupérer celui qui a recommandé l'utilisateur
+                    profile = abonnement.user.profile if hasattr(abonnement.user, 'profile') else None
+                    recommande_par = profile.get_recommande_par_display() if profile else 'N/A'
+                    
                     # Notification de succès
                     envoyer_notification_telegram(
                         f"✅ <b>ABONNEMENT ACTIVÉ</b>\n"
                         f"📚 Niveau: <b>{abonnement.niveau.nom if abonnement.niveau else 'N/A'}</b>\n"
                         f"👤 Utilisateur: <b>{abonnement.user.username if abonnement.user else 'N/A'}</b>\n"
                         f"💰 Montant: {amount} FCFA\n"
-                        f"📞 Téléphone: {numero_tel or 'N/A'}"
+                        f"📞 Téléphone: {numero_tel or 'N/A'} | Recommandé par: {recommande_par}"
                     )
 
                     return JsonResponse({

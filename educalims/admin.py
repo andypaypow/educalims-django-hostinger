@@ -90,10 +90,10 @@ class FichierAdmin(admin.ModelAdmin):
 @admin.register(Produit)
 class ProduitAdmin(admin.ModelAdmin):
     """Admin pour Produit"""
-    list_display = ['nom', 'prix', 'duree_jours', 'est_actif', 'date_creation']
+    list_display = ['nom', 'prix', 'date_expiration', 'est_actif', 'date_creation']
     search_fields = ['nom', 'description']
-    list_filter = ['est_actif', 'duree_jours']
-    list_editable = ['est_actif', 'prix', 'duree_jours']
+    list_filter = ['est_actif', 'date_expiration']
+    list_editable = ['est_actif', 'prix', 'date_expiration']
     ordering = ['-date_creation', 'nom']
 
 
@@ -152,3 +152,36 @@ class WebhookLogAdmin(admin.ModelAdmin):
     def get_queryset(self, request):
         qs = super().get_queryset(request)
         return qs.select_related('abonnement__user', 'abonnement__niveau')
+
+# ==================== ADMIN USER PROFILE ====================
+from django.contrib import admin
+from django.contrib.auth.admin import UserAdmin
+from django.contrib.auth.models import User
+from .models import UserProfile
+
+
+class UserProfileInline(admin.StackedInline):
+    model = UserProfile
+    can_delete = False
+    verbose_name_plural = 'Profil'
+    fields = ('recommande_par', 'telephone')
+
+
+class CustomUserAdmin(UserAdmin):
+    list_display = ('username', 'email', 'first_name', 'last_name', 'is_staff', 'get_recommande_par', 'get_telephone')
+    inlines = (UserProfileInline,)
+    
+    def get_recommande_par(self, obj):
+        profile = UserProfile.objects.filter(user=obj).first()
+        if profile:
+            return profile.get_recommande_par_display()
+        return '-'
+    get_recommande_par.short_description = 'Recommandé par'
+    
+    def get_telephone(self, obj):
+        profile = UserProfile.objects.filter(user=obj).first()
+        return profile.telephone if profile else '-'
+    get_telephone.short_description = 'Téléphone'
+
+admin.site.unregister(User)
+admin.site.register(User, CustomUserAdmin)
