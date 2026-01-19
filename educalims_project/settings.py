@@ -32,6 +32,7 @@ MIDDLEWARE = [
     'django.contrib.auth.middleware.AuthenticationMiddleware',
     'django.contrib.messages.middleware.MessageMiddleware',
     'django.middleware.clickjacking.XFrameOptionsMiddleware',
+    'educalims.middleware.DeviceIdMiddleware',
 ]
 
 ROOT_URLCONF = 'educalims_project.urls'

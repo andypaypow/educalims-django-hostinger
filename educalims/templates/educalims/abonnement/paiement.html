@@ -50,6 +50,25 @@
             </div>
         </div>
 
+
+        <!-- ⚠️ AVERTISSEMENT IMPORTANT -->
+        <div class="alert alert-warning border-2" role="alert" style="border-color: #ffc107 !important;">
+            <div class="d-flex align-items-start">
+                <i class="bi bi-exclamation-triangle-fill" style="font-size: 2rem; margin-right: 15px; color: #ffc107;"></i>
+                <div>
+                    <h5 class="alert-heading fw-bold"><i class="bi bi-device-hdd"></i> Important : Liaison de l"abonnement à votre appareil</h5>
+                    <hr style="border-color: #ffc107;">
+                    <p class="mb-2">Pour des raisons de sécurité, <strong>votre abonnement sera lié à cet appareil</strong> ({{ request.user_agent }}).</p>
+                    <ul class="mb-0">
+                        <li><i class="bi bi-check-circle text-warning"></i> Vous pourrez accéder à vos cours <strong>uniquement depuis cet appareil</strong></li>
+                        <li><i class="bi bi-check-circle text-warning"></i> Le partage d"accès n"est pas autorisé</li>
+                        <li><i class="bi bi-check-circle text-warning"></i> En cas de changement d"appareil, contactez le support</li>
+                    </ul>
+                    <p class="mb-0 mt-2"><small class="text-muted"><i class="bi bi-info-circle"></i> Cette mesure protège votre contenu et garantit la qualité du service.</small></p>
+                </div>
+            </div>
+        </div>
+
         <!-- Choix du moyen de paiement -->
         <div class="card">
             <div class="card-header" style="background: var(--gabon-blue);">

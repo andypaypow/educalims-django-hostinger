@@ -416,6 +416,14 @@ class UserProfile(models.Model):
         verbose_name='Recommandé par'
     )
     telephone = models.CharField(max_length=20, blank=True, null=True, verbose_name='Téléphone')
+# Appareil autorise pour cet utilisateur (securite JWT)
+    device_id = models.CharField(
+        max_length=255,
+        blank=True,
+        null=True,
+        unique=True,
+        help_text="Identifiant unique de l appareil autorise"
+    )
     
     def __str__(self):
         return f"Profile de {self.user.username}"

@@ -13,8 +13,6 @@ import requests
 import logging
 from .models import Cycle, Discipline, Niveau, Unite, Fichier, Produit, Abonnement, WebhookLog, UserProfile
 from .forms import CustomUserCreationForm, LoginForm
-from .middleware import DeviceIdMiddleware
-from .middleware import device_required
 
 logger = logging.getLogger(__name__)
 
@@ -126,7 +124,6 @@ def cycles_list(request):
     return render(request, 'educalims/cycles_list.html', {'cycles': cycles})
 
 
-@device_required
 def cycle_detail(request, cycle_id):
     """Détail d'un cycle avec ses disciplines"""
     cycle = get_object_or_404(Cycle, pk=cycle_id)
@@ -192,7 +189,6 @@ def niveau_detail(request, niveau_id):
     })
 
 
-@device_required
 def unite_detail(request, unite_id):
     """Détail d'une unité avec ses fichiers et sous-unités"""
     unite = get_object_or_404(Unite, pk=unite_id)
@@ -205,7 +201,6 @@ def unite_detail(request, unite_id):
     })
 
 
-@device_required
 def fichier_detail(request, fichier_id):
     """Détail d'un fichier"""
     fichier = get_object_or_404(Fichier, pk=fichier_id, est_actif=True)
@@ -341,43 +336,14 @@ def s_abonner(request, niveau_id):
 
     # Envoyer notification Telegram pour le nouvel abonnement
     notifier_nouveau_abonnement_telegram(abonnement)
-    
-    # Enregistrer le device_id et creer le cookie JWT
-    device_id = getattr(request, 'device_id', None)
-    
-    if device_id:
-        # Creer ou mettre a jour le UserProfile avec le device_id
-        profile, created = UserProfile.objects.get_or_create(
-            user=request.user,
-            defaults={'device_id': device_id}
-        )
-        
-        if not created and profile.device_id != device_id:
-            profile.device_id = device_id
-            profile.save()
 
-    # Creer la reponse avec le cookie JWT
-    response = render(request, 'educalims/abonnement/paiement.html', {
+    return render(request, 'educalims/abonnement/paiement.html', {
         'niveau': niveau,
         'produit': produit,
         'abonnement': abonnement,
         'reference_interne': reference_interne,
         'merchant_reference_id': merchant_reference_id
     })
-    
-    # Ajouter le cookie JWT si device_id existe
-    if device_id:
-        device_token = DeviceIdMiddleware.create_device_token(device_id)
-        response.set_cookie(
-            'device_token',
-            device_token,
-            max_age=365 * 24 * 60 * 60,  # 1 an
-            httponly=True,
-            secure=False,  # True en production avec HTTPS
-            samesite='Lax'
-        )
-    
-    return response
 
 
 @csrf_exempt
@@ -433,7 +399,7 @@ def paiement_callback(request):
             abonnement.montant_paye = amount
 
             # Activer l'abonnement
-            abonnement.activer_abonnement(date_expiration=abonnement.produit.date_expiration)
+            abonnement.activer_abonnement(duree_jours=abonnement.produit.duree_jours)
 
             print(f"SUCCESS: Abonnement {abonnement.id} active pour {abonnement.user.username}")
 
@@ -620,11 +586,9 @@ def webhook_cyberschool_simple(request):
                     abonnement.code_paiement = str(code)
 
                     # Calculer la date de fin selon la durée du produit
-                    if abonnement.produit and abonnement.produit.date_expiration:
-                        # Utiliser la date d'expiration du produit
-                        from datetime import datetime, time
-                        # Combiner la date d'expiration avec l'heure actuelle
-                        abonnement.date_fin = datetime.combine(abonnement.produit.date_expiration, time.max)
+                    if abonnement.produit and abonnement.produit.duree_jours:
+                        from datetime import timedelta
+                        abonnement.date_fin = timezone.now() + timedelta(days=abonnement.produit.duree_jours)
 
                     abonnement.save()
 
@@ -649,17 +613,13 @@ def webhook_cyberschool_simple(request):
                         raw_data=data
                     )
 
-                    # Récupérer celui qui a recommandé l'utilisateur
-                    profile = abonnement.user.profile if hasattr(abonnement.user, 'profile') else None
-                    recommande_par = profile.get_recommande_par_display() if profile else 'N/A'
-                    
                     # Notification de succès
                     envoyer_notification_telegram(
                         f"✅ <b>ABONNEMENT ACTIVÉ</b>\n"
                         f"📚 Niveau: <b>{abonnement.niveau.nom if abonnement.niveau else 'N/A'}</b>\n"
                         f"👤 Utilisateur: <b>{abonnement.user.username if abonnement.user else 'N/A'}</b>\n"
                         f"💰 Montant: {amount} FCFA\n"
-                        f"📞 Téléphone: {numero_tel or 'N/A'} | Recommandé par: {recommande_par}"
+                        f"📞 Téléphone: {numero_tel or 'N/A'}"
                     )
 
                     return JsonResponse({
