@@ -9,9 +9,40 @@
 
     {% csrf_token %}
     <link rel="stylesheet" href="{% static 'hippie/css/styles.css' %}">
+    <style>
+        .auth-nav {
+            text-align: right;
+            margin-bottom: 10px;
+            font-size: 0.9rem;
+        }
+        .auth-nav a {
+            color: var(--primary-color);
+            text-decoration: none;
+            margin-left: 15px;
+        }
+        .auth-nav a:hover {
+            text-decoration: underline;
+        }
+        .auth-nav .user-info {
+            display: inline-block;
+            margin-right: 10px;
+        }
+    </style>
 </head>
 <body>
     <div class="container">
+        <!-- Navigation Authentification -->
+        <div class="auth-nav">
+            {% if user.is_authenticated %}
+                <span class="user-info">👤 {{ user.username }}</span>
+                <a href="{% url 'hippie:profile' %}">Mon Profil</a>
+                <a href="{% url 'hippie:logout' %}">Se déconnecter</a>
+            {% else %}
+                <a href="{% url 'hippie:login' %}">Se connecter</a>
+                <a href="{% url 'hippie:register' %}">Créer un compte</a>
+            {% endif %}
+        </div>
+
         <header>
             <h1>🏇 Filtre Expert +</h1>
             <p class="subtitle">Application de filtrage de combinaisons hippiques</p>
@@ -529,6 +560,206 @@
         let filterApplied = false;
         let isLoadingScenario = false;  // Flag to prevent value overwriting during scenario load
 
+        // ==================== ABONNEMENT ====================
+        // Session Management (localStorage)
+        function getOrCreateSessionId() {
+            let sessionId = localStorage.getItem('filtrexpert_session');
+            if (!sessionId) {
+                sessionId = 'session_' + Date.now() + '_' + Math.random().toString(36).substr(2, 9);
+                localStorage.setItem('filtrexpert_session', sessionId);
+            }
+            return sessionId;
+        }
+
+        const sessionId = getOrCreateSessionId();
+        let abonnementActif = false;
+        let verificationInterval;
+        let lastFilteredCombinations = null;
+        let lastFilterData = null;
+
+        // Vérifier l'abonnement (polling)
+        async function verifierAbonnement() {
+            try {
+                const response = await fetch('/hippie/api/verifier-abonnement/', {
+                    method: 'POST',
+                    headers: {'Content-Type': 'application/json'},
+                    body: JSON.stringify({session_id: sessionId})
+                });
+                const data = await response.json();
+
+                if (data.abonnement_actif && !abonnementActif) {
+                    // Abonnement nouvellement activé
+                    abonnementActif = true;
+                    clearInterval(verificationInterval);
+
+                    // Afficher notification
+                    showNotification('✅ Paiement confirmé ! Vos combinaisons sont maintenant visibles.');
+
+                    // Afficher le compteur
+                    afficherCompteur(data);
+
+                    // Si des résultats étaient filtrés, les afficher maintenant
+                    if (lastFilteredCombinations && lastFilterData) {
+                        afficherResultats(lastFilteredCombinations, lastFilterData);
+                    }
+                } else if (data.abonnement_actif && abonnementActif) {
+                    // Mettre à jour le compteur
+                    afficherCompteur(data);
+                }
+            } catch (e) {
+                console.error('Erreur vérification abonnement:', e);
+            }
+        }
+
+        // Démarrer le polling
+        verificationInterval = setInterval(verifierAbonnement, 3000);
+
+        // Afficher le compteur d'expiration
+        function afficherCompteur(data) {
+            // Créer ou mettre à jour le compteur s'il n'existe pas
+            let compteurDiv = document.getElementById('compteur-abonnement');
+            if (!compteurDiv) {
+                compteurDiv = document.createElement('div');
+                compteurDiv.id = 'compteur-abonnement';
+                compteurDiv.style.cssText = 'background: linear-gradient(135deg, var(--gabon-green), var(--gabon-green-dark)); color: white; padding: 15px; border-radius: 8px; margin-bottom: 20px; text-align: center;';
+                const header = document.querySelector('header');
+                header.after(compteurDiv);
+            }
+
+            compteurDiv.innerHTML = `
+                ⏳ <strong>Abonnement Actif</strong> - Expire dans : ${data.jours_restants}j ${data.heures_restantes}h ${data.minutes_restantes}min
+                <br><small style="opacity: 0.8;">(Jusqu'au ${new Date(data.date_fin).toLocaleString('fr-FR')})</small>
+            `;
+        }
+
+        // Afficher le message de paiement
+        function afficherMessagePaiement(totalCombinaisons) {
+            const container = document.getElementById('results-output');
+            const summaryDiv = document.getElementById('results-summary');
+
+            summaryDiv.innerHTML = `
+                <strong>${totalCombinaisons.toLocaleString('fr-FR')}</strong> combinaisons possibles -
+                <span style="color: var(--warning-color);">Abonnement requis pour voir les résultats</span>
+            `;
+
+            container.innerHTML = `
+                <div class="payment-required-card" style="background: var(--bg-card); border: 2px solid var(--warning-color); border-radius: 12px; padding: 30px; text-align: center; max-width: 600px; margin: 20px auto;">
+                    <h2 style="color: var(--warning-color); margin-bottom: 15px;">🔒 Résultats masqués</h2>
+                    <p style="margin-bottom: 20px;">Pour voir les <strong>${totalCombinaisons.toLocaleString('fr-FR')}</strong> combinaisons restantes, vous devez avoir un abonnement actif.</p>
+
+                    <div class="pricing-card" style="background: linear-gradient(135deg, var(--gabon-green), var(--gabon-green-dark)); padding: 20px; border-radius: 8px; margin-bottom: 20px;">
+                        <h3 style="color: white; margin-bottom: 10px;">💰 Abonnement Journalier - 100 FCFA</h3>
+                        <p style="color: rgba(255,255,255,0.9); margin-bottom: 15px;">Valide jusqu'à 23h59 aujourd'hui</p>
+                        <button id="btn-payer" class="btn-save" style="background: var(--gabon-yellow); color: var(--gabon-green-dark); border: none; padding: 12px 30px; border-radius: 6px; font-weight: bold; cursor: pointer; font-size: 1rem;">
+                            💳 Payer maintenant
+                        </button>
+                    </div>
+
+                    <p style="color: var(--text-muted); font-size: 0.9rem;">⚡ Après paiement, les résultats apparaîtront automatiquement.</p>
+                </div>
+            `;
+
+            // Ajouter l'event listener pour le bouton payer
+            document.getElementById('btn-payer').addEventListener('click', ouvrirModalPaiement);
+        }
+
+        // Ouvrir la modal de paiement - ouvre directement le lien Cyberschool
+        function ouvrirModalPaiement() {
+            creerPaiement();
+        }
+
+        // Créer un paiement - ouvre directement le lien de paiement Cyberschool
+        async function creerPaiement() {
+            try {
+                const response = await fetch('/hippie/api/creer-paiement/', {
+                    method: 'POST',
+                    headers: {'Content-Type': 'application/json'},
+                    body: JSON.stringify({
+                        session_id: sessionId
+                    })
+                });
+                const data = await response.json();
+
+                if (data.lien_paiement) {
+                    window.open(data.lien_paiement, '_blank');
+                    showNotification('🔔 Paiement initié ! Veuillez compléter le paiement. Les résultats apparaîtront automatiquement après confirmation.');
+                } else {
+                    showNotification('❌ Erreur: ' + (data.error || 'Impossible de créer le paiement'));
+                }
+            } catch (e) {
+                console.error('Erreur création paiement:', e);
+                showNotification('❌ Erreur lors de la création du paiement');
+            }
+        }
+
+        // Afficher les résultats
+        function afficherResultats(combinations, filterData) {
+            const container = document.getElementById('results-output');
+            const summaryDiv = document.getElementById('results-summary');
+
+            // Mettre à jour currentFiltered pour cohérence
+            if (filterData) {
+                currentFiltered = filterData.filtered;
+
+                // Update results synthesis display and store for weight filter
+                if (filterData.results_synthesis && filterData.results_synthesis.length > 0) {
+                    currentSynthesis.results = filterData.results_synthesis.map(r => [r.horse, r.count]);
+                    const sortedResults = [...filterData.results_synthesis].sort((a, b) => b.count - a.count);
+                    const resultsText = sortedResults.map(r => `${r.horse} (${r.count})`).join(' - ');
+                    document.getElementById('results-synthesis').textContent = resultsText || 'Aucun résultat';
+                } else {
+                    currentSynthesis.results = [];
+                    document.getElementById('results-synthesis').textContent = 'Aucun résultat';
+                }
+            }
+
+            // Mettre à jour le résumé
+            const rate = ((currentTotal - combinations.length) / currentTotal * 100).toFixed(2);
+            summaryDiv.innerHTML = `
+                <strong>${combinations.length.toLocaleString('fr-FR')}</strong> combinaisons conservées sur <strong>${currentTotal.toLocaleString('fr-FR')}</strong> |
+                Taux de filtrage : <strong style="color: var(--success-color);">${rate}%</strong>
+            `;
+
+            // Afficher les combinaisons
+            container.innerHTML = combinations.slice(0, 1000).map(c =>
+                `<div class="combination-item">${c.join(' - ')}</div>`
+            ).join('');
+
+            if (combinations.length > 1000) {
+                container.innerHTML += `<div style="grid-column: 1/-1; text-align: center; color: var(--secondary-color); padding: 10px;">... et ${combinations.length - 1000} autres</div>`;
+            }
+
+            updateCounter();
+        }
+
+        // Notification
+        function showNotification(message) {
+            // Créer une notification temporaire
+            const notification = document.createElement('div');
+            notification.style.cssText = 'position: fixed; top: 20px; right: 20px; background: var(--gabon-green); color: white; padding: 15px 20px; border-radius: 8px; box-shadow: 0 4px 12px rgba(0,0,0,0.3); z-index: 10000; animation: slideIn 0.3s ease-out;';
+            notification.textContent = message;
+            document.body.appendChild(notification);
+
+            setTimeout(() => {
+                notification.style.animation = 'slideOut 0.3s ease-out';
+                setTimeout(() => notification.remove(), 300);
+            }, 5000);
+        }
+
+        // Ajouter les animations CSS
+        const style = document.createElement('style');
+        style.textContent = `
+            @keyframes slideIn {
+                from { transform: translateX(100%); opacity: 0; }
+                to { transform: translateX(0); opacity: 1; }
+            }
+            @keyframes slideOut {
+                from { transform: translateX(0); opacity: 1; }
+                to { transform: translateX(100%); opacity: 0; }
+            }
+        `;
+        document.head.appendChild(style);
+
         // DOM Elements
         const numPartantsInput = document.getElementById('num-partants');
         const tailleCombinaisonInput = document.getElementById('taille-combinaison');
@@ -824,6 +1055,20 @@
                     filterApplied = false;
                     currentFiltered = result.filtered;
 
+                    // Vérifier l'abonnement avant d'afficher les résultats
+                    if (!abonnementActif) {
+                        // Stocker les résultats pour affichage après paiement
+                        lastFilteredCombinations = result.combinations;
+                        lastFilterData = {
+                            filtered: result.filtered,
+                            has_more: result.has_more,
+                            results_synthesis: result.results_synthesis,
+                            no_filter: true
+                        };
+                        afficherMessagePaiement(result.filtered);
+                        return;
+                    }
+
                     resultsOutputDiv.innerHTML = result.combinations.map(c =>
                         `<div class="combination-item">${c.join(' - ')}</div>`
                     ).join('');
@@ -865,6 +1110,33 @@
 
                 filterApplied = true;
                 currentFiltered = result.filtered;
+
+                // Vérifier l'abonnement avant d'afficher les résultats
+                if (!abonnementActif) {
+                    // Stocker les résultats pour affichage après paiement
+                    lastFilteredCombinations = result.combinations;
+                    lastFilterData = {
+                        filtered: result.filtered,
+                        has_more: result.has_more,
+                        results_synthesis: result.results_synthesis,
+                        no_filter: false
+                    };
+
+                    // Mettre à jour currentSynthesis pour les filtres de poids
+                    if (result.results_synthesis && result.results_synthesis.length > 0) {
+                        currentSynthesis.results = result.results_synthesis.map(r => [r.horse, r.count]);
+                        const sortedResults = [...result.results_synthesis].sort((a, b) => b.count - a.count);
+                        const resultsText = sortedResults.map(r => `${r.horse} (${r.count})`).join(' - ');
+                        document.getElementById('results-synthesis').textContent = resultsText || 'Aucun résultat';
+                    } else {
+                        currentSynthesis.results = [];
+                        document.getElementById('results-synthesis').textContent = 'Aucun résultat';
+                    }
+
+                    afficherMessagePaiement(result.filtered);
+                    updateCounter();
+                    return;
+                }
 
                 resultsOutputDiv.innerHTML = result.combinations.map(c =>
                     `<div class="combination-item">${c.join(' - ')}</div>`

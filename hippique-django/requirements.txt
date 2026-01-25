@@ -8,6 +8,7 @@ dj-database-url>=2.0.0
 
 # Server
 gunicorn>=21.0.0
+whitenoise>=6.0
 
 # Configuration
 python-decouple>=3.8
@@ -17,3 +18,9 @@ Pillow>=10.0.0
 
 # Utilities
 python-dateutil>=2.8.0
+
+# HTTP & API
+requests>=2.31.0
+
+# JWT for device authentication
+PyJWT>=2.8.0

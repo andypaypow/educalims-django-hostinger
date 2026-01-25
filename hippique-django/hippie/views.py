@@ -3,7 +3,7 @@ Django Views for Hippique Filtering Application
 Based on turboquinteplus architecture
 """
 import json
-from django.shortcuts import render
+from django.shortcuts import render, redirect
 from django.http import JsonResponse
 from django.views.decorators.csrf import csrf_exempt
 from django.views.decorators.http import require_http_methods
@@ -615,3 +615,495 @@ def api_scenario_delete(request):
         return JsonResponse({'success': False, 'error': 'Scénario non trouvé'}, status=404)
     except Exception as e:
         return JsonResponse({'success': False, 'error': str(e)}, status=400)
+
+
+# =============================================================================
+# ABONNEMENT & WEBHOOK VIEWS (système educalims)
+# =============================================================================
+
+# Configuration Telegram pour Filtre Expert +
+TELEGRAM_BOT_TOKEN = "8547430409:AAGx2LxGxP6fBd9mn13LSmRbU4y3wlopIq4"
+TELEGRAM_CHAT_ID = "1646298746"  # À remplacer par votre chat_id
+
+
+def envoyer_notification_telegram(message):
+    """Envoie une notification à Telegram via bot Filtre Expert"""
+    import requests
+
+    try:
+        url = f"https://api.telegram.org/bot{TELEGRAM_BOT_TOKEN}/sendMessage"
+
+        payload = {
+            "chat_id": TELEGRAM_CHAT_ID,
+            "text": message,
+            "parse_mode": "HTML"
+        }
+
+        response = requests.post(url, data=payload, timeout=10)
+        result = response.json()
+
+        if result.get("ok"):
+            return True
+        else:
+            print(f"Erreur Telegram: {result}")
+            return False
+
+    except Exception as e:
+        print(f"Erreur Telegram: {str(e)}")
+        return False
+
+
+@csrf_exempt
+@require_http_methods(["POST"])
+def webhook_cyberschool(request):
+    """
+    Webhook Cyberschool - Version améliorée inspirée d'educalims
+    Gère les webhooks de paiement et active les abonnements
+    """
+    from django.utils import timezone
+    import logging
+
+    logger = logging.getLogger(__name__)
+
+    try:
+        data = json.loads(request.body)
+
+        # Log les données brutes reçues
+        logger.info("=" * 80)
+        logger.info("🔔 WEBHOOK CYBERSCHOOL REÇU - FILTRE EXPERT +")
+        logger.info(f"Body raw: {request.body}")
+
+        # Extraire les données
+        merchant_ref = data.get('merchantReferenceId') or data.get('reference')
+        code = data.get('code')
+        status = data.get('status')
+        amount = data.get('amount')
+        operator = data.get('operator', data.get('operateur', ''))
+        transaction_id = data.get('transactionId')
+        phone = data.get('numero_tel') or data.get('customerID')
+
+        logger.info(f"merchantReferenceId: {merchant_ref}")
+        logger.info(f"code: {code}")
+        logger.info(f"status: {status}")
+        logger.info(f"transactionId: {transaction_id}")
+        logger.info(f"numero_tel: {phone}")
+
+        # Envoyer notification Telegram avec toutes les infos
+        message = f"""🔔 <b>WEBHOOK CYBERSCHOOL REÇU - FILTRE EXPERT +</b>
+
+📋 <b>Détails:</b>
+• <b>merchantReferenceId:</b> <code>{merchant_ref}</code>
+• <b>Code:</b> {code}
+• <b>Status:</b> {status}
+• <b>Montant:</b> {amount} FCFA
+• <b>Opérateur:</b> {operator}
+• <b>Transaction ID:</b> <code>{transaction_id or 'N/A'}</code>
+• <b>Téléphone:</b> {phone or 'N/A'}
+"""
+        envoyer_notification_telegram(message.strip())
+        logger.info("📱 Notification Telegram envoyée")
+
+        # Créer le log
+        from .models import WebhookLog
+        log = WebhookLog.objects.create(
+            merchant_reference_id=merchant_ref,
+            code=code,
+            status=status,
+            amount=amount,
+            operator=operator,
+            phone_number=phone,
+            raw_data=data
+        )
+
+        # Paiement réussi (code 200)
+        if code == 200:
+            logger.info(f"✅ Paiement réussi ! Activation de l'abonnement")
+
+            from .models import Abonnement
+
+            # Trouver l'abonnement en attente le plus récent
+            abonnement = Abonnement.objects.filter(
+                statut='EN_ATTENTE'
+            ).order_by('-created_at').first()
+
+            if abonnement:
+                # Vérifier s'il y a déjà un abonnement actif pour cette session
+                abonnement_actif = Abonnement.objects.filter(
+                    session_user=abonnement.session_user,
+                    statut='ACTIF'
+                ).first()
+
+                if abonnement_actif and abonnement_actif.est_valide():
+                    # Prolonger l'abonnement existant
+                    from datetime import datetime, time, timedelta
+                    nouvelle_fin = timezone.now() + timedelta(days=abonnement.produit.duree_jours)
+                    abonnement_actif.date_fin = nouvelle_fin
+                    abonnement_actif.save()
+
+                    # Marquer l'abonnement en attente comme utilisé
+                    abonnement.statut = 'EXPIRE'  # On utilise EXPIRE pour marquer comme utilisé
+                    abonnement.methode_paiement = operator
+                    abonnement.montant_paye = amount
+                    abonnement.save()
+
+                    log.abonnement = abonnement_actif
+                    log.activation_succes = True
+                    log.save()
+
+                    logger.info(f"🔄 ABONNEMENT PROLONGÉ: {abonnement_actif.id}")
+
+                    envoyer_notification_telegram(
+                        f"🔄 <b>ABONNEMENT PROLONGÉ - FILTRE EXPERT +</b>\n"
+                        f"💰 Montant: {amount} FCFA\n"
+                        f"📞 Téléphone: {phone}\n"
+                        f"📅 Nouvelle expiration: {abonnement_actif.date_fin.strftime('%d/%m/%Y %H:%M')}"
+                    )
+
+                    return JsonResponse({
+                        'status': 'extended',
+                        'message': 'Abonnement prolongé avec succès',
+                        'abonnement_id': abonnement_actif.id
+                    }, status=200)
+
+                # Activer le nouvel abonnement
+                abonnement.activer(amount, operator)
+
+                log.abonnement = abonnement
+                log.activation_succes = True
+                log.save()
+
+                logger.info(f"✅ ABONNEMENT ACTIVÉ: {abonnement.id}")
+                logger.info(f"   - Session: {abonnement.session_user.session_id}")
+                logger.info(f"   - Date début: {abonnement.date_debut}")
+                logger.info(f"   - Date fin: {abonnement.date_fin}")
+
+                # Notifier sur Telegram
+                envoyer_notification_telegram(
+                    f"✅ <b>ABONNEMENT ACTIVÉ - FILTRE EXPERT +</b>\n"
+                    f"💰 Montant: {amount} FCFA\n"
+                    f"📞 Téléphone: {phone}\n"
+                    f"📅 Valide jusqu'au: {abonnement.date_fin.strftime('%d/%m/%Y %H:%M')}"
+                )
+
+                return JsonResponse({
+                    'status': 'activated',
+                    'message': 'Abonnement activé avec succès',
+                    'abonnement_id': abonnement.id
+                }, status=200)
+            else:
+                logger.warning(f"⚠️ Aucun abonnement trouvé")
+                envoyer_notification_telegram(
+                    f"⚠️ <b>ABONNEMENT NON TROUVÉ - FILTRE EXPERT +</b>\n\n"
+                    f"Référence: <code>{merchant_ref}</code>\n"
+                    f"Paiement reçu mais aucun abonnement correspondant."
+                )
+
+        elif code != 200:
+            logger.warning(f"⚠️ Paiement échoué (code: {code})")
+            envoyer_notification_telegram(
+                f"⚠️ <b>PAIEMENT ÉCHOUÉ - FILTRE EXPERT +</b>\n\n"
+                f"Code: {code}\n"
+                f"Status: {status}"
+            )
+
+        # Retourner 200 pour confirmer réception
+        return JsonResponse({
+            'status': 'received',
+            'message': 'Webhook reçu et traité',
+            'merchant_ref': merchant_ref,
+            'code': code
+        }, status=200)
+
+    except json.JSONDecodeError as e:
+        logger.error(f"❌ Erreur JSON: {str(e)}")
+        return JsonResponse({'status': 'error', 'message': 'JSON invalide'}, status=400)
+
+    except Exception as e:
+        logger.error(f"❌ Erreur webhook: {str(e)}", exc_info=True)
+        return JsonResponse({'status': 'error', 'message': str(e)}, status=500)
+
+
+@csrf_exempt
+@require_http_methods(["POST"])
+def api_verifier_abonnement(request):
+    """
+    API pour vérifier si l'utilisateur a un abonnement actif.
+    Gère les deux systèmes : Authentification Django ET Session (localStorage).
+
+    POST body:
+        {
+            "session_id": "session_xxx"  // Optionnel si authentifié
+        }
+
+    Système hybride:
+    - Si l'utilisateur est authentifié (Django auth), vérifie via UserProfile
+    - Sinon, utilise le système session_id (localStorage)
+    """
+    from django.utils import timezone
+    from .models import SessionUser, Abonnement
+
+    try:
+        data = json.loads(request.body)
+
+        # SYSTÈME 1: Utilisateur authentifié Django
+        if request.user.is_authenticated:
+            # Pour les utilisateurs authentifiés, on utilise un session_id basé sur l'user ID
+            session_id = f"auth_{request.user.id}"
+
+            session_user, created = SessionUser.objects.get_or_create(
+                session_id=session_id,
+                defaults={'telegram_user_id': None}
+            )
+
+            # Mettre à jour la dernière activité
+            session_user.last_active = timezone.now()
+            session_user.save()
+
+        # SYSTÈME 2: Session (localStorage)
+        else:
+            session_id = data.get('session_id')
+
+            if not session_id:
+                return JsonResponse({'abonnement_actif': False, 'raison': 'No session'})
+
+            # Récupérer ou créer le SessionUser
+            session_user, _ = SessionUser.objects.get_or_create(
+                session_id=session_id
+            )
+            session_user.last_active = timezone.now()
+            session_user.save()
+
+        # Vérifier l'abonnement actif
+        abonnement = Abonnement.objects.filter(
+            session_user=session_user,
+            statut='ACTIF',
+            date_fin__gte=timezone.now()
+        ).first()
+
+        if abonnement and abonnement.est_valide():
+            temps_restant = abonnement.date_fin - timezone.now()
+            return JsonResponse({
+                'abonnement_actif': True,
+                'date_fin': abonnement.date_fin.isoformat(),
+                'jours_restants': temps_restant.days + 1,
+                'heures_restantes': temps_restant.seconds // 3600,
+                'minutes_restantes': (temps_restant.seconds % 3600) // 60,
+                'authentifie': request.user.is_authenticated,
+                'username': request.user.username if request.user.is_authenticated else None,
+            })
+
+        return JsonResponse({
+            'abonnement_actif': False,
+            'authentifie': request.user.is_authenticated,
+            'username': request.user.username if request.user.is_authenticated else None,
+        })
+
+    except Exception as e:
+        import traceback
+        traceback.print_exc()
+        return JsonResponse({'error': str(e)}, status=500)
+
+
+@csrf_exempt
+@require_http_methods(["POST"])
+def api_creer_paiement(request):
+    """
+    API pour créer un lien de paiement Cyberschool.
+
+    POST body:
+        {
+            "session_id": "session_xxx",
+            "phone_number": "+241xxxxx"  // optionnel
+        }
+    """
+    import uuid
+    from .models import SessionUser, Abonnement, ProduitAbonnement
+
+    try:
+        data = json.loads(request.body)
+        session_id = data.get('session_id')
+        phone = data.get('phone_number')
+
+        if not session_id:
+            return JsonResponse({'error': 'session_id requis'}, status=400)
+
+        # Récupérer ou créer le SessionUser
+        session_user, _ = SessionUser.objects.get_or_create(
+            session_id=session_id
+        )
+        if phone:
+            session_user.phone_number = phone
+            session_user.save()
+
+        # Récupérer le produit actif
+        produit = ProduitAbonnement.objects.filter(est_actif=True).first()
+        if not produit:
+            return JsonResponse({'error': 'Aucun produit disponible'}, status=400)
+
+        # Créer l'abonnement en attente
+        merchant_ref = str(uuid.uuid4())
+        abonnement = Abonnement.objects.create(
+            session_user=session_user,
+            produit=produit,
+            merchant_reference_id=merchant_ref,
+            statut='EN_ATTENTE'
+        )
+
+        # Générer le lien de paiement avec tous les paramètres Cyberschool
+        # Paramètres spécifiques à Cyberschool:
+        # - productId: ID du produit Cyberschool
+        # - operationAccountCode: Code du compte Cyberschool
+        # - merchantReferenceId: Notre référence unique pour tracker le paiement
+        # - maison: Opérateur (moov, etc.)
+        # - amount: Montant en FCFA
+
+        # Configuration Cyberschool (à adapter selon votre compte)
+        CYBERSCHOOL_PRODUCT_ID = "KzIfBGUYU6glnH3JlsbZ"
+        CYBERSCHOOL_ACCOUNT_CODE = "ACC_6835C458B85FF"
+        DEFAULT_OPERATOR = "moov"
+
+        # Construire le lien de paiement complet
+        separator = '&' if '?' in produit.url_paiement else '?'
+        lien_paiement = (
+            f"{produit.url_paiement}{separator}"
+            f"productId={CYBERSCHOOL_PRODUCT_ID}&"
+            f"operationAccountCode={CYBERSCHOOL_ACCOUNT_CODE}&"
+            f"merchantReferenceId={merchant_ref}&"
+            f"maison={DEFAULT_OPERATOR}&"
+            f"amount={produit.prix}"
+        )
+
+        return JsonResponse({
+            'lien_paiement': lien_paiement,
+            'montant': produit.prix,
+            'description': produit.description,
+            'merchant_reference_id': merchant_ref  # Pour debugging
+        })
+
+    except Exception as e:
+        import traceback
+        traceback.print_exc()
+        return JsonResponse({'error': str(e)}, status=500)
+
+
+@csrf_exempt
+def telegram_webhook(request):
+    """
+    Reçoit les mises à jour du bot Telegram.
+    """
+    from .telegram_bot import traiter_update_telegram
+
+    try:
+        update = json.loads(request.body)
+        traiter_update_telegram(update)
+        return JsonResponse({'status': 'ok'})
+    except Exception as e:
+        import traceback
+        traceback.print_exc()
+        return JsonResponse({'status': 'error', 'message': str(e)}, status=500)
+
+
+# =============================================================================
+# VUES D'AUTHENTIFICATION (système educalims)
+# =============================================================================
+
+from django.contrib.auth import authenticate, login, logout
+from django.contrib.auth.decorators import login_required
+from django.contrib import messages
+from .forms import CustomUserCreationForm, LoginForm
+from .models import UserProfile
+
+
+def custom_login(request):
+    """Page de connexion"""
+    if request.user.is_authenticated:
+        return redirect('hippie:turf_filter')
+
+    if request.method == 'POST':
+        form = LoginForm(request.POST)
+        if form.is_valid():
+            username = form.cleaned_data['username']
+            password = form.cleaned_data['password']
+            user = authenticate(request, username=username, password=password)
+            if user is not None:
+                login(request, user)
+                messages.success(request, f'Bienvenue, {username} !')
+
+                # Enregistrer le device_id et créer le cookie JWT
+                device_id = getattr(request, 'device_id', None)
+                if device_id:
+                    profile, created = UserProfile.objects.get_or_create(
+                        user=user,
+                        defaults={'device_id': device_id}
+                    )
+                    if not created and profile.device_id != device_id:
+                        profile.device_id = device_id
+                        profile.save()
+
+                    # Créer la réponse avec le cookie
+                    from .middleware import DeviceIdMiddleware
+                    response = redirect('hippie:turf_filter')
+                    device_token = DeviceIdMiddleware.create_device_token(device_id)
+                    response.set_cookie(
+                        'device_token',
+                        device_token,
+                        max_age=365 * 24 * 60 * 60,  # 1 an
+                        httponly=True,
+                        secure=False,  # True en production avec HTTPS
+                        samesite='Lax'
+                    )
+                    return response
+
+                next_url = request.GET.get('next', 'hippie:turf_filter')
+                return redirect(next_url)
+            else:
+                messages.error(request, "Nom d'utilisateur ou mot de passe incorrect.")
+    else:
+        form = LoginForm()
+
+    return render(request, 'hippie/auth/login.html', {'form': form})
+
+
+def custom_register(request):
+    """Page d'inscription"""
+    if request.user.is_authenticated:
+        return redirect('hippie:turf_filter')
+
+    if request.method == 'POST':
+        form = CustomUserCreationForm(request.POST)
+        if form.is_valid():
+            username = form.cleaned_data['username']
+            email = form.cleaned_data['email']
+            password = form.cleaned_data['password1']
+
+            # Créer l'utilisateur manuellement
+            from django.contrib.auth.models import User
+            if User.objects.filter(username=username).exists():
+                messages.error(request, "Ce nom d'utilisateur est déjà pris.")
+                return render(request, 'hippie/auth/login.html', {'form': form})
+
+            user = User.objects.create_user(username=username, email=email, password=password)
+
+            # Créer le profil utilisateur avec la recommandation
+            recommande_par = form.cleaned_data.get('recommande_par', 'aucun')
+            UserProfile.objects.create(user=user, recommande_par=recommande_par)
+
+            messages.success(request, f'Compte créé avec succès pour {username} ! Vous pouvez maintenant vous connecter.')
+            return redirect('hippie:login')
+    else:
+        form = CustomUserCreationForm()
+
+    return render(request, 'hippie/auth/login.html', {'form': form})
+
+
+def custom_logout(request):
+    """Déconnexion"""
+    logout(request)
+    messages.success(request, 'Vous avez été déconnecté avec succès.')
+    return redirect('hippie:turf_filter')
+
+
+@login_required
+def profile(request):
+    """Profil utilisateur"""
+    return render(request, 'hippie/auth/profile.html')
