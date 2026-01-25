@@ -1,0 +1,1877 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>🏇 Filtre Expert + - Filtrage de Combinaisons Hippiques</title>
+    <script src='https://cdn.jsdelivr.net/npm/tesseract.js@5/dist/tesseract.min.js' defer></script>
+
+    {% csrf_token %}
+    <link rel="stylesheet" href="{% static 'hippie/css/styles.css' %}">
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1>🏇 Filtre Expert +</h1>
+            <p class="subtitle">Application de filtrage de combinaisons hippiques</p>
+        </header>
+
+        <div class="grid-container">
+            <!-- Configuration -->
+            <div class="card">
+                <h2>⚙️ Configuration</h2>
+                <div class="form-group">
+                    <label for="num-partants">Nombre de partants (8-20) :</label>
+                    <input type="number" id="num-partants" value="16" min="8" max="20">
+                </div>
+                <div class="form-group">
+                    <label for="taille-combinaison">Taille de combinaison (2-7) :</label>
+                    <input type="number" id="taille-combinaison" value="6" min="2" max="7">
+                </div>
+                <div class="total-combinaisons" id="total-combinaisons-info">
+                    <strong>8008</strong> combinaisons possibles
+                </div>
+            </div>
+
+            <!-- Scénarios -->
+            <div class="card">
+                <h2>💾 Scénarios <span style="font-size: 0.8rem; font-weight: normal; color: #888;">(Sauvegardez vos configurations)</span></h2>
+                <div style="display: flex; gap: 10px; margin-bottom: 15px;">
+                    <button id="btn-save-scenario" class="btn-save">💾 Sauvegarder</button>
+                    <button id="btn-manage-scenarios" class="btn-manage">📂 Gérer</button>
+                </div>
+                <div id="scenarios-list" style="display: none;">
+                    <!-- Liste des scénarios chargée dynamiquement -->
+                </div>
+            </div>
+
+            <!-- Pronostics -->
+            <div class="card">
+                <h2>✍️ Pronostics</h2>
+                <p style="margin-bottom: 10px; color: #888;">Entrez vos pronostics, un groupe par ligne (optionnel) :</p>
+                <textarea id="pronostics" rows="5" placeholder="Ex:&#10;Favoris : 1, 2, 3&#10;Outsiders : 4, 7, 10&#10;Bases : 5, 8"></textarea>
+                <div id="parsed-groups"></div>
+            </div>
+        </div>
+
+        <!-- Synthèse -->
+        <div class="card">
+            <h2>📈 Synthèse des Pronostics</h2>
+            <div style="margin-bottom: 15px;">
+                <h4 style="color: var(--primary-color);">Par Citation</h4>
+                <div id="citation-synthesis" class="synthesis-compact">En attente de pronostics...</div>
+            </div>
+            <div>
+                <h4 style="color: var(--primary-color);">Par Position (Pondéré)</h4>
+                <div id="position-synthesis" class="synthesis-compact">En attente de pronostics...</div>
+            </div>
+        </div>
+
+        <!-- Filtres -->
+        <div class="card">
+            <h2>🔍 Filtres <span style="font-size: 0.8rem; font-weight: normal; color: #888;">(désactivés par défaut = aucun filtrage)</span></h2>
+            <div class="filter-container" id="filter-container">
+                <!-- Expert 1 (OU) -->
+                <div class="filter-box">
+                    <div class="filter-header">
+                        <div class="filter-infobox">
+                            <h3>Expert 1 (OU)</h3>
+                            <span class="infobox-icon">?</span>
+                            <div class="infobox-tooltip">
+                                <h4>🎯 Expert 1 - Logique OU (Inclusif)</h4>
+                                <p><strong>Objectif :</strong> Garder les combinaisons qui couvrent plusieurs groupes</p>
+                                <ul>
+                                    <li>Vérifie si <strong>au moins X</strong> chevaux de la combinaison sont présents</li>
+                                    <li>Dans <strong>au moins Y</strong> groupes différents</li>
+                                    <li>Logique OU : un cheval peut valider pour plusieurs groupes</li>
+                                </ul>
+                                <div class="example">
+                                    <strong>Exemple :</strong> Avec X=2, Y=1 et groupes {1,2}, {3,4}<br>
+                                    → [1,5,6] ✅ (1 cheval dans {1,2})<br>
+                                    → [1,3,5] ✅ (2 chevaux dans 2 groupes)<br>
+                                    → [5,6,7] ❌ (aucun cheval dans les groupes)
+                                </div>
+                            </div>
+                        </div>
+                        <label class="switch">
+                            <input type="checkbox" class="filter-enable">
+                            <span class="slider"></span>
+                        </label>
+                    </div>
+                    <div class="form-group" style="display: flex; gap: 10px;">
+                        <div>
+                            <label>Chevaux min (X):</label>
+                            <input type="number" class="chevaux-min" value="0" min="0" max="8">
+                        </div>
+                        <div>
+                            <label>Groupes min (Y):</label>
+                            <input type="number" class="groupes-min" value="0" min="0" max="10">
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Expert 2 (ET) -->
+                <div class="filter-box">
+                    <div class="filter-header">
+                        <div class="filter-infobox">
+                            <h3>Expert 2 (ET)</h3>
+                            <span class="infobox-icon">?</span>
+                            <div class="infobox-tooltip">
+                                <h4>🎯 Expert 2 - Logique ET (Exclusif)</h4>
+                                <p><strong>Objectif :</strong> Garder les combinaisons avec des chevaux présents dans TOUS les groupes spécifiés</p>
+                                <ul>
+                                    <li>Vérifie si <strong>au moins X</strong> chevaux différents de la combinaison</li>
+                                    <li>Sont présents dans <strong>chacun</strong> des Y groupes</li>
+                                    <li>Logique ET : chaque cheval compte pour un seul groupe à la fois</li>
+                                </ul>
+                                <div class="example">
+                                    <strong>Exemple :</strong> Avec X=1, Y=2 et groupes {1,2}, {3,4}<br>
+                                    → [1,3,5] ✅ (1 cheval dans {1,2} ET 1 dans {3,4})<br>
+                                    → [1,2,3] ✅ (2 chevaux dans {1,2} ET 1 dans {3,4})<br>
+                                    → [1,5,6] ❌ (aucun cheval dans {3,4})<br>
+                                    → [5,6,7] ❌ (aucun cheval dans les groupes)
+                                </div>
+                            </div>
+                        </div>
+                        <label class="switch">
+                            <input type="checkbox" class="filter-enable">
+                            <span class="slider"></span>
+                        </label>
+                    </div>
+                    <div class="form-group" style="display: flex; gap: 10px;">
+                        <div>
+                            <label>Chevaux min (X):</label>
+                            <input type="number" class="chevaux-min" value="0" min="0" max="8">
+                        </div>
+                        <div>
+                            <label>Groupes min (Y):</label>
+                            <input type="number" class="groupes-min" value="0" min="0" max="10">
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Pairs/Impairs -->
+                <div class="filter-box">
+                    <div class="filter-header">
+                        <div class="filter-infobox">
+                            <h3>Pairs / Impairs</h3>
+                            <span class="infobox-icon">?</span>
+                            <div class="infobox-tooltip">
+                                <h4>🔢 Pairs / Impairs</h4>
+                                <p><strong>Objectif :</strong> Contrôler la répartition des numéros pairs et impairs dans la combinaison</p>
+                                <ul>
+                                    <li>Compte le nombre de numéros <strong>pairs</strong> (2, 4, 6, 8, ...)</li>
+                                    <li>Les impairs sont déduits : <code>impairs = taille - pairs</code></li>
+                                    <li>Utile pour équilibrer les combinaisons</li>
+                                </ul>
+                                <div class="example">
+                                    <strong>Exemple :</strong> Combinaison de 6 chevaux avec pairs entre 2 et 4<br>
+                                    → [1,2,3,4,5,6] ✅ (3 pairs: 2,4,6)<br>
+                                    → [2,4,6,8,10,12] ❌ (6 pairs - trop)<br>
+                                    → [1,3,5,7,9,11] ❌ (0 pair - pas assez)
+                                </div>
+                            </div>
+                        </div>
+                        <label class="switch">
+                            <input type="checkbox" class="filter-enable">
+                            <span class="slider"></span>
+                        </label>
+                    </div>
+                    <div class="form-group" style="display: flex; gap: 10px;">
+                        <div>
+                            <label>Pairs Min:</label>
+                            <input type="number" class="even-min" value="0" min="0" max="8">
+                        </div>
+                        <div>
+                            <label>Pairs Max:</label>
+                            <input type="number" class="even-max" value="8" min="0" max="8">
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Petits/Grands -->
+                <div class="filter-box">
+                    <div class="filter-header">
+                        <div class="filter-infobox">
+                            <h3>Petits / Grands</h3>
+                            <span class="infobox-icon">?</span>
+                            <div class="infobox-tooltip">
+                                <h4>📏 Petits / Grands</h4>
+                                <p><strong>Objectif :</strong> Séparer les chevaux en deux catégories selon un seuil</p>
+                                <ul>
+                                    <li><strong>Petits :</strong> numéros ≤ limite (ex: 1-10)</li>
+                                    <li><strong>Grands :</strong> numéros > limite (ex: 11-16)</li>
+                                    <li>La limite divise l'ensemble des partants en deux groupes</li>
+                                </ul>
+                                <div class="example">
+                                    <strong>Exemple :</strong> Limite=10, petits entre 2 et 4<br>
+                                    → [1,2,3,11,12,13] ✅ (3 petits: 1,2,3)<br>
+                                    → [1,2,3,4,5,6] ❌ (6 petits - trop)<br>
+                                    → [11,12,13,14,15,16] ❌ (0 petit - pas assez)
+                                </div>
+                            </div>
+                        </div>
+                        <label class="switch">
+                            <input type="checkbox" class="filter-enable">
+                            <span class="slider"></span>
+                        </label>
+                    </div>
+                    <div class="form-group" style="display: flex; gap: 10px;">
+                        <div>
+                            <label>Limite:</label>
+                            <input type="number" class="limit" value="10" min="1" max="20">
+                        </div>
+                        <div>
+                            <label>Petits Min:</label>
+                            <input type="number" class="small-min" value="0" min="0" max="8">
+                        </div>
+                        <div>
+                            <label>Petits Max:</label>
+                            <input type="number" class="small-max" value="8" min="0" max="8">
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Suites Consécutives -->
+                <div class="filter-box">
+                    <div class="filter-header">
+                        <div class="filter-infobox">
+                            <h3>Suites Consécutives</h3>
+                            <span class="infobox-icon">?</span>
+                            <div class="infobox-tooltip">
+                                <h4>🔗 Suites Consécutives</h4>
+                                <p><strong>Objectif :</strong> Contrôler la présence de numéros qui se suivent</p>
+                                <ul>
+                                    <li>Une <strong>suite</strong> = plusieurs numéros consécutifs (ex: 3-4-5)</li>
+                                    <li>Mesure la <strong>longueur maximale</strong> d'une suite dans la combinaison</li>
+                                    <li>Permet d'éviter ou de favoriser les suites</li>
+                                </ul>
+                                <div class="example">
+                                    <strong>Exemple :</strong> Suite entre 2 et 3<br>
+                                    → [1,2,3,7,10,15] ✅ (suite de 3: 1-2-3)<br>
+                                    → [1,2,3,4,10,15] ❌ (suite de 4: 1-2-3-4 - trop long)<br>
+                                    → [1,3,5,7,10,15] ✅ (suite de 1: aucun numéro consécutif)<br>
+                                    → [1,2,4,5,6,10] ✅ (suite de 3: 4-5-6)
+                                </div>
+                            </div>
+                        </div>
+                        <label class="switch">
+                            <input type="checkbox" class="filter-enable">
+                            <span class="slider"></span>
+                        </label>
+                    </div>
+                    <div class="form-group" style="display: flex; gap: 10px;">
+                        <div>
+                            <label>Suite Min:</label>
+                            <input type="number" class="consecutive-min" value="0" min="0" max="8">
+                        </div>
+                        <div>
+                            <label>Suite Max:</label>
+                            <input type="number" class="consecutive-max" value="8" min="0" max="8">
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Poids -->
+                <div class="filter-box weight-filter">
+                    <div class="filter-header">
+                        <div class="filter-infobox">
+                            <h3>⚖️ Poids</h3>
+                            <span class="infobox-icon">?</span>
+                            <div class="infobox-tooltip">
+                                <h4>⚖️ Poids des Chevaux</h4>
+                                <p><strong>Objectif :</strong> Filtrer selon la somme des poids des chevaux de la combinaison</p>
+                                <ul>
+                                    <li>Chaque cheval reçoit un <strong>poids</strong> (1 = le plus léger/important)</li>
+                                    <li>La combinaison doit avoir une somme de poids entre min et max</li>
+                                    <li>Les chevaux non-classés reçoivent un <strong>pénalité</strong> (n+1)</li>
+                                </ul>
+                                <div class="example">
+                                    <strong>Exemple :</strong> Source=Manuelle (5,1,8,2), min=5, max=10<br>
+                                    Poids: 5→1, 1→2, 8→3, 2→4, autres→17<br>
+                                    → [1,2,5] ✅ (poids=2+4+1=7)<br>
+                                    → [1,5,8] ✅ (poids=2+1+3=6)<br>
+                                    → [5,8,10] ❌ (poids=1+3+17=21 - trop lourd)
+                                </div>
+                            </div>
+                        </div>
+                        <label class="switch">
+                            <input type="checkbox" class="filter-enable">
+                            <span class="slider"></span>
+                        </label>
+                    </div>
+                    <div class="form-group">
+                        <label>Source des poids :</label>
+                        <select class="weight-source">
+                            <option value="default">Par Défaut (N° du cheval)</option>
+                            <option value="manual">Sélection Manuelle</option>
+                            <option value="citation">Synthèse par Citation</option>
+                            <option value="position">Synthèse par Position</option>
+                            <option value="results">Synthèse des Résultats</option>
+                        </select>
+                    </div>
+                    <div class="form-group manual-input-container" style="display: none;">
+                        <label>Liste manuelle des chevaux (ordre de poids) :</label>
+                        <textarea class="manual-input" rows="2" placeholder="Ex: 5, 1, 8, 2, 10... (du plus léger au plus lourd)"></textarea>
+                    </div>
+                    <div class="form-group" style="display: flex; gap: 10px;">
+                        <div>
+                            <label>Poids Min:</label>
+                            <input type="number" class="weight-min" value="21" min="1">
+                        </div>
+                        <div>
+                            <label>Poids Max:</label>
+                            <input type="number" class="weight-max" value="81" min="1">
+                        </div>
+                    </div>
+                    <div class="weight-range-info" style="font-size: 0.8rem; text-align: center; color: var(--secondary-color);"></div>
+                </div>
+
+                <!-- Alternance -->
+                <div class="filter-box alternance-filter">
+                    <div class="filter-header">
+                        <div class="filter-infobox">
+                            <h3>🔄 Alternance</h3>
+                            <span class="infobox-icon">?</span>
+                            <div class="infobox-tooltip">
+                                <h4>🔄 Alternance</h4>
+                                <p><strong>Objectif :</strong> Mesurer les changements de sélection dans une liste ordonnée</p>
+                                <ul>
+                                    <li>Parcourt une liste ordonnée et compte les transitions Sélectionné→Non-Sélectionné</li>
+                                    <li>Alternance max théorique = 2×k (k=taille de combinaison)</li>
+                                    <li>Permet de favoriser les combinaisons "mixtes"</li>
+                                </ul>
+                                <div class="example">
+                                    <strong>Exemple :</strong> Liste=[1,2,3,4,5,6,7,8], Combinaison=[1,3,6]<br>
+                                    Parcours: ✓✗✓✗✓✗✗✗ → Alternance=5<br>
+                                    → [1,3,6] ✅ (5 alternances)<br>
+                                    → [1,2,3] ❌ (1 alternance: ✓✓✓✗✗✗✗)<br>
+                                    → [1,3,5,7,9,11] ✅ (12 alternances = max)
+                                </div>
+                            </div>
+                        </div>
+                        <label class="switch">
+                            <input type="checkbox" class="filter-enable">
+                            <span class="slider"></span>
+                        </label>
+                    </div>
+                    <div class="form-group">
+                        <label>Source de la liste ordonnée :</label>
+                        <select class="alternance-source">
+                            <option value="default">Par Défaut (N° du cheval)</option>
+                            <option value="manual">Sélection Manuelle</option>
+                            <option value="citation">Synthèse par Citation</option>
+                            <option value="position">Synthèse par Position</option>
+                            <option value="results">Synthèse des Résultats</option>
+                        </select>
+                    </div>
+                    <div class="form-group manual-input-container-alt" style="display: none;">
+                        <label>Liste manuelle ordonnée :</label>
+                        <textarea class="manual-input-alt" rows="2" placeholder="Ex: 1, 3, 5, 2, 8, 10... (ordre important)"></textarea>
+                    </div>
+                    <div class="form-group" style="display: flex; gap: 10px;">
+                        <div>
+                            <label>Alt. Min:</label>
+                            <input type="number" class="alternance-min" value="0" min="0" max="12">
+                        </div>
+                        <div>
+                            <label>Alt. Max:</label>
+                            <input type="number" class="alternance-max" value="12" min="0" max="12">
+                        </div>
+                    </div>
+                    <div class="alternance-info" style="font-size: 0.8rem; text-align: center; color: var(--secondary-color);">Max théorique: --</div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Résultats -->
+        <div class="card">
+            <h2>📊 Résultats</h2>
+            <div class="results-summary" id="results-summary">
+                <strong>8008</strong> combinaisons possibles - Aucun filtre actif
+            </div>
+            <div id="loader" style="display: none;"><div class="loader"></div></div>
+            <div class="results-output" id="results-output"></div>
+        </div>
+
+        <!-- Synthèse des Résultats -->
+        <div class="card" style="border-left: 5px solid var(--success-color);">
+            <h2 style="color: var(--success-color);">🏆 Synthèse des Résultats</h2>
+            <p style="font-size: 0.9rem; color: #888; margin-bottom: 15px;">Synthèse générale issue des combinaisons filtrées</p>
+            <div class="synthesis-compact" id="results-synthesis" style="background: linear-gradient(135deg, #1a3d1a, #0d260d);">
+                En attente de filtrage...
+            </div>
+        </div>
+    </div>
+
+    <!-- Floating Counter -->
+    <div id="floating-counter" class="floating-btn">8008/8008</div>
+
+    <!-- Debug Log Panel -->
+    <div id="debug-log" style="position: fixed; bottom: 10px; right: 10px; width: 500px; max-height: 400px; overflow-y: auto; background: rgba(0,0,0,0.95); color: #0f0; font-family: monospace; font-size: 11px; padding: 10px; border-radius: 5px; z-index: 10000; display: block;">
+        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 5px; border-bottom: 1px solid #0f0; padding-bottom: 5px;">
+            <strong>🔍 DEBUG LOG</strong>
+            <button onclick="clearDebugLog(); document.getElementById('debug-log').style.display='none'" style="background: #f00; color: white; border: none; padding: 2px 8px; cursor: pointer; border-radius: 3px;">✕</button>
+        </div>
+        <div id="debug-log-content"></div>
+    </div>
+
+    <!-- Informations de la course -->
+    <div class="card">
+        <h2>🏇 Informations de la Course <span style="font-size: 0.8rem; font-weight: normal; color: #888;">(Optionnel - pour sauvegarde du scénario)</span></h2>
+        <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 15px;">
+            <div class="form-group">
+                <label for="course-date">📅 Date de la course :</label>
+                <input type="date" id="course-date">
+            </div>
+            <div class="form-group">
+                <label for="course-name">🏟️ Nom de la course :</label>
+                <input type="text" id="course-name" placeholder="Ex: Prix d'Amérique" maxlength="200">
+            </div>
+            <div class="form-group">
+                <label for="course-arrivee">🏆 Arrivée (optionnel) :</label>
+                <input type="text" id="course-arrivee" placeholder="Ex: 1, 2, 3, 4, 5">
+            </div>
+        </div>
+    </div>
+
+    <!-- Modal pour sauvegarder un scénario -->
+    <div class="modal-overlay" id="save-scenario-modal">
+        <div class="modal-content" style="max-width: 500px;">
+            <h3>💾 Sauvegarder le Scénario</h3>
+            <div class="form-group">
+                <label for="scenario-name">Nom du scénario :</label>
+                <input type="text" id="scenario-name" placeholder="Ex: Mon filtre Quinté+ favori" maxlength="100">
+            </div>
+            <div class="form-group">
+                <label>📝 Description générée automatiquement :</label>
+                <div id="scenario-auto-description" style="background: var(--bg-secondary); padding: 10px; border-radius: 5px; font-size: 0.9rem; min-height: 80px; margin-bottom: 10px;">
+                    La description sera générée à partir des filtres actifs, des pronostics et du nombre de combinaisons restantes...
+                </div>
+                <div style="font-size: 0.8rem; color: var(--text-muted); margin-top: 5px;">
+                    💡 Vous pouvez modifier cette description si nécessaire
+                </div>
+                <textarea id="scenario-description" rows="3" style="margin-top: 10px;" placeholder="Description personnalisée (optionnel)"></textarea>
+            </div>
+            <div class="form-group">
+                <label style="display: flex; align-items: center; gap: 10px; cursor: pointer;">
+                    <input type="checkbox" id="scenario-favorite" style="width: auto;">
+                    <span>⭐ Marquer comme favori</span>
+                </label>
+            </div>
+            <div style="display: flex; gap: 10px; margin-top: 20px;">
+                <button id="btn-confirm-save" class="btn-save">Sauvegarder</button>
+                <button id="btn-cancel-save" class="btn-manage">Annuler</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Modal pour gérer les scénarios -->
+    <div class="modal-overlay" id="manage-scenarios-modal">
+        <div class="modal-content" style="max-width: 600px;">
+            <h3>📂 Mes Scénarios</h3>
+            <div id="scenarios-list-container" style="max-height: 400px; overflow-y: auto; margin-bottom: 20px;">
+                <p style="text-align: center; color: var(--text-muted);">Aucun scénario sauvegardé</p>
+            </div>
+            <button id="btn-close-manage" class="btn-manage" style="width: 100%;">Fermer</button>
+        </div>
+    </div>
+
+    <script>
+        const API_BASE = '{% url "hippie:api_combinations_count" %}'.split('api/')[0] + 'api/';
+
+        // Debug logging
+        function debugLog(message, data = null) {
+            const logContent = document.getElementById('debug-log-content');
+            const timestamp = new Date().toLocaleTimeString();
+            const logEntry = document.createElement('div');
+            logEntry.style.marginBottom = '5px';
+            logEntry.style.borderLeft = '2px solid #0f0';
+            logEntry.style.paddingLeft = '5px';
+
+            if (data !== null) {
+                logEntry.innerHTML = `<span style="color: #888;">[${timestamp}]</span> ${message}<br><span style="color: #ff0; font-size: 10px;">${JSON.stringify(data, null, 2)}</span>`;
+            } else {
+                logEntry.innerHTML = `<span style="color: #888;">[${timestamp}]</span> ${message}`;
+            }
+
+            logContent.appendChild(logEntry);
+            logContent.scrollTop = logContent.scrollHeight;
+
+            // Also log to console
+            console.log(message, data);
+        }
+
+        function clearDebugLog() {
+            document.getElementById('debug-log-content').innerHTML = '';
+        }
+
+        // API Calls
+        async function apiCall(endpoint, data) {
+            const response = await fetch(API_BASE + endpoint, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json', 'X-CSRFToken': getCsrfToken() },
+                body: JSON.stringify(data)
+            });
+            return await response.json();
+        }
+
+        function getCsrfToken() {
+            return document.querySelector('[name=csrfmiddlewaretoken]')?.value || '';
+        }
+
+        // State
+        let currentRawGroups = [];
+        let currentSynthesis = { citation: [], position: [], results: [] };
+        let currentTotal = 8008;
+        let currentFiltered = 8008;
+        let filterApplied = false;
+        let isLoadingScenario = false;  // Flag to prevent value overwriting during scenario load
+
+        // DOM Elements
+        const numPartantsInput = document.getElementById('num-partants');
+        const tailleCombinaisonInput = document.getElementById('taille-combinaison');
+        const pronosticsTextarea = document.getElementById('pronostics');
+        const totalCombinaisonsInfo = document.getElementById('total-combinaisons-info');
+        const parsedGroupsDiv = document.getElementById('parsed-groups');
+        const resultsSummaryDiv = document.getElementById('results-summary');
+        const resultsOutputDiv = document.getElementById('results-output');
+        const loader = document.getElementById('loader');
+        const filterContainer = document.getElementById('filter-container');
+        const floatingCounter = document.getElementById('floating-counter');
+
+        // Update Total Combinations
+        async function updateTotalCombinaisons() {
+            const n = parseInt(numPartantsInput.value);
+            const k = parseInt(tailleCombinaisonInput.value);
+
+            if (n < 8 || n > 20 || k < 2 || k > 7 || k > n) {
+                totalCombinaisonsInfo.innerHTML = '<strong>Paramètres invalides</strong>';
+                return;
+            }
+
+            try {
+                const result = await apiCall('combinations-count/', { n, k });
+                currentTotal = result.count;
+                currentFiltered = result.count;
+                filterApplied = false;
+
+                totalCombinaisonsInfo.innerHTML = `<strong>${result.count_formatted}</strong> combinaisons possibles`;
+                updateCounter();
+                updateResultsSummary();
+
+                // Update all filter bounds after config changes
+                updateAllFiltersBounds();
+
+                return result; // Return result for promise chaining
+            } catch (e) {
+                console.error('Error:', e);
+                throw e; // Re-throw to allow promise catching
+            }
+        }
+
+        // Update Counter Display
+        function updateCounter() {
+            const formattedTotal = currentTotal.toLocaleString('fr-FR');
+            const formattedFiltered = currentFiltered.toLocaleString('fr-FR');
+            floatingCounter.textContent = `${formattedFiltered}/${formattedTotal}`;
+        }
+
+        // Update Results Summary
+        function updateResultsSummary() {
+            if (!filterApplied) {
+                resultsSummaryDiv.innerHTML = `<strong>${currentTotal.toLocaleString('fr-FR')}</strong> combinaisons possibles - Aucun filtre actif`;
+            } else {
+                const rate = ((currentTotal - currentFiltered) / currentTotal * 100).toFixed(2);
+                const rateClass = rate > 90 ? 'color: var(--success-color)' : 'color: var(--danger-color)';
+                resultsSummaryDiv.innerHTML = `
+                    <strong>${currentFiltered.toLocaleString('fr-FR')}</strong> combinaisons conservées sur <strong>${currentTotal.toLocaleString('fr-FR')}</strong> |
+                    Taux de filtrage : <strong style="${rateClass}">${rate}%</strong>
+                `;
+            }
+        }
+
+        // Parse Pronostics
+        function parsePronostics() {
+            const text = pronosticsTextarea.value.trim();
+            const lines = text.split('\n');
+            currentRawGroups = [];
+
+            lines.forEach((line, idx) => {
+                line = line.trim();
+                if (!line) return;
+
+                const parts = line.split(':');
+                let name = `Groupe ${idx + 1}`;
+                let horses = [];
+
+                if (parts.length > 1) {
+                    name = parts[0].trim();
+                    const found = parts[1].match(/\d+/g);
+                    if (found) horses = [...new Set(found.map(Number))];
+                } else {
+                    const found = line.match(/\d+/g);
+                    if (found) horses = [...new Set(found.map(Number))];
+                }
+
+                if (horses.length > 0) {
+                    currentRawGroups.push({ name, horses, min: 0, max: horses.length });
+                }
+            });
+
+            return currentRawGroups;
+        }
+
+        // Render Groups
+        function renderParsedGroups(groups) {
+            if (groups.length === 0) {
+                parsedGroupsDiv.innerHTML = '';
+                return;
+            }
+
+            parsedGroupsDiv.innerHTML = groups.map(g => `
+                <div class="group">
+                    <span class="group-title">${g.name}:</span>
+                    [${g.horses.join(', ')}]
+                    <div class="group-filter-controls">
+                        <input type="number" class="group-min" value="0" min="0" max="${g.horses.length}">
+                        <span>-</span>
+                        <input type="number" class="group-max" value="${g.horses.length}" min="0" max="${g.horses.length}">
+                    </div>
+                </div>
+            `).join('');
+
+            // Add event listeners
+            parsedGroupsDiv.querySelectorAll('.group-min, .group-max').forEach(input => {
+                input.addEventListener('input', debounce(triggerFilter, 500));
+            });
+        }
+
+        // Update Synthesis
+        async function updateSynthesis() {
+            if (currentRawGroups.length === 0) {
+                document.getElementById('citation-synthesis').textContent = 'En attente de pronostics...';
+                document.getElementById('position-synthesis').textContent = 'En attente de pronostics...';
+                currentSynthesis = { citation: [], position: [], results: [] };
+                return;
+            }
+
+            try {
+                const result = await apiCall('synthesis/', { groups: currentRawGroups });
+                currentSynthesis = {
+                    citation: result.citation.map(c => [c.horse, c.count]),
+                    position: result.position.map(p => [p.horse, p.score])
+                };
+
+                document.getElementById('citation-synthesis').textContent =
+                    result.citation.map(c => c.horse).join(' - ');
+                document.getElementById('position-synthesis').textContent =
+                    result.position.map(p => p.horse).join(' - ');
+            } catch (e) {
+                console.error('Error:', e);
+            }
+        }
+
+        // Trigger Filter
+        async function triggerFilter() {
+            const n = parseInt(numPartantsInput.value);
+            const k = parseInt(tailleCombinaisonInput.value);
+
+            if (n < k || n < 8 || k < 2) {
+                resultsSummaryDiv.innerHTML = 'Paramètres invalides';
+                return;
+            }
+
+            // Get groups with min/max
+            const groups = Array.from(parsedGroupsDiv.children).map((div, idx) => ({
+                name: currentRawGroups[idx].name,
+                horses: currentRawGroups[idx].horses,
+                min: parseInt(div.querySelector('.group-min')?.value || 0),
+                max: parseInt(div.querySelector('.group-max')?.value || currentRawGroups[idx].horses.length)
+            }));
+
+            // Check if any filter is enabled OR if groups are defined
+            let hasActiveFilter = groups.length > 0;  // Groups count as active filter
+            const filters = {
+                expert1: [],
+                expert2: [],
+                even_odd: [],
+                small_large: [],
+                consecutive: [],
+                weight: [],
+                alternance: []
+            };
+
+            document.querySelectorAll('.filter-box').forEach(box => {
+                if (!box.querySelector('.filter-enable')?.checked) return;
+
+                hasActiveFilter = true;
+                const h3 = box.querySelector('h3')?.textContent || '';
+                const chevauxMin = parseInt(box.querySelector('.chevaux-min')?.value || 0);
+                const groupesMin = parseInt(box.querySelector('.groupes-min')?.value || 0);
+
+                if (h3.includes('Expert 1') || h3.includes('OU')) {
+                    filters.expert1.push({ chevaux_min: chevauxMin, groupes_min: groupesMin });
+                } else if (h3.includes('Expert 2') || h3.includes('ET')) {
+                    filters.expert2.push({ chevaux_min: chevauxMin, groupes_min: groupesMin });
+                } else if (h3.includes('Pairs') || h3.includes('Impairs')) {
+                    const evenMin = parseInt(box.querySelector('.even-min')?.value || 0);
+                    const evenMax = parseInt(box.querySelector('.even-max')?.value || k);
+                    filters.even_odd.push({ min: evenMin, max: evenMax });
+                } else if (h3.includes('Petits') || h3.includes('Grands')) {
+                    const limit = parseInt(box.querySelector('.limit')?.value || 10);
+                    const smallMin = parseInt(box.querySelector('.small-min')?.value || 0);
+                    const smallMax = parseInt(box.querySelector('.small-max')?.value || k);
+                    filters.small_large.push({ limit, min: smallMin, max: smallMax });
+                } else if (h3.includes('Suites') || h3.includes('Consécutives')) {
+                    const consecutiveMin = parseInt(box.querySelector('.consecutive-min')?.value || 0);
+                    const consecutiveMax = parseInt(box.querySelector('.consecutive-max')?.value || k);
+                    filters.consecutive.push({ min: consecutiveMin, max: consecutiveMax });
+                } else if (h3.includes('Poids') || h3.includes('⚖️')) {
+                    const source = box.querySelector('.weight-source')?.value || 'default';
+                    const min = parseInt(box.querySelector('.weight-min')?.value || 21);
+                    const max = parseInt(box.querySelector('.weight-max')?.value || 81);
+                    const manualList = box.querySelector('.manual-input')?.value || '';
+
+                    // Build weight map based on source
+                    let weightMap = {};
+
+                    if (source === 'default') {
+                        for (let i = 1; i <= n; i++) weightMap[i.toString()] = i;
+                    } else if (source === 'manual') {
+                        // Initialize ALL horses with penalty, then assign manual weights
+                        for (let i = 1; i <= n; i++) weightMap[i.toString()] = n + 1;
+                        const horses = manualList.match(/\d+/g) || [];
+                        horses.forEach((h, idx) => weightMap[h] = idx + 1);
+                    } else if (source === 'citation') {
+                        if (currentSynthesis.citation.length > 0) {
+                            // Initialize ALL horses with penalty, then assign citation weights
+                            for (let i = 1; i <= n; i++) weightMap[i.toString()] = n + 1;
+                            currentSynthesis.citation.forEach(([horse, count], idx) => weightMap[horse.toString()] = idx + 1);
+                        } else {
+                            // Fallback to default if no citation synthesis available
+                            console.warn('Synthèse citation vide, utilisation de la source par défaut');
+                            for (let i = 1; i <= n; i++) weightMap[i.toString()] = i;
+                        }
+                    } else if (source === 'position') {
+                        if (currentSynthesis.position.length > 0) {
+                            // Initialize ALL horses with penalty, then assign position weights
+                            for (let i = 1; i <= n; i++) weightMap[i.toString()] = n + 1;
+                            currentSynthesis.position.forEach(([horse, score], idx) => weightMap[horse.toString()] = idx + 1);
+                        } else {
+                            // Fallback to default if no position synthesis available
+                            console.warn('Synthèse position vide, utilisation de la source par défaut');
+                            for (let i = 1; i <= n; i++) weightMap[i.toString()] = i;
+                        }
+                    } else if (source === 'results') {
+                        if (currentSynthesis.results.length > 0) {
+                            // Initialize ALL horses with penalty, then assign results weights
+                            for (let i = 1; i <= n; i++) weightMap[i.toString()] = n + 1;
+                            // Sort results by count descending, then assign weights
+                            const sortedResults = [...currentSynthesis.results].sort((a, b) => b[1] - a[1]);
+                            sortedResults.forEach(([horse, count], idx) => weightMap[horse.toString()] = idx + 1);
+                        } else {
+                            // Fallback to default if no results synthesis available
+                            console.warn('Synthèse résultats vide, utilisation de la source par défaut');
+                            for (let i = 1; i <= n; i++) weightMap[i.toString()] = i;
+                        }
+                    }
+
+                    filters.weight.push({ min, max, map: weightMap, source });
+                } else if (h3.includes('Alternance') || h3.includes('🔄')) {
+                    const source = box.querySelector('.alternance-source')?.value || 'default';
+                    const min = parseInt(box.querySelector('.alternance-min')?.value || 0);
+                    const max = parseInt(box.querySelector('.alternance-max')?.value || 2 * k);
+                    const manualList = box.querySelector('.manual-input-alt')?.value || '';
+
+                    let sourceArray = [];
+                    if (source === 'default') {
+                        sourceArray = Array.from({length: n}, (_, i) => i + 1).map(String);
+                    } else if (source === 'manual') {
+                        sourceArray = (manualList.match(/\d+/g) || []).map(String);
+                    } else if (source === 'citation') {
+                        if (currentSynthesis.citation.length > 0) {
+                            sourceArray = currentSynthesis.citation.map(([h]) => h.toString());
+                        } else {
+                            // Fallback to default if no citation synthesis available
+                            console.warn('Synthèse citation vide, utilisation de la source par défaut');
+                            sourceArray = Array.from({length: n}, (_, i) => i + 1).map(String);
+                        }
+                    } else if (source === 'position') {
+                        if (currentSynthesis.position.length > 0) {
+                            sourceArray = currentSynthesis.position.map(([h]) => h.toString());
+                        } else {
+                            // Fallback to default if no position synthesis available
+                            console.warn('Synthèse position vide, utilisation de la source par défaut');
+                            sourceArray = Array.from({length: n}, (_, i) => i + 1).map(String);
+                        }
+                    }
+
+                    filters.alternance.push({ min, max, source: sourceArray });
+                }
+            });
+
+            // If no filters are active and no groups, show all combinations
+            if (!hasActiveFilter) {
+                loader.style.display = 'block';
+                resultsSummaryDiv.innerHTML = 'Chargement...';
+
+                try {
+                    const result = await apiCall('filter/', { n, k, groups: [], filters: {} });
+
+                    loader.style.display = 'none';
+                    filterApplied = false;
+                    currentFiltered = result.filtered;
+
+                    resultsOutputDiv.innerHTML = result.combinations.map(c =>
+                        `<div class="combination-item">${c.join(' - ')}</div>`
+                    ).join('');
+
+                    if (result.has_more) {
+                        resultsOutputDiv.innerHTML += `<div style="grid-column: 1/-1; text-align: center; color: var(--secondary-color); padding: 10px;">... et ${result.filtered - 1000} autres</div>`;
+                    }
+
+                    // Update results synthesis display and store for weight filter
+                    if (result.results_synthesis && result.results_synthesis.length > 0) {
+                        currentSynthesis.results = result.results_synthesis.map(r => [r.horse, r.count]);
+                        const sortedResults = [...result.results_synthesis].sort((a, b) => b.count - a.count);
+                        const resultsText = sortedResults.map(r => `${r.horse} (${r.count})`).join(' - ');
+                        document.getElementById('results-synthesis').textContent = resultsText || 'Aucun résultat';
+                    } else {
+                        currentSynthesis.results = [];
+                        document.getElementById('results-synthesis').textContent = 'Aucun résultat';
+                    }
+
+                    updateCounter();
+                    updateResultsSummary();
+                } catch (e) {
+                    console.error('Error:', e);
+                    loader.style.display = 'none';
+                    resultsSummaryDiv.innerHTML = 'Erreur lors du chargement';
+                }
+                return;
+            }
+
+            loader.style.display = 'block';
+            resultsOutputDiv.innerHTML = '';
+            resultsSummaryDiv.innerHTML = 'Filtrage en cours...';
+            floatingCounter.textContent = '...';
+
+            try {
+                const result = await apiCall('filter/', { n, k, groups, filters });
+
+                loader.style.display = 'none';
+
+                filterApplied = true;
+                currentFiltered = result.filtered;
+
+                resultsOutputDiv.innerHTML = result.combinations.map(c =>
+                    `<div class="combination-item">${c.join(' - ')}</div>`
+                ).join('');
+
+                if (result.has_more) {
+                    resultsOutputDiv.innerHTML += `<div style="grid-column: 1/-1; text-align: center; color: var(--secondary-color); padding: 10px;">... et ${result.filtered - 1000} autres</div>`;
+                }
+
+                // Update results synthesis display and store for weight filter
+                if (result.results_synthesis && result.results_synthesis.length > 0) {
+                    currentSynthesis.results = result.results_synthesis.map(r => [r.horse, r.count]);
+                    // Sort by count descending for display
+                    const sortedResults = [...result.results_synthesis].sort((a, b) => b.count - a.count);
+                    const resultsText = sortedResults.map(r => `${r.horse} (${r.count})`).join(' - ');
+                    document.getElementById('results-synthesis').textContent = resultsText || 'Aucun résultat';
+                } else {
+                    currentSynthesis.results = [];
+                    document.getElementById('results-synthesis').textContent = 'Aucun résultat';
+                }
+
+                updateCounter();
+                updateResultsSummary();
+            } catch (e) {
+                console.error('Error:', e);
+                loader.style.display = 'none';
+                resultsSummaryDiv.innerHTML = 'Erreur lors du filtrage';
+            }
+        }
+
+        // Debounce
+        let debounceTimer;
+        function debounce(func, wait) {
+            return function(...args) {
+                clearTimeout(debounceTimer);
+                debounceTimer = setTimeout(() => func.apply(this, args), wait);
+            };
+        }
+
+        // Event Listeners
+        numPartantsInput.addEventListener('input', () => {
+            updateTotalCombinaisons();
+        });
+
+        tailleCombinaisonInput.addEventListener('input', () => {
+            updateTotalCombinaisons();
+        });
+
+        pronosticsTextarea.addEventListener('input', () => {
+            const groups = parsePronostics();
+            renderParsedGroups(groups);
+            updateSynthesis();
+            triggerFilter();
+        });
+
+        // Filter event listeners
+        document.querySelectorAll('.filter-enable, .chevaux-min, .groupes-min, .even-min, .even-max, .small-min, .small-max, .limit, .consecutive-min, .consecutive-max, .weight-min, .weight-max, .alternance-min, .alternance-max, .weight-source, .alternance-source, .manual-input, .manual-input-alt').forEach(el => {
+            el.addEventListener('input', debounce(triggerFilter, 500));
+            el.addEventListener('change', debounce(triggerFilter, 500));
+        });
+
+        // Weight source change handler
+        document.querySelectorAll('.weight-source').forEach(select => {
+            select.addEventListener('change', function() {
+                const container = this.closest('.filter-box').querySelector('.manual-input-container');
+                container.style.display = this.value === 'manual' ? 'block' : 'none';
+                updateWeightInfo();
+                triggerFilter();
+            });
+        });
+
+        // Manual input change handler - recalculate bounds
+        document.querySelectorAll('.manual-input').forEach(textarea => {
+            textarea.addEventListener('input', debounce(() => {
+                updateWeightInfo();
+                triggerFilter();
+            }, 300));
+        });
+
+        // Alternance source change handler
+        document.querySelectorAll('.alternance-source').forEach(select => {
+            select.addEventListener('change', function() {
+                const container = this.closest('.filter-box').querySelector('.manual-input-container-alt');
+                container.style.display = this.value === 'manual' ? 'block' : 'none';
+                updateAlternanceInfo();
+                triggerFilter();
+            });
+        });
+
+        // Update weight range info with SMART min/max for ALL sources
+        function updateWeightInfo() {
+            const n = parseInt(numPartantsInput.value);
+            const k = parseInt(tailleCombinaisonInput.value);
+            document.querySelectorAll('.weight-filter').forEach(box => {
+                const source = box.querySelector('.weight-source').value;
+                const isEnabled = box.querySelector('.filter-enable')?.checked;
+                const infoDiv = box.querySelector('.weight-range-info');
+                const minInput = box.querySelector('.weight-min');
+                const maxInput = box.querySelector('.weight-max');
+                const manualInput = box.querySelector('.manual-input');
+
+                let minWeight = 1;
+                let maxWeight = k * (2 * n - k + 1) / 2; // Maximum possible
+
+                if (source === 'default') {
+                    // Calculate theoretical weight bounds
+                    // Min weight: k smallest weights (1, 2, ..., k)
+                    minWeight = k * (k + 1) / 2;
+                    // Max weight: k largest weights (n, n-1, ..., n-k+1)
+                    maxWeight = k * (2 * n - k + 1) / 2;
+
+                    // Only reset values if filter is not enabled and not loading scenario
+                    if (!isLoadingScenario && !isEnabled) {
+                        minInput.value = minWeight;
+                        maxInput.value = maxWeight;
+                    }
+                    minInput.min = 1;
+                    minInput.max = maxWeight;
+                    maxInput.min = minWeight;
+                    maxInput.max = maxWeight;
+
+                    infoDiv.textContent = `Source Par Défaut: min ${minWeight}, max ${maxWeight}`;
+
+                } else if (source === 'manual') {
+                    // Calculate based on manual input
+                    const horses = (manualInput.value.match(/\d+/g) || []).map(Number);
+                    const validHorses = horses.filter(h => h >= 1 && h <= n);
+
+                    if (validHorses.length >= k) {
+                        // Min: k smallest weights (1st=k, 2nd=k-1, ..., kth=1)
+                        minWeight = k * (k + 1) / 2;
+                        // Max: k largest weights (1st=validHorses.length, ..., kth=validHorses.length-k+1)
+                        const m = validHorses.length;
+                        maxWeight = k * (2 * m - k + 1) / 2;
+
+                        // Only reset values if filter is not enabled and not loading scenario
+                        if (!isLoadingScenario && !isEnabled) {
+                            minInput.value = minWeight;
+                            maxInput.value = maxWeight;
+                        }
+                        minInput.min = 1;
+                        minInput.max = maxWeight;
+                        maxInput.min = minWeight;
+                        maxInput.max = maxWeight;
+
+                        infoDiv.textContent = `Source Manuelle (${validHorses.length} chevaux): min ${minWeight}, max ${maxWeight}`;
+                    } else {
+                        infoDiv.textContent = `Source Manuelle: ${validHorses.length} chevaux (besoin de ${k}+)`;
+                    }
+
+                } else if (source === 'citation') {
+                    // For citation synthesis, calculate bounds based on synthesis size
+                    const synthesisSize = currentSynthesis.citation.length;
+                    if (synthesisSize >= k) {
+                        minWeight = k * (k + 1) / 2;
+                        // Max: k largest weights from synthesis (1st=1, ..., synthesisSize=synthesisSize)
+                        maxWeight = k * (2 * synthesisSize - k + 1) / 2;
+
+                        // Only reset values if filter is not enabled and not loading scenario
+                        if (!isLoadingScenario && !isEnabled) {
+                            minInput.value = minWeight;
+                            maxInput.value = maxWeight;
+                        }
+                        minInput.min = 1;
+                        minInput.max = maxWeight;
+                        maxInput.min = minWeight;
+                        maxInput.max = maxWeight;
+
+                        infoDiv.textContent = `Source Citation (${synthesisSize} chevaux): min ${minWeight}, max ${maxWeight}`;
+                    } else {
+                        infoDiv.textContent = `Source Citation: ${synthesisSize} chevaux (besoin de ${k}+)`;
+                    }
+
+                } else if (source === 'position') {
+                    // For position synthesis, calculate bounds based on synthesis size
+                    const synthesisSize = currentSynthesis.position.length;
+                    if (synthesisSize >= k) {
+                        minWeight = k * (k + 1) / 2;
+                        // Max: k largest weights from synthesis (1st=1, ..., synthesisSize=synthesisSize)
+                        maxWeight = k * (2 * synthesisSize - k + 1) / 2;
+
+                        // Only reset values if filter is not enabled and not loading scenario
+                        if (!isLoadingScenario && !isEnabled) {
+                            minInput.value = minWeight;
+                            maxInput.value = maxWeight;
+                        }
+                        minInput.min = 1;
+                        minInput.max = maxWeight;
+                        maxInput.min = minWeight;
+                        maxInput.max = maxWeight;
+
+                        infoDiv.textContent = `Source Position (${synthesisSize} chevaux): min ${minWeight}, max ${maxWeight}`;
+                    } else {
+                        infoDiv.textContent = `Source Position: ${synthesisSize} chevaux (besoin de ${k}+)`;
+                    }
+
+                } else if (source === 'results') {
+                    // Results synthesis - bounds based on filtered results
+                    const resultsSize = currentSynthesis.results.length;
+                    if (resultsSize >= k) {
+                        minWeight = k * (k + 1) / 2;
+                        // Max: k largest weights from results (1st=1, ..., resultsSize=resultsSize)
+                        maxWeight = k * (2 * resultsSize - k + 1) / 2;
+
+                        // Only reset values if filter is not enabled and not loading scenario
+                        if (!isLoadingScenario && !isEnabled) {
+                            minInput.value = minWeight;
+                            maxInput.value = maxWeight;
+                        }
+                        minInput.min = 1;
+                        minInput.max = maxWeight;
+                        maxInput.min = minWeight;
+                        maxInput.max = maxWeight;
+
+                        infoDiv.textContent = `Source Résultats (${resultsSize} chevaux): min ${minWeight}, max ${maxWeight}`;
+                    } else {
+                        infoDiv.textContent = `Source Résultats: ${resultsSize} chevaux (besoin de ${k}+)`;
+                    }
+                }
+            });
+        }
+
+        // Update alternance max info with SMART max
+        function updateAlternanceInfo() {
+            const k = parseInt(tailleCombinaisonInput.value);
+            const maxAlt = 2 * k;
+            document.querySelectorAll('.alternance-filter').forEach(box => {
+                const isEnabled = box.querySelector('.filter-enable')?.checked;
+                const infoDiv = box.querySelector('.alternance-info');
+                const maxInput = box.querySelector('.alternance-max');
+                const minInput = box.querySelector('.alternance-min');
+
+                // Only reset values if filter is not enabled and not loading scenario
+                if (!isLoadingScenario && !isEnabled) {
+                    maxInput.value = maxAlt;
+                    minInput.value = 0;
+                }
+                maxInput.min = 0;
+                maxInput.max = maxAlt;
+                minInput.min = 0;
+                minInput.max = maxAlt;
+
+                infoDiv.textContent = `Max théorique: ${maxAlt}`;
+            });
+        }
+
+        // Update ALL filters with smart min/max
+        function updateAllFiltersBounds() {
+            const n = parseInt(numPartantsInput.value);
+            const k = parseInt(tailleCombinaisonInput.value);
+
+            // Expert 1 & 2: Chevaux min/max, Groupes min/max
+            document.querySelectorAll('.filter-box').forEach(box => {
+                const h3 = box.querySelector('h3')?.textContent || '';
+                const isEnabled = box.querySelector('.filter-enable')?.checked;
+                const chevauxMin = box.querySelector('.chevaux-min');
+                const groupesMin = box.querySelector('.groupes-min');
+
+                if (h3.includes('Expert') && chevauxMin && groupesMin) {
+                    chevauxMin.max = k;
+                    groupesMin.max = 10; // Max reasonable groups
+                }
+
+                // Pairs/Impairs - only reset if filter is not enabled and not loading scenario
+                const evenMin = box.querySelector('.even-min');
+                const evenMax = box.querySelector('.even-max');
+                if (evenMin && evenMax) {
+                    if (!isLoadingScenario && !isEnabled) {
+                        evenMin.value = 0;
+                        evenMax.value = k;
+                    }
+                    evenMin.min = 0;
+                    evenMin.max = k;
+                    evenMax.min = 0;
+                    evenMax.max = k;
+                }
+
+                // Petits/Grands - only reset if filter is not enabled and not loading scenario
+                const smallMin = box.querySelector('.small-min');
+                const smallMax = box.querySelector('.small-max');
+                const limit = box.querySelector('.limit');
+                if (smallMin && smallMax && limit) {
+                    if (!isLoadingScenario && !isEnabled) {
+                        limit.value = Math.floor(n / 2) + 1;
+                        smallMin.value = 0;
+                        smallMax.value = k;
+                    }
+                    limit.min = 1;
+                    limit.max = n;
+                    smallMin.min = 0;
+                    smallMin.max = k;
+                    smallMax.min = 0;
+                    smallMax.max = k;
+                }
+
+                // Suites Consécutives - only reset if filter is not enabled and not loading scenario
+                const consecutiveMin = box.querySelector('.consecutive-min');
+                const consecutiveMax = box.querySelector('.consecutive-max');
+                if (consecutiveMin && consecutiveMax) {
+                    if (!isLoadingScenario && !isEnabled) {
+                        consecutiveMin.value = 0;
+                        consecutiveMax.value = k;
+                    }
+                    consecutiveMin.min = 0;
+                    consecutiveMin.max = k;
+                    consecutiveMax.min = 0;
+                    consecutiveMax.max = k;
+                }
+            });
+
+            // Also update weight and alternance
+            updateWeightInfo();
+            updateAlternanceInfo();
+        }
+
+        // Initialize
+        document.addEventListener('DOMContentLoaded', () => {
+            updateTotalCombinaisons();
+            setupScenarioManagement();
+        });
+
+        // =============================================================================
+        // SCENARIO MANAGEMENT
+        // =============================================================================
+
+        function setupScenarioManagement() {
+            // Save button
+            document.getElementById('btn-save-scenario').addEventListener('click', () => {
+                openSaveModal();
+            });
+
+            // Manage button
+            document.getElementById('btn-manage-scenarios').addEventListener('click', () => {
+                openManageModal();
+            });
+
+            // Cancel save
+            document.getElementById('btn-cancel-save').addEventListener('click', () => {
+                closeSaveModal();
+            });
+
+            // Confirm save
+            document.getElementById('btn-confirm-save').addEventListener('click', () => {
+                saveScenario();
+            });
+
+            // Close manage
+            document.getElementById('btn-close-manage').addEventListener('click', () => {
+                closeManageModal();
+            });
+        }
+
+        // Generate automatic description from active filters
+        function generateAutoDescription() {
+            const parts = [];
+            const n = parseInt(numPartantsInput.value);
+            const k = parseInt(tailleCombinaisonInput.value);
+            const rate = currentTotal > 0 ? ((currentTotal - currentFiltered) / currentTotal * 100).toFixed(1) : 0;
+
+            // Configuration de base
+            parts.push(`⚙️ Configuration : ${n} partants, combinaisons de ${k} chevaux`);
+
+            // Pronostics info
+            if (currentRawGroups.length > 0) {
+                parts.push(`📊 ${currentRawGroups.length} groupe(s) de pronostics`);
+            }
+
+            // Active filters
+            const activeFilters = [];
+            document.querySelectorAll('.filter-box').forEach(box => {
+                const h3 = box.querySelector('h3')?.textContent || '';
+                const isEnabled = box.querySelector('.filter-enable')?.checked;
+
+                if (!isEnabled) return;
+
+                if (h3.includes('Expert 1') || h3.includes('OU')) {
+                    const x = box.querySelector('.chevaux-min')?.value || 0;
+                    const y = box.querySelector('.groupes-min')?.value || 0;
+                    activeFilters.push(`Expert1 (OU): X=${x}, Y=${y}`);
+                } else if (h3.includes('Expert 2') || h3.includes('ET')) {
+                    const x = box.querySelector('.chevaux-min')?.value || 0;
+                    const y = box.querySelector('.groupes-min')?.value || 0;
+                    activeFilters.push(`Expert2 (ET): X=${x}, Y=${y}`);
+                } else if (h3.includes('Pairs') || h3.includes('Impairs')) {
+                    const min = box.querySelector('.even-min')?.value || 0;
+                    const max = box.querySelector('.even-max')?.value || 0;
+                    activeFilters.push(`Pairs/Impairs: ${min}-${max}`);
+                } else if (h3.includes('Petits') || h3.includes('Grands')) {
+                    const limit = box.querySelector('.limit')?.value || 0;
+                    const min = box.querySelector('.small-min')?.value || 0;
+                    const max = box.querySelector('.small-max')?.value || 0;
+                    activeFilters.push(`Petits/Grands (limite=${limit}): ${min}-${max}`);
+                } else if (h3.includes('Suites') || h3.includes('Consécutives')) {
+                    const min = box.querySelector('.consecutive-min')?.value || 0;
+                    const max = box.querySelector('.consecutive-max')?.value || 0;
+                    activeFilters.push(`Suites: ${min}-${max}`);
+                } else if (h3.includes('Poids') || h3.includes('⚖️')) {
+                    const source = box.querySelector('.weight-source')?.value || 'default';
+                    const min = box.querySelector('.weight-min')?.value || 0;
+                    const max = box.querySelector('.weight-max')?.value || 0;
+                    const sourceNames = {
+                        'default': 'Par défaut',
+                        'manual': 'Manuel',
+                        'citation': 'Citation',
+                        'position': 'Position',
+                        'results': 'Résultats'
+                    };
+                    activeFilters.push(`Poids (${sourceNames[source]}): ${min}-${max}`);
+                } else if (h3.includes('Alternance') || h3.includes('🔄')) {
+                    const source = box.querySelector('.alternance-source')?.value || 'default';
+                    const min = box.querySelector('.alternance-min')?.value || 0;
+                    const max = box.querySelector('.alternance-max')?.value || 0;
+                    const sourceNames = {
+                        'default': 'Par défaut',
+                        'manual': 'Manuel',
+                        'citation': 'Citation',
+                        'position': 'Position',
+                        'results': 'Résultats'
+                    };
+                    activeFilters.push(`Alternance (${sourceNames[source]}): ${min}-${max}`);
+                }
+            });
+
+            if (activeFilters.length > 0) {
+                parts.push(`🔍 ${activeFilters.length} filtre(s) actif(s):\n${activeFilters.join('\n')}`);
+            }
+
+            // Results
+            parts.push(`📈 ${currentFiltered.toLocaleString('fr-FR')} combinaisons restantes sur ${currentTotal.toLocaleString('fr-FR')} (taux de réduction: ${rate}%)`);
+
+            // Course info
+            const courseDate = document.getElementById('course-date')?.value;
+            const courseName = document.getElementById('course-name')?.value;
+            const courseArrivee = document.getElementById('course-arrivee')?.value;
+
+            let courseInfo = [];
+            if (courseDate) courseInfo.push(`📅 ${courseDate}`);
+            if (courseName) courseInfo.push(`🏟️ ${courseName}`);
+            if (courseArrivee) courseInfo.push(`🏆 Arrivée: ${courseArrivee}`);
+
+            if (courseInfo.length > 0) {
+                parts.push(`\n🏇 Course: ${courseInfo.join(' | ')}`);
+            }
+
+            return parts.join('\n\n');
+        }
+
+        // Collect current configuration
+        function collectCurrentConfiguration() {
+            const n = parseInt(numPartantsInput.value);
+            const k = parseInt(tailleCombinaisonInput.value);
+
+            // Get groups
+            const groups = Array.from(parsedGroupsDiv.children).map((div, idx) => ({
+                name: currentRawGroups[idx].name,
+                horses: currentRawGroups[idx].horses,
+                min: parseInt(div.querySelector('.group-min')?.value || 0),
+                max: parseInt(div.querySelector('.group-max')?.value || currentRawGroups[idx].horses.length)
+            }));
+
+            // Get filters
+            const filters = {
+                expert1: [],
+                expert2: [],
+                even_odd: [],
+                small_large: [],
+                consecutive: [],
+                weight: [],
+                alternance: []
+            };
+
+            document.querySelectorAll('.filter-box').forEach(box => {
+                const h3 = box.querySelector('h3')?.textContent || '';
+                const isEnabled = box.querySelector('.filter-enable')?.checked;
+
+                if (!isEnabled) return;
+
+                if (h3.includes('Expert 1') || h3.includes('OU')) {
+                    filters.expert1.push({
+                        chevaux_min: parseInt(box.querySelector('.chevaux-min')?.value || 0),
+                        groupes_min: parseInt(box.querySelector('.groupes-min')?.value || 0)
+                    });
+                } else if (h3.includes('Expert 2') || h3.includes('ET')) {
+                    filters.expert2.push({
+                        chevaux_min: parseInt(box.querySelector('.chevaux-min')?.value || 0),
+                        groupes_min: parseInt(box.querySelector('.groupes-min')?.value || 0)
+                    });
+                } else if (h3.includes('Pairs') || h3.includes('Impairs')) {
+                    filters.even_odd.push({
+                        min: parseInt(box.querySelector('.even-min')?.value || 0),
+                        max: parseInt(box.querySelector('.even-max')?.value || k)
+                    });
+                } else if (h3.includes('Petits') || h3.includes('Grands')) {
+                    filters.small_large.push({
+                        limit: parseInt(box.querySelector('.limit')?.value || 10),
+                        min: parseInt(box.querySelector('.small-min')?.value || 0),
+                        max: parseInt(box.querySelector('.small-max')?.value || k)
+                    });
+                } else if (h3.includes('Suites') || h3.includes('Consécutives')) {
+                    filters.consecutive.push({
+                        min: parseInt(box.querySelector('.consecutive-min')?.value || 0),
+                        max: parseInt(box.querySelector('.consecutive-max')?.value || k)
+                    });
+                } else if (h3.includes('Poids') || h3.includes('⚖️')) {
+                    filters.weight.push({
+                        source: box.querySelector('.weight-source')?.value || 'default',
+                        min: parseInt(box.querySelector('.weight-min')?.value || 21),
+                        max: parseInt(box.querySelector('.weight-max')?.value || 81),
+                        manual_input: box.querySelector('.manual-input')?.value || ''
+                    });
+                } else if (h3.includes('Alternance') || h3.includes('🔄')) {
+                    filters.alternance.push({
+                        source: box.querySelector('.alternance-source')?.value || 'default',
+                        min: parseInt(box.querySelector('.alternance-min')?.value || 0),
+                        max: parseInt(box.querySelector('.alternance-max')?.value || 2 * k),
+                        manual_input: box.querySelector('.manual-input-alt')?.value || ''
+                    });
+                }
+            });
+
+            // Get course info
+            const courseDate = document.getElementById('course-date')?.value || null;
+            const courseName = document.getElementById('course-name')?.value || '';
+            const courseArrivee = document.getElementById('course-arrivee')?.value || '';
+            const arriveeArray = courseArrivee ? courseArrivee.split(',').map(x => parseInt(x.trim())).filter(x => !isNaN(x)) : null;
+
+            return {
+                n, k, groups, filters,
+                course_date: courseDate,
+                course_name: courseName,
+                arrivee: arriveeArray,
+                pronostics_text: pronosticsTextarea.value,
+                nb_combinaisons_restantes: currentFiltered
+            };
+        }
+
+        // Apply configuration
+        function applyConfiguration(config) {
+            debugLog('=== STARTING APPLY CONFIGURATION ===');
+            debugLog('Full config:', config);
+
+            // Set flag to prevent value overwriting
+            isLoadingScenario = true;
+
+            // Set n and k
+            numPartantsInput.value = config.n;
+            tailleCombinaisonInput.value = config.k;
+            debugLog(`Set n=${config.n}, k=${config.k}`);
+
+            // Set pronostics text (if available in scenario)
+            if (config.pronostics_text) {
+                pronosticsTextarea.value = config.pronostics_text;
+                debugLog('Set pronostics from saved text');
+            } else {
+                // Fallback: rebuild from groups
+                let pronosticsText = '';
+                config.groups.forEach(g => {
+                    pronosticsText += `${g.name}: ${g.horses.join(', ')}\n`;
+                });
+                pronosticsTextarea.value = pronosticsText;
+                debugLog('Rebuilt pronostics from groups');
+            }
+
+            // Parse and render groups
+            const groups = parsePronostics();
+            renderParsedGroups(groups);
+
+            // Set group min/max
+            Array.from(parsedGroupsDiv.children).forEach((div, idx) => {
+                if (config.groups[idx]) {
+                    div.querySelector('.group-min').value = config.groups[idx].min;
+                    div.querySelector('.group-max').value = config.groups[idx].max;
+                }
+            });
+            debugLog('Groups applied');
+
+            // Set course info if available
+            if (config.course_date) {
+                document.getElementById('course-date').value = config.course_date;
+            }
+            if (config.course_name) {
+                document.getElementById('course-name').value = config.course_name;
+            }
+            if (config.arrivee && Array.isArray(config.arrivee)) {
+                document.getElementById('course-arrivee').value = config.arrivee.join(', ');
+            }
+
+            // Update synthesis
+            updateSynthesis();
+
+            // Set filters
+            const filters = config.filters || {};
+            debugLog('Filters object:', filters);
+
+            // First, reset ALL filters
+            document.querySelectorAll('.filter-box').forEach(box => {
+                box.querySelector('.filter-enable').checked = false;
+            });
+            debugLog('All filters reset');
+
+            // Then apply saved filters
+            document.querySelectorAll('.filter-box').forEach(box => {
+                const h3 = box.querySelector('h3')?.textContent || '';
+                const checkbox = box.querySelector('.filter-enable');
+                debugLog(`Processing filter box: "${h3}"`);
+
+                if (h3.includes('Expert 1') || h3.includes('OU')) {
+                    if (filters.expert1 && filters.expert1.length > 0) {
+                        debugLog(`✓ Expert1 found`, filters.expert1[0]);
+                        checkbox.checked = true;
+                        const chevauxMin = box.querySelector('.chevaux-min');
+                        const groupesMin = box.querySelector('.groupes-min');
+                        debugLog(`  chevaux-min element:`, chevauxMin ? 'FOUND' : 'NOT FOUND');
+                        debugLog(`  groupes-min element:`, groupesMin ? 'FOUND' : 'NOT FOUND');
+                        if (chevauxMin) {
+                            chevauxMin.value = Number(filters.expert1[0].chevaux_min);
+                            debugLog(`  Set chevaux-min to ${chevauxMin.value}`);
+                        }
+                        if (groupesMin) {
+                            groupesMin.value = Number(filters.expert1[0].groupes_min);
+                            debugLog(`  Set groupes-min to ${groupesMin.value}`);
+                        }
+                    }
+                } else if (h3.includes('Expert 2') || h3.includes('ET')) {
+                    if (filters.expert2 && filters.expert2.length > 0) {
+                        debugLog(`✓ Expert2 found`, filters.expert2[0]);
+                        checkbox.checked = true;
+                        const chevauxMin = box.querySelector('.chevaux-min');
+                        const groupesMin = box.querySelector('.groupes-min');
+                        debugLog(`  chevaux-min element:`, chevauxMin ? 'FOUND' : 'NOT FOUND');
+                        debugLog(`  groupes-min element:`, groupesMin ? 'FOUND' : 'NOT FOUND');
+                        if (chevauxMin) {
+                            chevauxMin.value = Number(filters.expert2[0].chevaux_min);
+                            debugLog(`  Set chevaux-min to ${chevauxMin.value}`);
+                        }
+                        if (groupesMin) {
+                            groupesMin.value = Number(filters.expert2[0].groupes_min);
+                            debugLog(`  Set groupes-min to ${groupesMin.value}`);
+                        }
+                    }
+                } else if (h3.includes('Pairs') || h3.includes('Impairs')) {
+                    if (filters.even_odd && filters.even_odd.length > 0) {
+                        debugLog(`✓ Even/Odd found`, filters.even_odd[0]);
+                        checkbox.checked = true;
+                        const evenMin = box.querySelector('.even-min');
+                        const evenMax = box.querySelector('.even-max');
+                        debugLog(`  even-min element:`, evenMin ? 'FOUND' : 'NOT FOUND');
+                        debugLog(`  even-max element:`, evenMax ? 'FOUND' : 'NOT FOUND');
+                        if (evenMin) {
+                            evenMin.value = Number(filters.even_odd[0].min);
+                            debugLog(`  Set even-min to ${evenMin.value}`);
+                        }
+                        if (evenMax) {
+                            evenMax.value = Number(filters.even_odd[0].max);
+                            debugLog(`  Set even-max to ${evenMax.value}`);
+                        }
+                    }
+                } else if (h3.includes('Petits') || h3.includes('Grands')) {
+                    if (filters.small_large && filters.small_large.length > 0) {
+                        debugLog(`✓ Small/Large found`, filters.small_large[0]);
+                        checkbox.checked = true;
+                        const limit = box.querySelector('.limit');
+                        const smallMin = box.querySelector('.small-min');
+                        const smallMax = box.querySelector('.small-max');
+                        debugLog(`  limit element:`, limit ? 'FOUND' : 'NOT FOUND');
+                        debugLog(`  small-min element:`, smallMin ? 'FOUND' : 'NOT FOUND');
+                        debugLog(`  small-max element:`, smallMax ? 'FOUND' : 'NOT FOUND');
+                        if (limit) {
+                            limit.value = Number(filters.small_large[0].limit);
+                            debugLog(`  Set limit to ${limit.value}`);
+                        }
+                        if (smallMin) {
+                            smallMin.value = Number(filters.small_large[0].min);
+                            debugLog(`  Set small-min to ${smallMin.value}`);
+                        }
+                        if (smallMax) {
+                            smallMax.value = Number(filters.small_large[0].max);
+                            debugLog(`  Set small-max to ${smallMax.value}`);
+                        }
+                    }
+                } else if (h3.includes('Suites') || h3.includes('Consécutives')) {
+                    if (filters.consecutive && filters.consecutive.length > 0) {
+                        debugLog(`✓ Consecutive found`, filters.consecutive[0]);
+                        checkbox.checked = true;
+                        const consecutiveMin = box.querySelector('.consecutive-min');
+                        const consecutiveMax = box.querySelector('.consecutive-max');
+                        debugLog(`  consecutive-min element:`, consecutiveMin ? 'FOUND' : 'NOT FOUND');
+                        debugLog(`  consecutive-max element:`, consecutiveMax ? 'FOUND' : 'NOT FOUND');
+                        if (consecutiveMin) {
+                            consecutiveMin.value = Number(filters.consecutive[0].min);
+                            debugLog(`  Set consecutive-min to ${consecutiveMin.value}`);
+                        }
+                        if (consecutiveMax) {
+                            consecutiveMax.value = Number(filters.consecutive[0].max);
+                            debugLog(`  Set consecutive-max to ${consecutiveMax.value}`);
+                        }
+                    }
+                } else if (h3.includes('Poids') || h3.includes('⚖️')) {
+                    if (filters.weight && filters.weight.length > 0) {
+                        debugLog(`✓ Weight found`, filters.weight[0]);
+                        checkbox.checked = true;
+                        const sourceSelect = box.querySelector('.weight-source');
+                        const weightMin = box.querySelector('.weight-min');
+                        const weightMax = box.querySelector('.weight-max');
+                        const manualContainer = box.querySelector('.manual-input-container');
+                        debugLog(`  source element:`, sourceSelect ? 'FOUND' : 'NOT FOUND');
+                        debugLog(`  weight-min element:`, weightMin ? 'FOUND' : 'NOT FOUND');
+                        debugLog(`  weight-max element:`, weightMax ? 'FOUND' : 'NOT FOUND');
+                        if (sourceSelect) {
+                            sourceSelect.value = filters.weight[0].source;
+                            debugLog(`  Set source to ${sourceSelect.value}`);
+                        }
+                        if (weightMin) {
+                            weightMin.value = Number(filters.weight[0].min);
+                            debugLog(`  Set weight-min to ${weightMin.value}`);
+                        }
+                        if (weightMax) {
+                            weightMax.value = Number(filters.weight[0].max);
+                            debugLog(`  Set weight-max to ${weightMax.value}`);
+                        }
+
+                        // Show/hide manual input based on source
+                        if (filters.weight[0].source === 'manual') {
+                            if (manualContainer) manualContainer.style.display = 'block';
+                            if (filters.weight[0].manual_input) {
+                                const manualInput = box.querySelector('.manual-input');
+                                if (manualInput) manualInput.value = filters.weight[0].manual_input;
+                            }
+                        } else {
+                            if (manualContainer) manualContainer.style.display = 'none';
+                        }
+                    }
+                } else if (h3.includes('Alternance') || h3.includes('🔄')) {
+                    if (filters.alternance && filters.alternance.length > 0) {
+                        debugLog(`✓ Alternance found`, filters.alternance[0]);
+                        checkbox.checked = true;
+                        const sourceSelect = box.querySelector('.alternance-source');
+                        const altMin = box.querySelector('.alternance-min');
+                        const altMax = box.querySelector('.alternance-max');
+                        const manualContainer = box.querySelector('.manual-input-container-alt');
+                        debugLog(`  source element:`, sourceSelect ? 'FOUND' : 'NOT FOUND');
+                        debugLog(`  alternance-min element:`, altMin ? 'FOUND' : 'NOT FOUND');
+                        debugLog(`  alternance-max element:`, altMax ? 'FOUND' : 'NOT FOUND');
+                        if (sourceSelect) {
+                            sourceSelect.value = filters.alternance[0].source;
+                            debugLog(`  Set source to ${sourceSelect.value}`);
+                        }
+                        if (altMin) {
+                            altMin.value = Number(filters.alternance[0].min);
+                            debugLog(`  Set alternance-min to ${altMin.value}`);
+                        }
+                        if (altMax) {
+                            altMax.value = Number(filters.alternance[0].max);
+                            debugLog(`  Set alternance-max to ${altMax.value}`);
+                        }
+
+                        // Show/hide manual input based on source
+                        if (filters.alternance[0].source === 'manual') {
+                            if (manualContainer) manualContainer.style.display = 'block';
+                            if (filters.alternance[0].manual_input) {
+                                const manualInput = box.querySelector('.manual-input-alt');
+                                if (manualInput) manualInput.value = filters.alternance[0].manual_input;
+                            }
+                        } else {
+                            if (manualContainer) manualContainer.style.display = 'none';
+                        }
+                    }
+                }
+            });
+
+            debugLog('=== CONFIGURATION APPLIED, TRIGGERING FILTER ===');
+
+            // Verify values were actually set in DOM
+            debugLog('=== VERIFYING DOM VALUES ===');
+            document.querySelectorAll('.filter-box').forEach(box => {
+                const h3 = box.querySelector('h3')?.textContent || '';
+                const checkbox = box.querySelector('.filter-enable');
+                if (checkbox.checked) {
+                    if (h3.includes('Pairs') || h3.includes('Impairs')) {
+                        const evenMin = box.querySelector('.even-min');
+                        const evenMax = box.querySelector('.even-max');
+                        debugLog(`Pairs/Impairs DOM values: min=${evenMin?.value}, max=${evenMax?.value}`);
+                    } else if (h3.includes('Petits') || h3.includes('Grands')) {
+                        const limit = box.querySelector('.limit');
+                        const smallMin = box.querySelector('.small-min');
+                        const smallMax = box.querySelector('.small-max');
+                        debugLog(`Small/Large DOM values: limit=${limit?.value}, min=${smallMin?.value}, max=${smallMax?.value}`);
+                    } else if (h3.includes('Poids') || h3.includes('⚖️')) {
+                        const weightMin = box.querySelector('.weight-min');
+                        const weightMax = box.querySelector('.weight-max');
+                        debugLog(`Weight DOM values: min=${weightMin?.value}, max=${weightMax?.value}`);
+                    }
+                }
+            });
+
+            // First update total combinations, then trigger filter to apply all filters
+            updateTotalCombinaisons().then(() => {
+                // Clear the flag after all updates are done
+                isLoadingScenario = false;
+                debugLog('=== SCENARIO LOADING COMPLETE, FLAG CLEARED ===');
+
+                // Verify values again after updateTotalCombinaisons
+                debugLog('=== VERIFYING DOM VALUES AFTER TOTAL UPDATE ===');
+                document.querySelectorAll('.filter-box').forEach(box => {
+                    const h3 = box.querySelector('h3')?.textContent || '';
+                    const checkbox = box.querySelector('.filter-enable');
+                    if (checkbox.checked) {
+                        if (h3.includes('Pairs') || h3.includes('Impairs')) {
+                            const evenMin = box.querySelector('.even-min');
+                            const evenMax = box.querySelector('.even-max');
+                            debugLog(`Pairs/Impairs after total update: min=${evenMin?.value}, max=${evenMax?.value}`);
+                        } else if (h3.includes('Petits') || h3.includes('Grands')) {
+                            const limit = box.querySelector('.limit');
+                            const smallMin = box.querySelector('.small-min');
+                            const smallMax = box.querySelector('.small-max');
+                            debugLog(`Small/Large after total update: limit=${limit?.value}, min=${smallMin?.value}, max=${smallMax?.value}`);
+                        } else if (h3.includes('Poids') || h3.includes('⚖️')) {
+                            const weightMin = box.querySelector('.weight-min');
+                            const weightMax = box.querySelector('.weight-max');
+                            debugLog(`Weight after total update: min=${weightMin?.value}, max=${weightMax?.value}`);
+                        }
+                    }
+                });
+
+                // After total is updated, trigger the full filter with all saved filters
+                triggerFilter();
+            });
+        }
+
+        // Modal functions
+        function openSaveModal() {
+            document.getElementById('save-scenario-modal').classList.add('active');
+            document.getElementById('scenario-name').value = '';
+            document.getElementById('scenario-favorite').checked = false;
+
+            // Generate and display auto-description
+            const autoDesc = generateAutoDescription();
+            document.getElementById('scenario-auto-description').innerHTML = `<pre style="white-space: pre-wrap; font-family: inherit; margin: 0;">${autoDesc}</pre>`;
+            document.getElementById('scenario-description').value = autoDesc;
+        }
+
+        function closeSaveModal() {
+            document.getElementById('save-scenario-modal').classList.remove('active');
+        }
+
+        function openManageModal() {
+            document.getElementById('manage-scenarios-modal').classList.add('active');
+            loadScenariosList();
+        }
+
+        function closeManageModal() {
+            document.getElementById('manage-scenarios-modal').classList.remove('active');
+        }
+
+        // Save scenario
+        async function saveScenario() {
+            const name = document.getElementById('scenario-name').value.trim();
+            const description = document.getElementById('scenario-description').value.trim();
+            const isFavorite = document.getElementById('scenario-favorite').checked;
+
+            if (!name) {
+                alert('Veuillez entrer un nom pour le scénario');
+                return;
+            }
+
+            const config = collectCurrentConfiguration();
+
+            try {
+                const response = await fetch(API_BASE + 'scenario/save/', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json', 'X-CSRFToken': getCsrfToken() },
+                    body: JSON.stringify({
+                        id: null,
+                        name,
+                        description,
+                        n_partants: config.n,
+                        k_taille: config.k,
+                        groups: config.groups,
+                        filters: config.filters,
+                        course_date: config.course_date,
+                        course_name: config.course_name,
+                        arrivee: config.arrivee,
+                        pronostics_text: config.pronostics_text,
+                        nb_combinaisons_restantes: config.nb_combinaisons_restantes,
+                        is_favorite: isFavorite
+                    })
+                });
+
+                const result = await response.json();
+
+                if (result.success) {
+                    alert('Scénario sauvegardé avec succès !');
+                    closeSaveModal();
+                } else {
+                    alert('Erreur: ' + result.error);
+                }
+            } catch (e) {
+                console.error('Error:', e);
+                alert('Erreur lors de la sauvegarde');
+            }
+        }
+
+        // Load scenarios list
+        async function loadScenariosList() {
+            const container = document.getElementById('scenarios-list-container');
+            container.innerHTML = '<p style="text-align: center;">Chargement...</p>';
+
+            try {
+                const response = await fetch(API_BASE + 'scenarios/');
+                const result = await response.json();
+
+                if (result.scenarios && result.scenarios.length > 0) {
+                    container.innerHTML = result.scenarios.map(s => {
+                        let extraInfo = [];
+                        if (s.date_course) extraInfo.push(`📅 ${s.date_course}`);
+                        if (s.course_name) extraInfo.push(`🏟️ ${s.course_name}`);
+                        if (s.nb_combinaisons_restantes) extraInfo.push(`📊 ${s.nb_combinaisons_restantes.toLocaleString('fr-FR')} comb.`);
+
+                        return `
+                        <div class="scenario-item ${s.is_favorite ? 'favorite' : ''}">
+                            <div class="scenario-info">
+                                <h4>
+                                    ${s.is_favorite ? '⭐ ' : ''}${s.name}
+                                    <span style="font-size: 0.75rem; color: var(--text-muted);">
+                                        C${s.n_partants}, K${s.k_taille} | ${s.usage_count} utilisations
+                                    </span>
+                                </h4>
+                                ${extraInfo.length > 0 ? `<p style="font-size: 0.85rem; color: var(--secondary-color); margin-bottom: 8px;">${extraInfo.join(' | ')}</p>` : ''}
+                                ${s.description ? `<p style="font-size: 0.85rem; white-space: pre-wrap;">${s.description}</p>` : ''}
+                            </div>
+                            <div class="scenario-actions">
+                                <button class="btn-load" onclick="loadScenario(${s.id})">Charger</button>
+                                <button class="btn-delete" onclick="deleteScenario(${s.id})">Supprimer</button>
+                            </div>
+                        </div>
+                    `}).join('');
+                } else {
+                    container.innerHTML = '<p style="text-align: center; color: var(--text-muted);">Aucun scénario sauvegardé</p>';
+                }
+            } catch (e) {
+                console.error('Error:', e);
+                container.innerHTML = '<p style="text-align: center; color: var(--danger-color);">Erreur de chargement</p>';
+            }
+        }
+
+        // Load scenario
+        async function loadScenario(id) {
+            try {
+                const response = await fetch(API_BASE + 'scenario/load/', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json', 'X-CSRFToken': getCsrfToken() },
+                    body: JSON.stringify({ id })
+                });
+
+                const result = await response.json();
+
+                if (result.success) {
+                    console.log('Scenario loaded from server:', result.scenario);
+                    const config = {
+                        n: result.scenario.n_partants,
+                        k: result.scenario.k_taille,
+                        groups: result.scenario.groups,
+                        filters: result.scenario.filters,
+                        course_date: result.scenario.course_date,
+                        course_name: result.scenario.course_name,
+                        arrivee: result.scenario.arrivee,
+                        pronostics_text: result.scenario.pronostics_text,
+                        nb_combinaisons_restantes: result.scenario.nb_combinaisons_restantes
+                    };
+                    console.log('Config to apply:', config);
+                    applyConfiguration(config);
+                    closeManageModal();
+                    alert('Scénario chargé avec succès !');
+                } else {
+                    alert('Erreur: ' + result.error);
+                }
+            } catch (e) {
+                console.error('Error:', e);
+                alert('Erreur lors du chargement');
+            }
+        }
+
+        // Delete scenario
+        async function deleteScenario(id) {
+            if (!confirm('Êtes-vous sûr de vouloir supprimer ce scénario ?')) {
+                return;
+            }
+
+            try {
+                const response = await fetch(API_BASE + 'scenario/delete/', {
+                    method: 'DELETE',
+                    headers: { 'Content-Type': 'application/json', 'X-CSRFToken': getCsrfToken() },
+                    body: JSON.stringify({ id })
+                });
+
+                const result = await response.json();
+
+                if (result.success) {
+                    loadScenariosList();
+                } else {
+                    alert('Erreur: ' + result.error);
+                }
+            } catch (e) {
+                console.error('Error:', e);
+                alert('Erreur lors de la suppression');
+            }
+        }
+    </script>
+</body>
+</html>

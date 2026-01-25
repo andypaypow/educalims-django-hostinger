@@ -1,0 +1,19 @@
+# Django Core
+Django>=4.2,<5.0
+django-cors-headers>=4.0.0
+
+# Database
+psycopg2-binary>=2.9.0
+dj-database-url>=2.0.0
+
+# Server
+gunicorn>=21.0.0
+
+# Configuration
+python-decouple>=3.8
+
+# Media
+Pillow>=10.0.0
+
+# Utilities
+python-dateutil>=2.8.0
