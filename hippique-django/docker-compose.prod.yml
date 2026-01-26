@@ -1,0 +1,57 @@
+version: '3.8'
+
+services:
+  db:
+    image: postgres:15-alpine
+    container_name: hippique-prod-db
+    environment:
+      POSTGRES_DB: hippique_db
+      POSTGRES_USER: hippique
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+    volumes:
+      - postgres_prod_data:/var/lib/postgresql/data
+    ports:
+      - "5434:5432"
+    networks:
+      - hippique-prod-network
+
+  web:
+    build: .
+    container_name: hippique-prod-web
+    command: gunicorn hippique_project.wsgi:application --bind 0.0.0.0:8000 --workers 4 --timeout 120
+    volumes:
+      - static_volume:/code/staticfiles
+    ports:
+      - "8083:8000"
+    environment:
+      - DEBUG=False
+      - POSTGRES_DB=hippique_db
+      - POSTGRES_USER=hippique
+      - POSTGRES_PASSWORD=${POSTGRES_PASSWORD}
+      - POSTGRES_HOST=db
+      - POSTGRES_PORT=5432
+    depends_on:
+      - db
+    networks:
+      - hippique-prod-network
+
+  nginx:
+    image: nginx:alpine
+    container_name: hippique-prod-nginx
+    volumes:
+      - ./nginx.conf:/etc/nginx/nginx.conf:ro
+      - static_volume:/code/staticfiles
+    ports:
+      - "80:80"
+    depends_on:
+      - web
+    networks:
+      - hippique-prod-network
+
+volumes:
+  postgres_prod_data:
+  static_volume:
+
+networks:
+  hippique-prod-network:
+    driver: bridge
