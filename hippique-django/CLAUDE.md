@@ -17,6 +17,9 @@ Ce fichier fournit des instructions à Claude Code (claude.ai/code) lorsqu'il tr
 5. **Git et Déploiement** - Commit, Push, Reset
 6. **Guide de Reset Git** - Revenir à un commit spécifique
 7. **Supabase - Backend as a Service** - Base de données, Auth, Edge Functions
+8. **FiltreExpert Supabase** - Frontend statique
+9. **FiltreExpert - Paiement** - Système d'abonnement
+10. **Gosen Filter** - Projet TurfFilter (Port 8082)
 
 ---
 
@@ -592,8 +595,9 @@ supabase/.env
 
 | Environnement | URL | Admin |
 |---------------|-----|-------|
-| Dev | http://72.62.181.239:8082/ | http://72.62.181.239:8082/admin/ |
-| Prod | http://72.62.181.239:8083/ | http://72.62.181.239:8083/admin/ |
+| **Gosen Filter** | http://72.62.181.239:8082/ | http://72.62.181.239:8082/admin/ |
+| **Hippique Prod** | http://72.62.181.239:8083/ | http://72.62.181.239:8083/admin/ |
+| **FiltreExpert** | http://72.62.181.239:8090/ | - |
 | **Supabase** | https://supabase.com/dashboard/project/qfkyzljqykymahlpmdnu | https://qfkyzljqykymahlpmdnu.supabase.co |
 
 ### 🔗 Liens Utiles
@@ -963,8 +967,454 @@ services:
 
 ---
 
-**Dernière mise à jour** : 28 Janvier 2026
-**Projet** : Hippique - Plateforme de pronostics hippiques + FiltreExpert Supabase
+## ÉTAPE 9 : FILTREEXPERT - SYSTÈME DE PAIEMENT SUPABASE
+
+### 💳 Architecture du Système de Paiement
+
+```
+┌─────────────────────────────────────────────────────────────┐
+│                    Flux de Paiement FiltreExpert            │
+├─────────────────────────────────────────────────────────────┤
+│                                                              │
+│  1. Utilisateur → Bouton "S'abonner (100F/jour)"           │
+│  2. Redirection vers Cyberschool (lien de paiement)        │
+│  3. Paiement réussi (code "200")                            │
+│  4. Cyberschool → Webhook Supabase                          │
+│  5. Webhook → Crée abonnement dans Supabase DB              │
+│  6. Webhook → Notification Telegram @Filtrexpert_bot        │
+│  7. Frontend → Vérifie abonnement → Affiche résultats       │
+│                                                              │
+└─────────────────────────────────────────────────────────────┘
+```
+
+### 🔗 URLs Importantes
+
+| Élément | URL |
+|---------|-----|
+| **Lien de paiement Cyberschool** | `https://sumb.cyberschool.ga/?productId=KzIfBGUYU6glnH3JlsbZ&operationAccountCode=ACC_6835C458B85FF&maison=moov&amount=100` |
+| **Webhook Cyberschool → Supabase** | `https://qfkyzljqykymahlpmdnu.supabase.co/functions/v1/webhook-cyberschool` |
+| **Bot Telegram FiltreExpert** | `@Filtrexpert_bot` |
+
+### 🔑 Identifiants Telegram FiltreExpert
+
+```
+Bot Token: 8547430409:AAGx2LxGxP6fBd9mn13LSmRbU4y3wlopIq4
+Chat ID: 1646298746
+Bot Username: @Filtrexpert_bot
+```
+
+**Note :** Ces identifiants sont différents de ceux du projet Educalims (hippique-django).
+
+### 🗄️ Table subscriptions (Supabase)
+
+**Structure de la table :**
+```sql
+CREATE TABLE subscriptions (
+  id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
+  device_id TEXT UNIQUE NOT NULL,
+  jwt_token TEXT UNIQUE NOT NULL,
+  payment_status TEXT DEFAULT 'pending',
+  transaction_id TEXT,
+  phone_number TEXT,
+  amount NUMERIC DEFAULT 100,
+  payment_date TIMESTAMP WITH TIME ZONE,
+  expiry_date TIMESTAMP WITH TIME ZONE,
+  fingerprint_data JSONB,
+  created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
+);
+
+-- Index
+CREATE INDEX idx_subscriptions_device_id ON subscriptions(device_id);
+CREATE INDEX idx_subscriptions_jwt_token ON subscriptions(jwt_token);
+CREATE INDEX idx_subscriptions_expiry ON subscriptions(expiry_date);
+```
+
+**Logique d'abonnement :**
+- Un device_id = un abonnement
+- L'abonnement expire à 23h59 le jour du paiement
+- Renouvellement quotidien requis (100F/jour)
+- Device fingerprinting pour lier l'appareil à l'abonnement
+
+### ⚡ Edge Functions Déployées
+
+**Fonctions actives sur Supabase :**
+```
+1. webhook-cyberschool    - Reçoit les notifications Cyberschool
+2. verify-access          - Vérifie si un device a un abonnement actif
+3. turboquinte-filter     - Filtre les combinaisons (avec vérif abonnement)
+4. turboquinte-backtest   - Backtest des combinaisons (avec vérif abonnement)
+5. create-table           - Fonction temporaire pour créer des tables
+```
+
+**Déployer une Edge Function depuis Hostinger :**
+```bash
+# SSH vers Hostinger
+ssh -i ~/.ssh/id_ed25519 root@72.62.181.239
+
+# Créer le dossier temporaire
+mkdir -p /tmp/supabase-deploy/supabase/functions/<function-name>
+
+# Copier le fichier
+cat > /tmp/supabase-deploy/supabase/functions/<function-name>/index.ts < <local-file>
+
+# Déployer
+cd /tmp/supabase-deploy && ~/.local/bin/supabase functions deploy <function-name> --project-ref qfkyzljqykymahlpmdnu
+```
+
+**Token d'accès Supabase CLI (sur Hostinger) :**
+```bash
+# Chemin du token
+/root/.supabase/access-token
+
+# Contenu
+sbp_2f96bd8c55c691ea2a3af1b65fe86359d42146b9
+```
+
+### 🔐 Sécurité et Authentification
+
+**Device Fingerprinting (Frontend) :**
+```javascript
+// Généré à partir de :
+// - User agent
+// - Screen resolution
+// - Timezone
+// - Platform
+// - Language
+// - Color depth
+// - Device memory
+// - Hardware concurrency
+
+const deviceId = generateDeviceId(); // Stocké dans localStorage
+```
+
+**Vérification d'abonnement (Backend) :**
+```typescript
+// Dans turboquinte-filter et turboquinte-backtest
+const accessCheck = await verifySubscription(deviceId, jwtToken);
+
+if (!accessCheck.hasAccess) {
+  return new Response(JSON.stringify({
+    error: 'Abonnement requis',
+    message: 'Aucun abonnement actif. Veuillez effectuer un paiement.',
+    payment_link: PAYMENT_LINK
+  }), { status: 403 });
+}
+```
+
+### 📡 Notification Telegram
+
+**Format de la notification envoyée :**
+```
+🎉 NOUVEL ABONNEMENT FILTREEXPERT
+
+💰 Montant: 100 F
+📱 Tel: +229XXXXXXXX
+🔐 Device ID: abc12345...
+⏰ Expire: 29/01/2026 23:59:59
+
+Transaction ID: TX-1234567890
+```
+
+### 🌐 Configuration Frontend
+
+**Fichiers frontend (filtreexpertsupabase/frontend/) :**
+```
+index.html              - Page principale avec section abonnement
+static/css/style.css    - Styles pour la section abonnement
+static/js/app-bundle.js - Logique de vérification d'abonnement
+```
+
+**Section abonnement dans index.html :**
+```html
+<div class="card subscription-card" id="subscription-section">
+  <h2>💎 Abonnement Requis</h2>
+  <div class="subscription-warning">
+    <p>⚠️ L'affichage des combinaisons nécessite un abonnement journalier (100F).</p>
+    <p class="device-warning">📱 L'abonnement est lié UNIQUEMENT à cet appareil.</p>
+  </div>
+  <a href="https://sumb.cyberschool.ga/?..." class="payment-btn">
+    💳 S'abonner (100F/jour)
+  </a>
+</div>
+```
+
+**Polling automatique (toutes les 30s) :**
+```javascript
+// Vérifie automatiquement l'abonnement toutes les 30 secondes
+// Arrête le polling quand l'abonnement est détecté comme actif
+startSubscriptionPolling();
+```
+
+### 🔧 Gestion via API Supabase
+
+**Exécuter du SQL via l'API Management :**
+```bash
+# Créer une table
+curl -X POST "https://api.supabase.com/v1/projects/qfkyzljqykymahlpmdnu/database/query" \
+  -H "Authorization: Bearer sbp_2f96bd8c55c691ea2a3af1b65fe86359d42146b9" \
+  -H "Content-Type: application/json" \
+  -d '{"query": "CREATE TABLE IF NOT EXISTS ..."}'
+
+# Vérifier une table
+curl -X POST "https://api.supabase.com/v1/projects/qfkyzljqykymahlpmdnu/database/query" \
+  -H "Authorization: Bearer sbp_2f96bd8c55c691ea2a3af1b65fe86359d42146b9" \
+  -d '{"query": "SELECT * FROM subscriptions LIMIT 10;"}'
+```
+
+**Lister les Edge Functions déployées :**
+```bash
+curl -s "https://api.supabase.com/v1/projects/qfkyzljqykymahlpmdnu/functions" \
+  -H "Authorization: Bearer sbp_2f96bd8c55c691ea2a3af1b65fe86359d42146b9"
+```
+
+### ⚠️ Points d'Attention
+
+1. **Device Binding** : L'abonnement est lié à l'appareil. Changer d'appareil = perdra l'accès
+2. **Expiration quotidienne** : L'abonnement expire à 23h59 le jour du paiement
+3. **Paiement obligatoire** : Sans abonnement actif, les combinaisons ne s'affichent pas (403)
+4. **Polling automatique** : Le frontend vérifie automatiquement l'abonnement toutes les 30s
+5. **Telegram FiltreExpert** : Bot différent du bot Educalims (@Filtrexpert_bot)
+
+### 🚨 Résolution de Problèmes
+
+**Problème : Les combinaisons s'affichent sans abonnement**
+- **Cause** : La table `subscriptions` n'existe pas
+- **Solution** : Créer la table via l'API Management ou le Dashboard Supabase
+
+**Problème : Notifications Telegram sur le mauvais bot**
+- **Cause** : TELEGRAM_CHAT_ID mal configuré
+- **Solution** : Vérifier que webhook-cyberschool utilise `1646298746` et `8547430409:AAGx2LxGxP6fBd9mn13LSmRbU4y3wlopIq4`
+
+**Problème : 403 sur appel API**
+- **Cause** : Pas d'abonnement ou device_id invalide
+- **Solution** : Vérifier que l'utilisateur a payé et que le device_id correspond
+
+---
+
+## ÉTAPE 10 : GOSEN FILTER - PROJET TURFFILTER
+
+### 🎯 Projet Gosen TurfFilter
+
+**Projet :** gosen-filter-dev
+**Port :** 8082
+**Chemin Hostinger :** `/root/gosen-filter-dev`
+**Conteneur :** `gosen-dev-web`
+
+### 🌐 Architecture
+
+```
+┌─────────────────────────────────────────────────────────┐
+│                   Hostinger VPS                          │
+│  IP : 72.62.181.239                                       │
+├─────────────────────────────────────────────────────────┤
+│                                                          │
+│  ┌──────────────────┐      ┌──────────────────┐        │
+│  │ Gosen Filter Dev │      │   PostgreSQL      │        │
+│  │ Port : 8082       │ ───▶ │ gosen_dev         │        │
+│  │ Django + Gunicorn │      │ Port : 5432       │        │
+│  └──────────────────┘      └──────────────────┘        │
+│                                                          │
+└─────────────────────────────────────────────────────────┘
+```
+
+### 📂 Structure du Projet
+
+```
+gosen-filter-dev/
+├── gosen/                 # Application principale
+│   ├── models.py         # Modèles de données
+│   ├── views.py          # Vues API
+│   ├── templates/        # Templates HTML
+│   └── static/           # Fichiers statiques
+├── gosen_project/        # Configuration Django
+│   ├── settings.py       # Paramètres
+│   ├── urls.py           # Routes
+│   └── wsgi.py           # WSGI
+├── docker-compose.dev.yml # Configuration Docker
+├── Dockerfile            # Image Docker
+├── requirements.txt      # Dépendances Python
+└── manage.py             # Script Django
+```
+
+### ⚡ Conteneurs Docker
+
+```bash
+# Vérifier l'état des conteneurs
+ssh -i ~/.ssh/id_ed25519 root@72.62.181.239 "docker ps | grep gosen"
+
+# Voir les logs
+ssh -i ~/.ssh/id_ed25519 root@72.62.181.239 "docker logs gosen-dev-web -f"
+
+# Redémarrer le conteneur
+ssh -i ~/.ssh/id_ed25519 root@72.62.181.239 "docker restart gosen-dev-web"
+```
+
+### 🔧 Commandes Django
+
+```bash
+# Collecter les fichiers statiques
+ssh -i ~/.ssh/id_ed25519 root@72.62.181.239 "docker exec gosen-dev-web python manage.py collectstatic --noinput"
+
+# Créer un superutilisateur
+ssh -i ~/.ssh/id_ed25519 root@72.62.181.239 "docker exec gosen-dev-web python manage.py createsuperuser"
+
+# Appliquer les migrations
+ssh -i ~/.ssh/id_ed25519 root@72.62.181.239 "docker exec gosen-dev-web python manage.py migrate"
+
+# Ouvrir un shell Django
+ssh -i ~/.ssh/id_ed25519 root@72.62.181.239 "docker exec -it gosen-dev-web python manage.py shell"
+```
+
+### 🌐 URLs d'Accès
+
+| Élément | URL |
+|---------|-----|
+| **Application** | http://72.62.181.239:8082/ |
+| **Admin Django** | http://72.62.181.239:8082/admin/ |
+
+### 🚨 PROBLÈME : Interface Admin Sans CSS
+
+**Symptôme :**
+- L'interface admin s'affiche mais sans le style CSS de Django
+- Le contenu HTML est là mais pas les fichiers statiques (CSS, JS, images)
+
+**Cause :**
+Le conteneur utilise **Gunicorn directement** sans nginx pour servir les fichiers statiques. En production, Django ne sert pas les fichiers statiques par défaut.
+
+### ✅ SOLUTION : Whitenoise
+
+**Étape 1 : Installer Whitenoise**
+```bash
+docker exec gosen-dev-web pip install whitenoise
+```
+
+**Étape 2 : Configurer Django (settings.py)**
+
+Ajouter Whitenoise dans les middlewares, **juste après** `SecurityMiddleware` :
+
+```python
+MIDDLEWARE = [
+    'django.middleware.security.SecurityMiddleware',
+    'whitenoise.middleware.WhiteNoiseMiddleware',  # ← AJOUTER ICI
+    'corsheaders.middleware.CorsMiddleware',
+    'django.contrib.sessions.middleware.SessionMiddleware',
+    # ... autres middlewares
+]
+```
+
+Ajouter la configuration de stockage statique :
+
+```python
+STATIC_URL = '/static/'
+STATIC_ROOT = os.path.join(BASE_DIR, 'staticfiles')
+STATICFILES_STORAGE = 'whitenoise.storage.CompressedManifestStaticFilesStorage'
+```
+
+**Étape 3 : Collecter les fichiers statiques**
+```bash
+docker exec gosen-dev-web python manage.py collectstatic --noinput
+```
+
+**Étape 4 : Redémarrer le conteneur**
+```bash
+docker restart gosen-dev-web
+```
+
+### 📋 Ordre Correct des Middlewares
+
+⚠️ **IMPORTANT** : L'ordre des middlewares est critique pour que Whitenoise fonctionne :
+
+```python
+MIDDLEWARE = [
+    # 1. Sécurité (DOIT être premier)
+    'django.middleware.security.SecurityMiddleware',
+
+    # 2. Fichiers statiques (DOIT être juste après SecurityMiddleware)
+    'whitenoise.middleware.WhiteNoiseMiddleware',
+
+    # 3. CORS (après Whitenoise pour ne pas bloquer les statiques)
+    'corsheaders.middleware.CorsMiddleware',
+
+    # 4. Autres middlewares Django
+    'django.contrib.sessions.middleware.SessionMiddleware',
+    'django.middleware.common.CommonMiddleware',
+    # ...
+]
+```
+
+### 🔍 Vérifier que les statiques sont servis
+
+```bash
+# Tester l'accès aux fichiers statiques
+curl -I http://72.62.181.239:8082/static/admin/css/base.css
+
+# Doit retourner HTTP 200 avec Content-Type: text/css
+```
+
+### 📝 Configuration Complète de settings.py
+
+```python
+import os
+from pathlib import Path
+
+BASE_DIR = Path(__file__).resolve().parent.parent
+
+SECRET_KEY = os.environ.get('SECRET_KEY', 'django-insecure-gosen-dev-change-in-production')
+DEBUG = os.environ.get('DEBUG', 'True') == 'True'
+ALLOWED_HOSTS = os.environ.get('ALLOWED_HOSTS', '*').split(',')
+
+INSTALLED_APPS = [
+    'django.contrib.admin',
+    'django.contrib.auth',
+    'django.contrib.contenttypes',
+    'django.contrib.sessions',
+    'django.contrib.messages',
+    'django.contrib.staticfiles',
+    'corsheaders',
+    'gosen',
+]
+
+MIDDLEWARE = [
+    'django.middleware.security.SecurityMiddleware',
+    'whitenoise.middleware.WhiteNoiseMiddleware',
+    'corsheaders.middleware.CorsMiddleware',
+    'django.contrib.sessions.middleware.SessionMiddleware',
+    'django.middleware.common.CommonMiddleware',
+    'django.middleware.csrf.CsrfViewMiddleware',
+    'django.contrib.auth.middleware.AuthenticationMiddleware',
+    'django.contrib.messages.middleware.MessageMiddleware',
+    'django.middleware.clickjacking.XFrameOptionsMiddleware',
+]
+
+# ... reste de la configuration
+
+STATIC_URL = '/static/'
+STATIC_ROOT = os.path.join(BASE_DIR, 'staticfiles')
+STATICFILES_STORAGE = 'whitenoise.storage.CompressedManifestStaticFilesStorage'
+
+# CORS settings
+CORS_ALLOW_ALL_ORIGINS = True
+CORS_ALLOW_CREDENTIALS = True
+```
+
+### 🚨 Résolution de Problèmes
+
+**Problème : Les fichiers statiques retournent 404**
+- **Cause** : Mauvais ordre des middlewares
+- **Solution** : Vérifier que Whitenoise est juste après SecurityMiddleware
+
+**Problème : L'admin affiche du HTML sans style**
+- **Cause** : Whitenoise n'est pas installé ou pas configuré
+- **Solution** : Installer whitenoise et configurer les middlewares
+
+**Problème : Après modification, les changements ne s'appliquent pas**
+- **Cause** : Le conteneur doit être redémarré
+- **Solution** : `docker restart gosen-dev-web`
+
+---
+
+**Dernière mise à jour** : 29 Janvier 2026
+**Projet** : Hippique - Plateforme de pronostics hippiques + FiltreExpert Supabase + Gosen TurfFilter
 **Repository** : https://github.com/andypaypow/hippique-django.git
 **VPS** : Hostinger (72.62.181.239)
 **Supabase** : https://qfkyzljqykymahlpmdnu.supabase.co

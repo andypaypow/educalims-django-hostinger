@@ -2,6 +2,13 @@
 // Logique de filtrage des combinaisons hippiques
 
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
+import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
+
+// ===== CONFIGURATION =====
+const SUPABASE_URL = Deno.env.get('SUPABASE_URL') || 'https://qfkyzljqykymahlpmdnu.supabase.co';
+const SUPABASE_ANON_KEY = Deno.env.get('SUPABASE_ANON_KEY') || '';
+const PAYMENT_LINK = Deno.env.get('PAYMENT_LINK') ||
+  'https://sumb.cyberschool.ga/?productId=KzIfBGUYU6glnH3JlsbZ&operationAccountCode=ACC_6835C458B85FF&maison=moov&amount=100';
 
 // ===== TYPES =====
 interface BaseConfig {
@@ -56,6 +63,8 @@ interface FilterRequest {
   smallLargeFilters: Array<{ limit: number; min: number; max: number }>;
   consecutiveFilters: Array<{ min: number; max: number }>;
   alternanceFilters: AlternanceFilter[];
+  device_id?: string;
+  jwt_token?: string;
 }
 
 interface SynthesisData {
@@ -71,6 +80,40 @@ interface FilterResponse {
   filteredCount: number;
   reductionRate: number;
   synthesis: SynthesisData;
+}
+
+// ===== VÉRIFICATION ABONNEMENT =====
+
+async function verifySubscription(deviceId: string, jwtToken?: string): Promise<{ hasAccess: boolean; message: string }> {
+  if (!deviceId) {
+    return { hasAccess: false, message: 'Device ID requis. Veuillez effectuer un paiement.' };
+  }
+
+  const supabase = createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+  const now = new Date().toISOString();
+
+  const { data: subscription, error } = await supabase
+    .from('subscriptions')
+    .select('*')
+    .eq('device_id', deviceId)
+    .gte('expiry_date', now)
+    .order('created_at', { ascending: false })
+    .limit(1)
+    .maybeSingle();
+
+  if (error || !subscription) {
+    return { hasAccess: false, message: 'Aucun abonnement actif. Veuillez effectuer un paiement.' };
+  }
+
+  if (subscription.payment_status !== 'active') {
+    return { hasAccess: false, message: `Abonnement ${subscription.payment_status}. Veuillez effectuer un paiement.` };
+  }
+
+  if (jwtToken && subscription.jwt_token !== jwtToken) {
+    return { hasAccess: false, message: 'Token invalide. Reconnectez-vous.' };
+  }
+
+  return { hasAccess: true, message: 'Accès autorisé' };
 }
 
 // ===== FONCTIONS DE GÉNÉRATION =====
@@ -365,6 +408,31 @@ serve(async (req) => {
     const request: FilterRequest = await req.json();
 
     console.log('📊 Reçu:', JSON.stringify(request, null, 2));
+
+    // ===== VÉRIFICATION ABONNEMENT =====
+    const deviceId = request.device_id;
+    const jwtToken = request.jwt_token;
+
+    console.log(`🔍 Vérification abonnement pour device: ${deviceId?.substring(0, 8)}...`);
+
+    const accessCheck = await verifySubscription(deviceId, jwtToken);
+
+    if (!accessCheck.hasAccess) {
+      console.log(`❌ Accès refusé: ${accessCheck.message}`);
+      return new Response(JSON.stringify({
+        error: 'Abonnement requis',
+        message: accessCheck.message,
+        payment_link: PAYMENT_LINK
+      }), {
+        headers: {
+          'Content-Type': 'application/json',
+          'Access-Control-Allow-Origin': '*'
+        },
+        status: 403
+      });
+    }
+
+    console.log('✅ Abonnement vérifié, traitement du filtrage...');
 
     const { config, groups, standardFilters, advancedFilters, weightFilters,
             evenOddFilters, smallLargeFilters, consecutiveFilters, alternanceFilters } = request;
