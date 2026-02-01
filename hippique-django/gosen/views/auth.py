@@ -1,9 +1,8 @@
 from django.shortcuts import render, redirect
 from django.http import JsonResponse
 from django.views.decorators.csrf import csrf_exempt
-from django.utils import timezone
-import secrets
-from ..models import AdminUser
+from django.contrib.auth import authenticate, login, logout
+from django.contrib.auth.decorators import login_required
 
 
 def login_page(request):
@@ -13,43 +12,32 @@ def login_page(request):
 
 @csrf_exempt
 def login_api(request):
-    """API de connexion"""
+    """API de connexion avec authentification Django standard"""
     if request.method != 'POST':
         return JsonResponse({'success': False, 'error': 'Méthode non autorisée'}, status=405)
     
     username = request.POST.get('username', '')
     password = request.POST.get('password', '')
     
-    # Pour l'instant, on utilise un mot de passe fixe pour la demo
-    # En production, utilisez un vrai systeme d'authentification
-    if password == 'gosen2026admin':
-        try:
-            admin = AdminUser.objects.get(username=username, is_active=True)
-            # Mettre a jour la date de derniere connexion
-            admin.last_login = timezone.now()
-            admin.save()
-            
-            response = JsonResponse({'success': True, 'redirect': '/'})
-            response.set_cookie('admin_token', admin.token, max_age=7*24*3600)  # 7 jours
-            return response
-        except AdminUser.DoesNotExist:
-            return JsonResponse({'success': False, 'error': 'Identifiants incorrects'}, status=401)
+    # Authentification Django standard
+    user = authenticate(request, username=username, password=password)
     
-    return JsonResponse({'success': False, 'error': 'Mot de passe incorrect'}, status=401)
+    if user is not None and user.is_active:
+        login(request, user)
+        return JsonResponse({'success': True, 'redirect': '/'})
+    
+    return JsonResponse({'success': False, 'error': 'Identifiants incorrects'}, status=401)
 
 
-def logout(request):
+def logout_view(request):
     """Déconnexion"""
-    response = redirect('/')
-    response.delete_cookie('admin_token')
-    return response
+    logout(request)
+    return redirect('/')
 
 
 def check_auth(request):
-    """Vérifie si l'utilisateur est authentifié comme admin"""
-    token = request.COOKIES.get('admin_token')
-    if not token:
-        return JsonResponse({'is_admin': False})
-    
-    admin = AdminUser.verify_token(token)
-    return JsonResponse({'is_admin': admin is not None, 'username': admin.username if admin else None})
+    """Vérifie si l'utilisateur est authentifié"""
+    return JsonResponse({
+        'is_admin': request.user.is_authenticated,
+        'username': request.user.username if request.user.is_authenticated else None
+    })
