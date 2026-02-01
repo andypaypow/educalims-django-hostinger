@@ -1,0 +1,11 @@
+{
+  "name": "fix-whitenoise",
+  "description": "Corriger les problèmes de fichiers statiques avec Whitenoise",
+  "steps": [
+    "Installer whitenoise dans requirements.txt",
+    "Configurer Whitenoise dans settings.py",
+    "Collecter les fichiers statiques",
+    "Redémarrer le conteneur",
+    "Vérifier que les fichiers statiques sont servis"
+  ]
+}

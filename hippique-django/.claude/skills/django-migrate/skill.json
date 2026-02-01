@@ -1,0 +1,11 @@
+{
+  "name": "django-migrate",
+  "description": "Créer et appliquer des migrations Django pour Gosen Filter",
+  "steps": [
+    "Se connecter au serveur via SSH",
+    "Créer les migrations avec makemigrations",
+    "Vérifier les migrations avec showmigrations",
+    "Appliquer les migrations avec migrate",
+    "Redémarrer le conteneur si nécessaire"
+  ]
+}

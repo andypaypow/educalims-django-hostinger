@@ -1,0 +1,9 @@
+{
+  "name": "docker-commands",
+  "description": "Commandes Docker utiles pour Gosen Filter sur Hostinger",
+  "steps": [
+    "Se connecter au serveur via SSH",
+    "Exécuter les commandes Docker appropriées",
+    "Vérifier l'état des conteneurs"
+  ]
+}

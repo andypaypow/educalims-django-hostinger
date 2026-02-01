@@ -1,0 +1,11 @@
+{
+  "name": "git-workflow",
+  "description": "Workflow Git pour le projet Gosen Filter",
+  "steps": [
+    "Créer une branche pour les modifications",
+    "Faire les modifications et les tester",
+    "Commiter les changements",
+    "Pousser vers GitHub",
+    "Merger dans prod si validé"
+  ]
+}
