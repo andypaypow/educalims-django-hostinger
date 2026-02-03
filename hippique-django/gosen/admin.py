@@ -2,12 +2,198 @@
 Administration Django pour l'application Gosen TurfFilter
 """
 from django.contrib import admin
+from django.contrib.auth.admin import UserAdmin
+from django.contrib.auth.models import User
 from django.utils.html import format_html
 from django.utils import timezone
 import json
 
-from .models import WebhookLog
+from .models import WebhookLog, UserProfile, SubscriptionPayment, SubscriptionProduct
 
+
+# ============================================
+# INLINE ADMIN FOR USER PROFILE
+# ============================================
+
+class UserProfileInline(admin.StackedInline):
+    """Inline admin pour UserProfile dans User admin"""
+    model = UserProfile
+    can_delete = False
+    verbose_name_plural = 'Profil'
+    readonly_fields = ['date_creation_compte', 'derniere_connexion', 'nb_filtres_realises', 'date_reset_filtres']
+    fields = [
+        'telephone',
+        'device_id',
+        'date_creation_compte',
+        'derniere_connexion',
+        'nb_filtres_realises',
+        'est_actif',
+        'a_un_abonnement',
+        'type_abonnement',
+        'date_debut_abonnement',
+        'date_fin_abonnement',
+        'filtres_gratuits_utilises',
+        'date_reset_filtres',
+    ]
+
+
+class SubscriptionPaymentInline(admin.TabularInline):
+    """Inline admin pour SubscriptionPayment dans User admin"""
+    model = SubscriptionPayment
+    can_delete = True
+    verbose_name_plural = 'Paiements'
+    readonly_fields = ['date_creation', 'date_paiement', 'reference_transaction']
+    fields = [
+        'produit',
+        'type_abonnement',
+        'montant',
+        'devise',
+        'statut',
+        'reference_transaction',
+        'telephone',
+        'date_creation',
+        'date_paiement',
+    ]
+    extra = 0
+
+
+# ============================================
+# EXTEND USER ADMIN
+# ============================================
+
+class CustomUserAdmin(UserAdmin):
+    """Admin étendu pour User avec profil et abonnements"""
+
+    inlines = [UserProfileInline, SubscriptionPaymentInline]
+
+    list_display = UserAdmin.list_display + ('get_abonnement', 'get_telephone', 'get_nb_filtres')
+
+    def get_abonnement(self, obj):
+        """Affiche le statut d'abonnement"""
+        if hasattr(obj, 'profile'):
+            if obj.profile.est_abonne:
+                return format_html(
+                    '<span style="color: #28a745; font-weight: bold;">⭐ {}</span>',
+                    obj.profile.get_type_abonnement_display()
+                )
+            return format_html(
+                '<span style="color: #ffc107;">Gratuit</span>'
+            )
+        return '-'
+    get_abonnement.short_description = 'Abonnement'
+
+    def get_telephone(self, obj):
+        """Affiche le numéro de téléphone"""
+        if hasattr(obj, 'profile') and obj.profile.telephone:
+            return obj.profile.telephone
+        return '-'
+    get_telephone.short_description = 'Téléphone'
+
+    def get_nb_filtres(self, obj):
+        """Affiche le nombre de filtres réalisés"""
+        if hasattr(obj, 'profile'):
+            return obj.profile.nb_filtres_realises
+        return '-'
+    get_nb_filtres.short_description = 'Filtres'
+
+
+# Désenregistrer l'ancien UserAdmin et enregistrer le nouveau
+admin.site.unregister(User)
+admin.site.register(User, CustomUserAdmin)
+
+
+# ============================================
+# SUBSCRIPTION PRODUCT ADMIN
+# ============================================
+
+@admin.register(SubscriptionProduct)
+class SubscriptionProductAdmin(admin.ModelAdmin):
+    """Administration des produits d'abonnement"""
+
+    list_display = [
+        'id',
+        'nom',
+        'type_abonnement',
+        'prix_display',
+        'duree_display',
+        'est_actif',
+        'ordre_affichage',
+    ]
+
+    list_filter = [
+        'type_abonnement',
+        'est_actif',
+        'devise',
+    ]
+
+    search_fields = [
+        'nom',
+        'description',
+        'type_abonnement',
+    ]
+
+    readonly_fields = ['date_creation', 'date_modification']
+
+    fieldsets = (
+        ('Informations générales', {
+            'fields': (
+                'nom',
+                'description',
+                'type_abonnement',
+            )
+        }),
+        ('Prix', {
+            'fields': (
+                'prix',
+                'devise',
+            )
+        }),
+        ('Durée', {
+            'fields': (
+                'duree_jours',
+                'duree_heures',
+            )
+        }),
+        ('URLs de paiement', {
+            'fields': (
+                'url_moov_money',
+                'url_airtel_money',
+            ),
+            'classes': ('collapse',)
+        }),
+        ('Affichage', {
+            'fields': (
+                'est_actif',
+                'ordre_affichage',
+            )
+        }),
+        ('Métadonnées', {
+            'fields': (
+                'date_creation',
+                'date_modification',
+            ),
+            'classes': ('collapse',)
+        }),
+    )
+
+    list_editable = ['est_actif', 'ordre_affichage']
+    ordering = ['ordre_affichage', 'prix']
+    list_per_page = 25
+
+    def prix_display(self, obj):
+        """Affiche le prix formaté"""
+        return f'{obj.prix:,} {obj.devise}'.replace(',', ' ')
+    prix_display.short_description = 'Prix'
+
+    def duree_display(self, obj):
+        """Affiche la durée formatée"""
+        return obj.duree_affichage
+    duree_display.short_description = 'Durée'
+
+
+# ============================================
+# WEBHOOK LOG ADMIN
+# ============================================
 
 @admin.register(WebhookLog)
 class WebhookLogAdmin(admin.ModelAdmin):
@@ -20,10 +206,8 @@ class WebhookLogAdmin(admin.ModelAdmin):
         'reference_transaction',
         'telephone',
         'montant',
-        'fees',
-        'total_amount',
         'statut',
-        'est_en_retard',
+        'est_en_retard_admin',
     ]
 
     list_filter = [
@@ -60,9 +244,7 @@ class WebhookLogAdmin(admin.ModelAdmin):
     ]
 
     date_hierarchy = 'date_reception'
-
     ordering = ['-date_reception']
-
     list_per_page = 25
 
     fieldsets = (
@@ -104,17 +286,21 @@ class WebhookLogAdmin(admin.ModelAdmin):
         }),
     )
 
-    def est_en_retard(self, obj):
+    def est_en_retard_admin(self, obj):
         """Affiche un indicateur si le webhook est en retard"""
-        if obj.est_en_retard:
+        try:
+            en_retard = obj.est_en_retard
+        except:
+            en_retard = False
+
+        if en_retard:
             return format_html(
                 '<span style="color: #dc3545; font-weight: bold;">⚠️ OUI</span>'
             )
         return format_html(
             '<span style="color: #28a745;">✓ Non</span>'
         )
-    est_en_retard.short_description = 'En retard'
-    est_en_retard.boolean = False
+    est_en_retard_admin.short_description = 'En retard'
 
     def payload_display(self, obj):
         """Affiche le payload formaté"""
@@ -125,7 +311,7 @@ class WebhookLogAdmin(admin.ModelAdmin):
                 payload_json
             )
         return '-'
-    payload_display.short_description = 'Payload (données reçues)'
+    payload_display.short_description = 'Payload'
 
     def headers_display(self, obj):
         """Affiche les headers formatés"""
@@ -140,28 +326,24 @@ class WebhookLogAdmin(admin.ModelAdmin):
 
     def duree_traitement(self, obj):
         """Affiche la durée de traitement"""
-        if obj.duree_traitement:
-            return f'{obj.duree_traitement:.2f} s'
+        try:
+            if obj.duree_traitement:
+                return f'{obj.duree_traitement:.2f} s'
+        except:
+            pass
         return '-'
     duree_traitement.short_description = 'Durée de traitement'
 
     def has_add_permission(self, request):
-        """Interdit l'ajout manuel de webhooks"""
         return False
 
     def has_change_permission(self, request, obj=None):
-        """Interdit la modification des webhooks"""
         return False
 
-    def has_delete_permission(self, request, obj=None):
-        """Autorise la suppression des webhooks"""
-        return True
 
-
-# Actions personnalisées
+# Actions personnalisées pour WebhookLog
 @admin.action(description='Marquer comme traités (Succès)')
 def marquer_traite(modeladmin, request, queryset):
-    """Marque les webhooks sélectionnés comme traités"""
     count = 0
     for log in queryset:
         log.marque_traite(succes=True)
@@ -171,7 +353,6 @@ def marquer_traite(modeladmin, request, queryset):
 
 @admin.action(description='Marquer comme en erreur')
 def marquer_erreur(modeladmin, request, queryset):
-    """Marque les webhooks sélectionnés comme en erreur"""
     count = 0
     for log in queryset:
         log.marque_traite(succes=False, message="Marqué manuellement comme erreur")
@@ -179,5 +360,107 @@ def marquer_erreur(modeladmin, request, queryset):
     modeladmin.message_user(request, f'{count} webhooks marqués comme en erreur.')
 
 
-# Ajouter les actions à l'admin
 WebhookLogAdmin.actions = [marquer_traite, marquer_erreur]
+
+
+# ============================================
+# SUBSCRIPTION PAYMENT ADMIN
+# ============================================
+
+@admin.register(SubscriptionPayment)
+class SubscriptionPaymentAdmin(admin.ModelAdmin):
+    """Administration des paiements d'abonnement"""
+
+    list_display = [
+        'id',
+        'utilisateur',
+        'produit_display',
+        'type_abonnement',
+        'montant_display',
+        'statut',
+        'reference_transaction',
+        'date_creation',
+        'date_paiement',
+    ]
+
+    list_filter = [
+        'statut',
+        'type_abonnement',
+        'produit',
+        'date_creation',
+    ]
+
+    search_fields = [
+        'utilisateur__username',
+        'utilisateur__email',
+        'reference_transaction',
+        'telephone',
+    ]
+
+    readonly_fields = [
+        'utilisateur',
+        'produit',
+        'type_abonnement',
+        'montant',
+        'devise',
+        'reference_transaction',
+        'code_paiement',
+        'telephone',
+        'date_creation',
+        'date_paiement',
+        'webhook_log',
+    ]
+
+    date_hierarchy = 'date_creation'
+    ordering = ['-date_creation']
+    list_per_page = 25
+
+    fieldsets = (
+        ('Informations générales', {
+            'fields': (
+                'utilisateur',
+                'produit',
+                'type_abonnement',
+                'montant',
+                'devise',
+                'statut',
+            )
+        }),
+        ('Transaction', {
+            'fields': (
+                'reference_transaction',
+                'code_paiement',
+                'telephone',
+            )
+        }),
+        ('Dates', {
+            'fields': (
+                'date_creation',
+                'date_paiement',
+            )
+        }),
+        ('Webhook associé', {
+            'fields': (
+                'webhook_log',
+            ),
+            'classes': ('collapse',)
+        }),
+    )
+
+    def produit_display(self, obj):
+        """Affiche le produit lié"""
+        if obj.produit:
+            return obj.produit.nom
+        return '-'
+    produit_display.short_description = 'Produit'
+
+    def montant_display(self, obj):
+        """Affiche le montant formaté"""
+        return f'{obj.montant:,} {obj.devise}'.replace(',', ' ')
+    montant_display.short_description = 'Montant'
+
+    def has_add_permission(self, request):
+        return False
+
+    def has_change_permission(self, request, obj=None):
+        return False

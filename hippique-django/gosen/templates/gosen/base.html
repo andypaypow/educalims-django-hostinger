@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>🏇 Gosen TurfFilter</title>
+    <title>Filtre Expert</title>
     <script src='https://cdn.jsdelivr.net/npm/tesseract.js@5/dist/tesseract.min.js' defer></script>
     
     
@@ -11,11 +11,13 @@
 
     <link rel="stylesheet" href="/static/gosen/css/styles.css"></head>
 <body>
+{% include "gosen/auth_navbar.html" %}
+<div class="main-content">
 
     <div class="container">
         <header>
-            <a href="https://wa.me/241077045354?text=Bonjour,%20je%20souhaite%20souscrire%20à%20un%20abonnement%20pour%20Gosen%20TurfFilter.%20Quelles%20sont%20les%20options%20pour%20un%20abonnement%20mensuel,%20annuel,%20ou%20à%20vie%20?%20Je%20comprends%20que%20chaque%20licence%20est%20valable%20pour%20un%20seul%20appareil." target="_blank" class="logo-link"><img src="logo GM..webp" alt="Gosen TurfFilter Logo" style="width: 150px; height: auto; margin-bottom: 20px; border: 0;"></a>
-            <h1>🏇 Gosen TurfFilter</h1>
+            <a href="https://wa.me/241077045354?text=Bonjour,%20je%20souhaite%20souscrire%20à%20un%20abonnement%20pour%20Gosen%20TurfFilter.%20Quelles%20sont%20les%20options%20pour%20un%20abonnement%20mensuel,%20annuel,%20ou%20à%20vie%20?%20Je%20comprends%20que%20chaque%20licence%20est%20valable%20pour%20un%20seul%20appareil." target="_blank" class="logo-link"></a>
+            <h1>Filtre Expert</h1>
             <p class="subtitle">Application de filtrage de combinaisons hippiques</p>
         </header>
 
@@ -102,7 +104,9 @@
 
 
         <!-- Section des Résultats -->
-        <div class="card results-card">
+        <!-- IMPORTANT: BLOC ABONNEMENT - CONTENU A MASQUER -->
+        <!-- Resultats + Syntheses -->
+        <div class="card subscription-content-block">
             <h2>📊 4. Résultats du filtrage</h2>
             <div class="tab-buttons">
                 <button class="tab-btn active" data-tab="results-tab-content">Résultats</button>
@@ -148,7 +152,7 @@
     
 
     <!-- Section de Synthèse de l Expert -->
-    <div class="card expert-synthesis-card">
+    <div 
         <h2>🌟 Synthèse de l Expert</h2>
         <div id="expert-synthesis-section">
             <div class="synthesis-header">
@@ -163,7 +167,6 @@
                 </p>
                 <div class="synthesis-output-grid"></div>
             </div>
-        </div>
     </div>
 
     <!-- JavaScript intégré pour la logique de l application -->
@@ -185,7 +188,6 @@
                 <button id="add-alternance-filter-btn" class="modal-btn alternance">Alternance</button>
             </div>
             <button id="close-modal-btn" class="modal-close">&times;</button>
-        </div>
     </div>
 
     <!-- Modal for image source selection -->
