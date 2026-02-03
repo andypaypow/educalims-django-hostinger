@@ -14,13 +14,22 @@ services:
   web:
     build: .
     container_name: hippique-dev-web
-    command: gunicorn hippique_project.wsgi:application --bind 0.0.0.0:8000 --workers 2 --timeout 120
     volumes:
       - .:/code
     ports:
       - "8082:8000"
     env_file:
       - .env.dev
+    environment:
+      - DJANGO_SETTINGS_MODULE=gosen_project.settings
+      - DB_NAME=hippique_db
+      - DB_USER=hippique
+      - DB_PASSWORD=password
+      - DB_HOST=db
+      - DB_PORT=5432
+      - DJANGO_SUPERUSER_USERNAME=${DJANGO_SUPERUSER_USERNAME:-admin}
+      - DJANGO_SUPERUSER_EMAIL=${DJANGO_SUPERUSER_EMAIL:-admin@example.com}
+      - DJANGO_SUPERUSER_PASSWORD=${DJANGO_SUPERUSER_PASSWORD:-admin}
     depends_on:
       - db
     networks:

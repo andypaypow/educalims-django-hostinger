@@ -26,8 +26,12 @@ COPY . /code/
 # Collect static files
 RUN python manage.py collectstatic --noinput
 
+# Copy entrypoint script
+COPY entrypoint.sh /entrypoint.sh
+RUN chmod +x /entrypoint.sh
+
 # Expose port
 EXPOSE 8000
 
-# Run the application
-CMD ["gunicorn", "hippique_project.wsgi:application", "--bind", "0.0.0.0:8000"]
+# Run the entrypoint script
+ENTRYPOINT ["/entrypoint.sh"]
