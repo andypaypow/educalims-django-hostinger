@@ -2,7 +2,7 @@
 URLs pour l'application Gosen TurfFilter
 """
 from django.urls import path
-from .views import webhooks, base, filters
+from .views import webhooks, base, filters, auth, subscriptions
 
 
 app_name = 'gosen'
@@ -24,6 +24,53 @@ urlpatterns = [
 
     # API pour filtrer les combinaisons
     path('api/filter/', filters.api_filter_combinations, name='api_filter'),
+
+    # ============================================
+    # AUTHENTIFICATION ET UTILISATEURS
+    # ============================================
+
+    # Page de connexion
+    path('auth/login/', auth.login_page, name='login'),
+
+    # API de connexion
+    path('api/auth/login/', auth.login_api, name='login_api'),
+
+    # Page d'inscription
+    path('auth/register/', auth.register_page, name='register'),
+
+    # Déconnexion
+    path('auth/logout/', auth.logout_view, name='logout'),
+
+    # Vérifier l'authentification
+    path('api/auth/check/', auth.check_auth, name='check_auth'),
+
+    # Vérifier les filtres restants
+    path('api/auth/filters/remaining/', auth.check_filters_remaining, name='check_filters_remaining'),
+
+    # Incrémenter le compteur de filtres
+    path('api/auth/filters/increment/', auth.increment_filter_count, name='increment_filter_count'),
+
+    # Profil utilisateur
+    path('auth/profile/', auth.profile_page, name='profile'),
+
+    # Modifier le profil
+    path('auth/profile/edit/', auth.profile_edit, name='profile_edit'),
+
+    # Page d'abonnement
+    path('auth/subscription/', auth.subscription_page, name='subscription'),
+
+    # Tableau de bord
+    path('auth/dashboard/', auth.dashboard_page, name='dashboard'),
+
+    # ============================================
+    # PRODUITS ET PAIEMENTS
+    # ============================================
+
+    # API pour récupérer les produits d'abonnement
+    path('api/subscriptions/products/', subscriptions.api_products_list, name='api_products_list'),
+
+    # API pour créer un paiement
+    path('api/subscriptions/payment/create/', subscriptions.api_create_payment, name='api_create_payment'),
 
     # ============================================
     # WEBHOOKS
