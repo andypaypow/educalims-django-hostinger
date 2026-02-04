@@ -157,11 +157,29 @@ def api_filter_combinations(request):
         from math import comb
         total_combinations = comb(n, k)
         
+        # IMPORTANT: Conserver le vrai nombre de combinaisons filtrées AVANT de vider
+        filtered_count = len(filtered_combinations)
+        
+        # Vérification de l'abonnement
+        from django.contrib.auth.models import AnonymousUser
+        user = request.user
+        is_subscribed = False
+        combinations_to_return = filtered_combinations
+        
+        if not isinstance(user, AnonymousUser) and hasattr(user, 'profile'):
+            is_subscribed = user.profile.est_abonne
+        
+        # Pour les non-abonnés, on renvoie un tableau vide mais on garde filtered_count
+        if not is_subscribed:
+            combinations_to_return = []
+        
         return JsonResponse({
             'success': True,
-            'filtered': filtered_combinations,
+            'filtered': combinations_to_return,
             'total': total_combinations,
-            'count': len(filtered_combinations)
+            'filtered_count': filtered_count,
+            'count': len(combinations_to_return),
+            'is_subscribed': is_subscribed
         })
         
     except Exception as e:

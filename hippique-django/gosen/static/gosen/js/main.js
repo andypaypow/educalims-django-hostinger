@@ -620,7 +620,13 @@
                     const data = await response.json();
 
                     if (data.success) {
-                        displayResults(data.filtered, data.total);
+                        // Vérifier si l'utilisateur est abonné
+                        if (data.is_subscribed) {
+                            displayResults(data.filtered, data.total);
+                        } else {
+                            // Non abonné : afficher les produits
+                            showSubscriptionProducts(data);
+                        }
                     } else {
                         // Erreur
                         loader.style.display = 'none';
@@ -998,4 +1004,66 @@ Filtre: ${h3.textContent}
             addFilter('advanced'); // Ajoute un filtre avancé par défaut
             updateEventListeners();
             handleInputChange();
-        });
+
+            // Fonction pour afficher les produits d'abonnement (pour les non-abonnés)
+            async function showSubscriptionProducts(data) {
+                const realCount = data.filtered_count || data.total;
+                loader.style.display = 'none';
+                resultsSummaryDiv.innerHTML = `<strong>${realCount.toLocaleString('fr-FR')}</strong> combinaisons conservées sur <strong>${data.total.toLocaleString('fr-FR')}</strong>`;
+                
+                // Mettre à jour le bouton flottant
+                const floatingCounter = document.getElementById('floating-counter');
+                if (floatingCounter) {
+                    floatingCounter.textContent = `${realCount}/${data.total}`;
+                }
+
+                // Charger les produits
+                try {
+                    const response = await fetch('/api/subscriptions/products/');
+                    const result = await response.json();
+                    
+                    if (result.products && result.products.length > 0) {
+                        const productsHtml = result.products.map(product => `
+                            <div style="background: linear-gradient(135deg, rgba(0, 198, 255, 0.1) 0%, rgba(26, 26, 26, 1) 100%); border: 2px solid var(--primary-color); border-radius: 15px; padding: 25px; margin: 15px 0;">
+                                <h3 style="color: var(--primary-color); margin-bottom: 10px; font-size: 1.3rem;">${product.nom}</h3>
+                                <div style="font-size: 2rem; font-weight: 800; color: var(--primary-color); margin-bottom: 5px;">${product.prix.toLocaleString('fr-FR')} ${product.devise}</div>
+                                <div style="color: #888; font-size: 0.9rem; margin-bottom: 20px;">Durée: ${product.duree_affichage}</div>
+                                <div style="display: flex; flex-direction: column; gap: 10px;">
+                                    ${product.url_moov_money ? `<a href="${product.url_moov_money}" target="_blank" style="display: block; padding: 12px; background: #FF6600; color: white; text-decoration: none; border-radius: 8px; text-align: center; font-weight: 600;">💳 Payer avec Moov Money</a>` : ''}
+                                    ${product.url_airtel_money ? `<a href="${product.url_airtel_money}" target="_blank" style="display: block; padding: 12px; background: #ED1C24; color: white; text-decoration: none; border-radius: 8px; text-align: center; font-weight: 600;">💳 Payer avec Airtel Money</a>` : ''}
+                                </div>
+                            </div>
+                        `).join('');
+
+                        resultsOutputDiv.innerHTML = `
+                            <div style="text-align: center; padding: 30px 20px;">
+                                <h3 style="color: var(--primary-color); font-size: 1.5rem; margin-bottom: 15px;">🔒 Résultats réservés aux abonnés</h3>
+                                <p style="color: #888; margin-bottom: 25px;">Choisissez votre abonnement pour voir les ${realCount} combinaisons :</p>
+                                <div style="max-width: 350px; margin: 0 auto;">
+                                    ${productsHtml}
+                                </div>
+                            </div>
+                        `;
+                    } else {
+                        resultsOutputDiv.innerHTML = `
+                            <div style="text-align: center; padding: 40px; color: var(--primary-color);">
+                                <h3>🔒 Résultats réservés aux abonnés</h3>
+                                <p style="margin-top: 15px;">Aucun abonnement disponible.</p>
+                                <a href="https://wa.me/241077045354" target="_blank" style="display: inline-block; margin-top: 15px; padding: 12px 24px; border-radius: 8px; text-decoration: none; font-weight: 600; background: linear-gradient(135deg, #25D366 0%, #128C7E 100%); color: white;">
+                                    💬 WhatsApp
+                                </a>
+                            </div>
+                        `;
+                    }
+                } catch (error) {
+                    console.error('Error loading products:', error);
+                    resultsOutputDiv.innerHTML = `
+                        <div style="text-align: center; padding: 40px; color: var(--primary-color);">
+                            <h3>🔒 Résultats réservés aux abonnés</h3>
+                            <p style="margin-top: 15px;">Contactez-nous pour vous abonner.</p>
+                        </div>
+                    `;
+                }
+            }
+
+                });
