@@ -1,0 +1,367 @@
+{% extends "gosen/base.html" %}
+
+{% block content %}
+<div class="container" style="max-width: 1000px; margin: 0 auto; padding: 20px;">
+    <div class="header" style="text-align: center; margin-bottom: 40px;">
+        <h1 style="color: #00C6FF; font-size: 2.2rem; margin-bottom: 10px;">⭐ Choisissez votre abonnement</h1>
+        <p style="color: #888; font-size: 1.1rem;">Débloquez tout le potentiel de Gosen TurfFilter</p>
+    </div>
+
+    {% if profile.est_abonne %}
+    <div class="current-plan" style="background-color: rgba(0, 255, 127, 0.1); border: 1px solid #00FF7F; padding: 15px; border-radius: 10px; text-align: center; margin-bottom: 30px;">
+        <p style="color: #00FF7F; font-weight: 600;">✅ Vous êtes déjà abonné ({{ profile.type_abonnement|title }}) - Jours restants: {{ profile.jours_restants_abonnement }}</p>
+    </div>
+    {% endif %}
+
+    <!-- Conteneur pour les produits chargés dynamiquement -->
+    <div id="products-container" class="plans-grid" style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 20px; margin-bottom: 40px;">
+        <!-- Les produits seront chargés ici via JavaScript -->
+        <div style="text-align: center; grid-column: 1 / -1; padding: 50px;">
+            <div style="display: inline-block; width: 50px; height: 50px; border: 5px solid #333; border-top: 5px solid #00C6FF; border-radius: 50%; animation: spin 1s linear infinite;"></div>
+            <p style="color: #888; margin-top: 20px;">Chargement des abonnements...</p>
+        </div>
+    </div>
+
+    <!-- Formulaire de paiement (caché par défaut) -->
+    <div class="payment-form" id="payment-form" style="display: none; background-color: #1a1a1a; border-radius: 20px; padding: 40px; border: 1px solid #333;">
+        <h2 style="color: #00C6FF; margin-bottom: 20px;">💳 Finaliser votre abonnement</h2>
+
+        <div id="selected-product-info" style="background-color: #222; padding: 15px; border-radius: 10px; margin-bottom: 20px;">
+            <!-- Info du produit sélectionné -->
+        </div>
+
+        <form id="subscription-form">
+            {% csrf_token %}
+
+            <input type="hidden" id="selected-product-id" name="product_id" value="">
+
+            <div class="form-group" style="margin-bottom: 20px;">
+                <label style="display: block; margin-bottom: 8px; color: #ccc; font-weight: 500;">Numéro de téléphone pour le paiement *</label>
+                <input type="tel" id="payment-telephone" name="telephone" required placeholder="+241 XX XX XX XX" style="width: 100%; padding: 14px; border: 1px solid #444; border-radius: 10px; background-color: #222; color: #f0f0f0; font-size: 1rem;">
+            </div>
+
+            <div class="form-group">
+                <div style="display: flex; align-items: center; gap: 10px;">
+                    <input type="checkbox" name="accepter_conditions" id="id_conditions" required style="width: 20px; height: 20px; cursor: pointer;">
+                    <label for="id_conditions" style="margin: 0; cursor: pointer;">J'accepte les conditions générales de vente</label>
+                </div>
+            </div>
+
+            <button type="submit" class="btn-submit" style="width: 100%; padding: 15px; background: linear-gradient(135deg, #00C6FF 0%, #0077b6 100%); border: none; border-radius: 10px; color: white; font-size: 1.1rem; font-weight: 600; cursor: pointer; transition: all 0.3s ease; margin-top: 15px;">🚀 Procéder au paiement</button>
+
+            <!-- Options de paiement -->
+            <div id="payment-options" style="display: none; margin-top: 20px;">
+                <p style="text-align: center; color: #888; margin-bottom: 15px; font-size: 0.9rem;">Choisissez votre moyen de paiement :</p>
+                <div id="payment-buttons" style="display: flex; flex-direction: column; gap: 10px;">
+                    <!-- Les boutons seront ajoutés ici dynamiquement -->
+                </div>
+            </div>
+
+            <p style="text-align: center; color: #888; margin-top: 20px; font-size: 0.9rem;">
+                Vous pourrez payer via Moov Money ou Airtel Money après avoir cliqué sur le bouton.
+            </p>
+        </form>
+
+        <a href="https://wa.me/241077045354?text=Bonjour,%20je%20souhaite%20souscrire%20à%20un%20abonnement%20Gosen%20TurfFilter." target="_blank" style="display: block; text-align: center; padding: 15px; background-color: #25D366; color: white; border-radius: 10px; text-decoration: none; font-weight: 600; margin-top: 20px; transition: all 0.3s ease;">
+            💬 Contacter le support WhatsApp
+        </a>
+
+        <button onclick="hidePaymentForm()" style="width: 100%; padding: 15px; background: transparent; border: 1px solid #00C6FF; border-radius: 10px; color: #00C6FF; font-weight: 600; cursor: pointer; transition: all 0.3s ease; margin-top: 15px;">← Retour aux plans</button>
+    </div>
+
+    <div style="text-align: center; margin-top: 30px;">
+        <a href="/" style="color: #00C6FF; text-decoration: none;">← Retour à l'accueil</a> | <a href="/auth/profile/" style="color: #00C6FF; text-decoration: none;">Mon profil</a>
+    </div>
+</div>
+
+<style>
+@keyframes spin {
+    0% { transform: rotate(0deg); }
+    100% { transform: rotate(360deg); }
+}
+
+@media (max-width: 900px) {
+    #products-container {
+        grid-template-columns: 1fr !important;
+    }
+}
+
+.plan-card {
+    background-color: #1a1a1a;
+    border-radius: 20px;
+    padding: 30px;
+    border: 1px solid #333;
+    position: relative;
+    transition: all 0.3s ease;
+}
+
+.plan-card:hover {
+    transform: translateY(-10px);
+    border-color: #00C6FF;
+    box-shadow: 0 10px 40px rgba(0, 198, 255, 0.2);
+}
+
+.plan-card.featured {
+    border: 2px solid #00C6FF;
+    background: linear-gradient(135deg, rgba(0, 198, 255, 0.1) 0%, rgba(26, 26, 26, 1) 100%);
+}
+
+.plan-card.featured::before {
+    content: '⭐ POPULAIRE';
+    position: absolute;
+    top: -12px;
+    left: 50%;
+    transform: translateX(-50%);
+    background: linear-gradient(135deg, #00C6FF 0%, #0077b6 100%);
+    color: white;
+    padding: 5px 15px;
+    border-radius: 20px;
+    font-size: 0.75rem;
+    font-weight: 700;
+}
+
+.plan-name {
+    font-size: 1.4rem;
+    font-weight: 700;
+    color: #f0f0f0;
+    margin-bottom: 10px;
+}
+
+.plan-price {
+    font-size: 2.5rem;
+    font-weight: 800;
+    color: #00C6FF;
+    margin-bottom: 5px;
+}
+
+.plan-period {
+    color: #888;
+    font-size: 0.9rem;
+    margin-bottom: 20px;
+}
+
+.plan-features {
+    list-style: none;
+    margin-bottom: 25px;
+}
+
+.plan-features li {
+    padding: 10px 0;
+    border-bottom: 1px solid #333;
+    color: #ccc;
+    font-size: 0.9rem;
+    display: flex;
+    align-items: center;
+}
+
+.plan-features li:last-child {
+    border-bottom: none;
+}
+
+.plan-features li::before {
+    content: '✓';
+    color: #00FF7F;
+    font-weight: 700;
+    margin-right: 10px;
+}
+
+.plan-button {
+    width: 100%;
+    padding: 15px;
+    border: 2px solid #00C6FF;
+    background: transparent;
+    color: #00C6FF;
+    border-radius: 10px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.3s ease;
+}
+
+.plan-button:hover {
+    background: linear-gradient(135deg, #00C6FF 0%, #0077b6 100%);
+    color: white;
+}
+
+.plan-card.featured .plan-button {
+    background: linear-gradient(135deg, #00C6FF 0%, #0077b6 100%);
+    color: white;
+}
+
+.payment-provider-btn {
+    width: 100%;
+    padding: 15px;
+    border: none;
+    border-radius: 10px;
+    color: white;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    text-align: center;
+    text-decoration: none;
+    display: block;
+}
+
+.payment-provider-btn.moov {
+    background-color: #FF6600;
+}
+
+.payment-provider-btn.airtel {
+    background-color: #ED1C24;
+}
+
+.payment-provider-btn:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 5px 15px rgba(0, 0, 0, 0.3);
+}
+</style>
+
+<script>
+let products = [];
+let selectedProduct = null;
+
+// Charger les produits depuis l'API
+async function loadProducts() {
+    try {
+        const response = await fetch('/api/subscriptions/products/');
+        const data = await response.json();
+        products = data.products;
+        renderProducts(products);
+    } catch (error) {
+        console.error('Error loading products:', error);
+        document.getElementById('products-container').innerHTML = `
+            <div style="text-align: center; grid-column: 1 / -1; padding: 50px;">
+                <p style="color: #FF007F;">Erreur lors du chargement des abonnements. Veuillez réessayer.</p>
+                <button onclick="loadProducts()" style="margin-top: 20px; padding: 10px 20px; background: #00C6FF; border: none; border-radius: 10px; color: white; cursor: pointer;">Réessayer</button>
+            </div>
+        `;
+    }
+}
+
+// Afficher les produits
+function renderProducts(products) {
+    const container = document.getElementById('products-container');
+
+    if (products.length === 0) {
+        container.innerHTML = `
+            <div style="text-align: center; grid-column: 1 / -1; padding: 50px;">
+                <p style="color: #888;">Aucun abonnement disponible pour le moment.</p>
+            </div>
+        `;
+        return;
+    }
+
+    container.innerHTML = products.map(product => `
+        <div class="plan-card ${product.est_populaire ? 'featured' : ''}" data-product-id="${product.id}">
+            <div class="plan-name">${product.nom}</div>
+            <div class="plan-price">${product.prix.toLocaleString('fr-FR')} ${product.devise}</div>
+            <div class="plan-period">${product.duree_affichage}</div>
+            <ul class="plan-features">
+                <li>Filtres illimités</li>
+                <li>Tous les critères de filtrage</li>
+                <li>Synthèse des pronostics</li>
+                <li>Backtest complet</li>
+                <li>Support par email</li>
+            </ul>
+            <button class="plan-button" onclick="selectProduct(${product.id})">Choisir</button>
+        </div>
+    `).join('');
+}
+
+// Sélectionner un produit
+function selectProduct(productId) {
+    selectedProduct = products.find(p => p.id === productId);
+
+    if (!selectedProduct) return;
+
+    // Afficher le formulaire de paiement
+    document.getElementById('products-container').style.display = 'none';
+    document.getElementById('payment-form').style.display = 'block';
+
+    // Afficher les infos du produit
+    document.getElementById('selected-product-info').innerHTML = `
+        <h3 style="color: #00C6FF; margin-bottom: 10px;">${selectedProduct.nom}</h3>
+        <p style="color: #f0f0f0; font-size: 1.5rem; font-weight: 700; margin-bottom: 5px;">${selectedProduct.prix.toLocaleString('fr-FR')} ${selectedProduct.devise}</p>
+        <p style="color: #888;">Durée: ${selectedProduct.duree_affichage}</p>
+    `;
+
+    document.getElementById('selected-product-id').value = productId;
+
+    // Scroll vers le formulaire
+    document.getElementById('payment-form').scrollIntoView({ behavior: 'smooth' });
+}
+
+// Masquer le formulaire de paiement
+function hidePaymentForm() {
+    document.getElementById('payment-form').style.display = 'none';
+    document.getElementById('products-container').style.display = 'grid';
+    document.getElementById('payment-options').style.display = 'none';
+    selectedProduct = null;
+}
+
+// Gérer la soumission du formulaire
+document.getElementById('subscription-form').addEventListener('submit', async (e) => {
+    e.preventDefault();
+
+    if (!selectedProduct) {
+        alert('Veuillez sélectionner un abonnement');
+        return;
+    }
+
+    const formData = new FormData(e.target);
+    formData.append('product_id', selectedProduct.id);
+
+    try {
+        const response = await fetch('/api/subscriptions/payment/create/', {
+            method: 'POST',
+            body: formData,
+            headers: {
+                'X-Requested-With': 'XMLHttpRequest'
+            }
+        });
+
+        const data = await response.json();
+
+        if (data.success) {
+            // Afficher les options de paiement
+            showPaymentOptions(data.payment_urls);
+        } else {
+            alert('Erreur: ' + (data.error || 'Une erreur est survenue'));
+        }
+    } catch (error) {
+        console.error('Error:', error);
+        alert('Erreur de connexion au serveur');
+    }
+});
+
+// Afficher les options de paiement
+function showPaymentOptions(paymentUrls) {
+    const container = document.getElementById('payment-options');
+    const buttonsContainer = document.getElementById('payment-buttons');
+
+    buttonsContainer.innerHTML = '';
+
+    if (paymentUrls.moov_money) {
+        const moovBtn = document.createElement('a');
+        moovBtn.href = paymentUrls.moov_money;
+        moovBtn.className = 'payment-provider-btn moov';
+        moovBtn.target = '_blank';
+        moovBtn.innerHTML = '💳 Payer avec Moov Money';
+        buttonsContainer.appendChild(moovBtn);
+    }
+
+    if (paymentUrls.airtel_money) {
+        const airtelBtn = document.createElement('a');
+        airtelBtn.href = paymentUrls.airtel_money;
+        airtelBtn.className = 'payment-provider-btn airtel';
+        airtelBtn.target = '_blank';
+        airtelBtn.innerHTML = '💳 Payer avec Airtel Money';
+        buttonsContainer.appendChild(airtelBtn);
+    }
+
+    container.style.display = 'block';
+}
+
+// Charger les produits au chargement de la page
+document.addEventListener('DOMContentLoaded', loadProducts);
+</script>
+{% endblock %}

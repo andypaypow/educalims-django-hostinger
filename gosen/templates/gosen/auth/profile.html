@@ -1,0 +1,302 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Mon Profil - Gosen TurfFilter</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #0d0d0d 0%, #1a1a1a 100%);
+            min-height: 100vh;
+            color: #f0f0f0;
+            padding: 20px;
+        }
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+        }
+        .header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 30px;
+            padding-bottom: 20px;
+            border-bottom: 1px solid #333;
+        }
+        .header h1 {
+            color: #00C6FF;
+            font-size: 1.8rem;
+        }
+        .btn-back {
+            padding: 10px 20px;
+            background: transparent;
+            border: 1px solid #00C6FF;
+            border-radius: 8px;
+            color: #00C6FF;
+            cursor: pointer;
+            transition: all 0.3s ease;
+        }
+        .btn-back:hover {
+            background: rgba(0, 198, 255, 0.1);
+        }
+        .grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 20px;
+        }
+        @media (max-width: 768px) {
+            .grid {
+                grid-template-columns: 1fr;
+            }
+        }
+        .card {
+            background-color: #1a1a1a;
+            border-radius: 15px;
+            padding: 25px;
+            border: 1px solid #333;
+        }
+        .card h2 {
+            color: #00C6FF;
+            font-size: 1.3rem;
+            margin-bottom: 20px;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+        .info-row {
+            display: flex;
+            justify-content: space-between;
+            padding: 12px 0;
+            border-bottom: 1px solid #333;
+        }
+        .info-row:last-child {
+            border-bottom: none;
+        }
+        .info-label {
+            color: #888;
+            font-size: 0.9rem;
+        }
+        .info-value {
+            color: #f0f0f0;
+            font-weight: 500;
+        }
+        .status-badge {
+            padding: 5px 12px;
+            border-radius: 20px;
+            font-size: 0.85rem;
+            font-weight: 600;
+        }
+        .status-active {
+            background-color: rgba(0, 255, 127, 0.2);
+            color: #00FF7F;
+        }
+        .status-inactive {
+            background-color: rgba(255, 127, 0, 0.2);
+            color: #FF7F00;
+        }
+        .subscription-card {
+            background: linear-gradient(135deg, rgba(0, 198, 255, 0.1) 0%, rgba(0, 119, 182, 0.1) 100%);
+            border: 1px solid #00C6FF;
+        }
+        .btn-upgrade {
+            width: 100%;
+            padding: 12px;
+            background: linear-gradient(135deg, #00C6FF 0%, #0077b6 100%);
+            border: none;
+            border-radius: 10px;
+            color: white;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            margin-top: 15px;
+        }
+        .btn-upgrade:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 5px 15px rgba(0, 198, 255, 0.3);
+        }
+        .payments-list {
+            margin-top: 20px;
+        }
+        .payment-item {
+            background-color: #222;
+            border-radius: 10px;
+            padding: 15px;
+            margin-bottom: 10px;
+            border-left: 3px solid #00C6FF;
+        }
+        .payment-item.status-complete {
+            border-left-color: #00FF7F;
+        }
+        .payment-item.status-en_attente {
+            border-left-color: #FF7F00;
+        }
+        .payment-item.status-echoue {
+            border-left-color: #FF007F;
+        }
+        .payment-header {
+            display: flex;
+            justify-content: space-between;
+            margin-bottom: 5px;
+        }
+        .payment-type {
+            font-weight: 600;
+            color: #f0f0f0;
+        }
+        .payment-status {
+            font-size: 0.8rem;
+            padding: 3px 8px;
+            border-radius: 10px;
+        }
+        .payment-date {
+            font-size: 0.85rem;
+            color: #888;
+        }
+        .no-payments {
+            text-align: center;
+            color: #888;
+            padding: 30px;
+        }
+        .stats-grid {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 15px;
+        }
+        .stat-item {
+            background-color: #222;
+            border-radius: 10px;
+            padding: 15px;
+            text-align: center;
+        }
+        .stat-value {
+            font-size: 1.8rem;
+            font-weight: 700;
+            color: #00C6FF;
+        }
+        .stat-label {
+            font-size: 0.8rem;
+            color: #888;
+            margin-top: 5px;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>👤 Mon Profil</h1>
+            <button class="btn-back" onclick="window.location.href='/'">← Retour à l'accueil</button>
+        </div>
+
+        <div class="grid">
+            <!-- Informations du compte -->
+            <div class="card">
+                <h2>📋 Informations du compte</h2>
+                <div class="info-row">
+                    <span class="info-label">Nom d'utilisateur</span>
+                    <span class="info-value">{{ request.user.username }}</span>
+                </div>
+                <div class="info-row">
+                    <span class="info-label">Email</span>
+                    <span class="info-value">{{ request.user.email }}</span>
+                </div>
+                <div class="info-row">
+                    <span class="info-label">Téléphone</span>
+                    <span class="info-value">{{ profile.telephone|default:"Non renseigné" }}</span>
+                </div>
+                <div class="info-row">
+                    <span class="info-label">Membre depuis</span>
+                    <span class="info-value">{{ profile.date_creation_compte|date:"d/m/Y" }}</span>
+                </div>
+                <div class="info-row">
+                    <span class="info-label">Statut</span>
+                    <span class="status-badge {% if profile.est_actif %}status-active{% else %}status-inactive{% endif %}">
+                        {% if profile.est_actif %}Actif{% else %}Suspendu{% endif %}
+                    </span>
+                </div>
+            </div>
+
+            <!-- Abonnement -->
+            <div class="card {% if profile.est_abonne %}subscription-card{% endif %}">
+                <h2>⭐ Abonnement</h2>
+                <div class="info-row">
+                    <span class="info-label">Type</span>
+                    <span class="info-value">
+                        {% if profile.type_abonnement == 'mensuel' %}Mensuel{% elif profile.type_abonnement == 'annuel' %}Annuel{% elif profile.type_abonnement == 'a_vie' %}À vie{% else %}Gratuit{% endif %}
+                    </span>
+                </div>
+                <div class="info-row">
+                    <span class="info-label">Statut</span>
+                    <span class="status-badge {% if profile.est_abonne %}status-active{% else %}status-inactive{% endif %}">
+                        {% if profile.est_abonne %}Actif{% else %}Inactif{% endif %}
+                    </span>
+                </div>
+                {% if profile.est_abonne and profile.type_abonnement != 'a_vie' %}
+                <div class="info-row">
+                    <span class="info-label">Expire le</span>
+                    <span class="info-value">{{ profile.date_fin_abonnement|date:"d/m/Y" }}</span>
+                </div>
+                <div class="info-row">
+                    <span class="info-label">Jours restants</span>
+                    <span class="info-value">{{ profile.jours_restants_abonnement }} jours</span>
+                </div>
+                {% endif %}
+                {% if not profile.est_abonne %}
+                <button class="btn-upgrade" onclick="window.location.href='/auth/subscription/'">
+                    🚀 S'abonner maintenant
+                </button>
+                {% endif %}
+            </div>
+
+            <!-- Statistiques -->
+            <div class="card">
+                <h2>📊 Mes statistiques</h2>
+                <div class="stats-grid">
+                    <div class="stat-item">
+                        <div class="stat-value">{{ profile.nb_filtres_realises }}</div>
+                        <div class="stat-label">Filtres réalisés</div>
+                    </div>
+                    <div class="stat-item">
+                        <div class="stat-value">
+                            {% if profile.est_abonne %}∞{% else %}{{ profile.filtres_gratuits_restants }}{% endif %}
+                        </div>
+                        <div class="stat-label">Filtres disponibles</div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Historique des paiements -->
+            <div class="card">
+                <h2>💳 Historique des paiements</h2>
+                {% if payments %}
+                <div class="payments-list">
+                    {% for payment in payments %}
+                    <div class="payment-item status-{{ payment.statut }}">
+                        <div class="payment-header">
+                            <span class="payment-type">
+                                {% if payment.type_abonnement == 'mensuel' %}Abonnement Mensuel{% elif payment.type_abonnement == 'annuel' %}Abonnement Annuel{% else %}Abonnement à Vie{% endif %}
+                            </span>
+                            <span class="payment-status status-badge status-{{ payment.statut }}">
+                                {% if payment.statut == 'complete' %}Payé{% elif payment.statut == 'en_attente' %}En attente{% else %}Échoué{% endif %}
+                            </span>
+                        </div>
+                        <div class="payment-date">
+                            {{ payment.date_creation|date:"d/m/Y H:i" }} • {{ payment.montant }} {{ payment.devise }}
+                        </div>
+                    </div>
+                    {% endfor %}
+                </div>
+                {% else %}
+                <div class="no-payments">
+                    <p>Aucun paiement enregistré</p>
+                </div>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+</body>
+</html>

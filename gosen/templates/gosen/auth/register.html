@@ -1,0 +1,284 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Inscription - Gosen TurfFilter</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #0d0d0d 0%, #1a1a1a 100%);
+            min-height: 100vh;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            color: #f0f0f0;
+            padding: 20px;
+        }
+        .register-container {
+            background-color: #1a1a1a;
+            border-radius: 20px;
+            box-shadow: 0 0 30px rgba(0, 198, 255, 0.5);
+            padding: 40px;
+            width: 100%;
+            max-width: 500px;
+            border: 1px solid #333;
+        }
+        .logo {
+            text-align: center;
+            margin-bottom: 30px;
+        }
+        .logo h1 {
+            color: #00C6FF;
+            font-size: 1.8rem;
+            margin-bottom: 10px;
+        }
+        .logo p {
+            color: #888;
+            font-size: 0.9rem;
+        }
+        .form-group {
+            margin-bottom: 20px;
+        }
+        .form-group label {
+            display: block;
+            margin-bottom: 8px;
+            color: #ccc;
+            font-weight: 500;
+            font-size: 0.9rem;
+        }
+        .form-group input {
+            width: 100%;
+            padding: 14px;
+            border: 1px solid #444;
+            border-radius: 10px;
+            background-color: #222;
+            color: #f0f0f0;
+            font-size: 1rem;
+            transition: all 0.3s ease;
+        }
+        .form-group input:focus {
+            outline: none;
+            border-color: #00C6FF;
+            box-shadow: 0 0 10px rgba(0, 198, 255, 0.3);
+        }
+        .form-group input::placeholder {
+            color: #666;
+        }
+        .btn-register {
+            width: 100%;
+            padding: 15px;
+            background: linear-gradient(135deg, #00C6FF 0%, #0077b6 100%);
+            border: none;
+            border-radius: 10px;
+            color: white;
+            font-size: 1.1rem;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            margin-top: 10px;
+        }
+        .btn-register:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 5px 20px rgba(0, 198, 255, 0.4);
+        }
+        .error-message, .success-message {
+            padding: 12px;
+            border-radius: 10px;
+            margin-bottom: 20px;
+            font-size: 0.9rem;
+            display: none;
+        }
+        .error-message {
+            background-color: rgba(255, 0, 127, 0.1);
+            border: 1px solid #FF007F;
+            color: #FF007F;
+        }
+        .success-message {
+            background-color: rgba(0, 198, 255, 0.1);
+            border: 1px solid #00C6FF;
+            color: #00C6FF;
+        }
+        .error-message.show, .success-message.show {
+            display: block;
+        }
+        .form-errors {
+            background-color: rgba(255, 0, 127, 0.1);
+            border: 1px solid #FF007F;
+            color: #FF007F;
+            padding: 12px;
+            border-radius: 10px;
+            margin-bottom: 20px;
+            font-size: 0.85rem;
+            display: none;
+        }
+        .form-errors.show {
+            display: block;
+        }
+        .form-errors ul {
+            margin-left: 20px;
+        }
+        .links {
+            text-align: center;
+            margin-top: 25px;
+            color: #888;
+        }
+        .links a {
+            color: #00C6FF;
+            text-decoration: none;
+            font-size: 0.9rem;
+        }
+        .links a:hover {
+            text-decoration: underline;
+        }
+        .divider {
+            text-align: center;
+            margin: 20px 0;
+            color: #666;
+            font-size: 0.85rem;
+        }
+        .terms {
+            font-size: 0.8rem;
+            color: #888;
+            text-align: center;
+            margin-top: 15px;
+        }
+        .terms a {
+            color: #00C6FF;
+        }
+    </style>
+</head>
+<body>
+    <div class="register-container">
+        <div class="logo">
+            <h1>🏇 Créer un compte</h1>
+            <p>Rejoignez Gosen TurfFilter</p>
+        </div>
+
+        <div id="error-message" class="error-message"></div>
+        <div id="success-message" class="success-message"></div>
+        <div id="form-errors" class="form-errors"></div>
+
+        <form id="register-form">
+            {% csrf_token %}
+
+            <div class="form-group">
+                <label for="id_username">Nom d'utilisateur *</label>
+                <input type="text" id="id_username" name="username" required autocomplete="username" placeholder="Choisissez un nom d'utilisateur">
+            </div>
+
+            <div class="form-group">
+                <label for="id_email">Email *</label>
+                <input type="email" id="id_email" name="email" required autocomplete="email" placeholder="votre@email.com">
+            </div>
+
+            <div class="form-group">
+                <label for="id_telephone">Téléphone</label>
+                <input type="tel" id="id_telephone" name="telephone" autocomplete="tel" placeholder="+241 XX XX XX XX">
+            </div>
+
+            <div class="form-group">
+                <label for="id_password1">Mot de passe *</label>
+                <input type="password" id="id_password1" name="password1" required autocomplete="new-password" placeholder="Au moins 8 caractères">
+            </div>
+
+            <div class="form-group">
+                <label for="id_password2">Confirmer le mot de passe *</label>
+                <input type="password" id="id_password2" name="password2" required autocomplete="new-password" placeholder="Retapez le mot de passe">
+            </div>
+
+            <button type="submit" class="btn-register">Créer mon compte</button>
+
+            <div class="terms">
+                En créant un compte, vous acceptez nos <a href="#">conditions d'utilisation</a> et notre <a href="#">politique de confidentialité</a>.
+            </div>
+        </form>
+
+        <div class="divider">ou</div>
+
+        <div class="links">
+            <p>Déjà inscrit ? <a href="/auth/login/">Connectez-vous</a></p>
+            <p style="margin-top: 10px;"><a href="/">← Retour à l'accueil</a></p>
+        </div>
+    </div>
+
+    <script>
+        const registerForm = document.getElementById('register-form');
+        const errorMessage = document.getElementById('error-message');
+        const successMessage = document.getElementById('success-message');
+        const formErrors = document.getElementById('form-errors');
+
+        function hideMessages() {
+            errorMessage.classList.remove('show');
+            successMessage.classList.remove('show');
+            formErrors.classList.remove('show');
+        }
+
+        registerForm.addEventListener('submit', async (e) => {
+            e.preventDefault();
+            hideMessages();
+
+            const formData = new FormData(registerForm);
+
+            try {
+                const response = await fetch('/auth/register/', {
+                    method: 'POST',
+                    body: formData,
+                    headers: {
+                        'X-Requested-With': 'XMLHttpRequest'
+                    }
+                });
+
+                const data = await response.json();
+
+                if (data.success) {
+                    successMessage.textContent = 'Compte créé avec succès ! Redirection...';
+                    successMessage.classList.add('show');
+                    setTimeout(() => {
+                        window.location.href = data.redirect || '/';
+                    }, 1500);
+                } else if (data.errors) {
+                    // Afficher les erreurs de formulaire
+                    let errorHtml = '<ul>';
+                    for (const [field, errors] of Object.entries(data.errors)) {
+                        const fieldName = field === 'username' ? 'Nom d\'utilisateur' :
+                                         field === 'email' ? 'Email' :
+                                         field === 'password1' ? 'Mot de passe' :
+                                         field === 'password2' ? 'Confirmation' : field;
+                        errors.forEach(err => {
+                            errorHtml += `<li><strong>${fieldName}:</strong> ${err}</li>`;
+                        });
+                    }
+                    errorHtml += '</ul>';
+                    formErrors.innerHTML = errorHtml;
+                    formErrors.classList.add('show');
+                } else {
+                    errorMessage.textContent = data.error || 'Erreur lors de l\'inscription';
+                    errorMessage.classList.add('show');
+                }
+            } catch (error) {
+                errorMessage.textContent = 'Erreur de connexion au serveur';
+                errorMessage.classList.add('show');
+                console.error('Error:', error);
+            }
+        });
+
+        // Validation en temps réel du mot de passe
+        const password1 = document.getElementById('id_password1');
+        const password2 = document.getElementById('id_password2');
+
+        password2.addEventListener('input', () => {
+            if (password2.value && password1.value !== password2.value) {
+                password2.style.borderColor = '#FF007F';
+            } else {
+                password2.style.borderColor = '#444';
+            }
+        });
+    </script>
+</body>
+</html>

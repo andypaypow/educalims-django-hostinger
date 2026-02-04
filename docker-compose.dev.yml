@@ -1,0 +1,43 @@
+version: "3.8"
+
+services:
+  db:
+    image: postgres:15-alpine
+    container_name: gosen-dev-db
+    environment:
+      POSTGRES_DB: gosen_dev
+      POSTGRES_USER: gosen
+      POSTGRES_PASSWORD: password
+    volumes:
+      - postgres_data_dev:/var/lib/postgresql/data
+    networks:
+      - gosen-dev-network
+
+  web:
+    build: .
+    container_name: gosen-dev-web
+    command: gunicorn gosen_project.wsgi:application --bind 0.0.0.0:8000 --workers 2 --timeout 120
+    volumes:
+      - .:/code
+      - static_volume:/code/staticfiles
+    ports:
+      - "8082:8000"
+    depends_on:
+      - db
+    environment:
+      - DEBUG=True
+      - POSTGRES_DB=gosen_dev
+      - POSTGRES_USER=gosen
+      - POSTGRES_PASSWORD=password
+      - POSTGRES_HOST=db
+      - POSTGRES_PORT=5432
+    networks:
+      - gosen-dev-network
+
+volumes:
+  postgres_data_dev:
+  static_volume:
+
+networks:
+  gosen-dev-network:
+    driver: bridge
