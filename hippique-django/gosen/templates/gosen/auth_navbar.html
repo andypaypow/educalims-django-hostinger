@@ -7,7 +7,8 @@
 
         <div class="nav-auth" id="nav-auth-guest">
             <a href="/auth/login/" class="nav-btn nav-btn-secondary">Connexion</a>
-            <a href="/auth/register/" class="nav-btn nav-btn-primary">Inscription</a>
+            <a href="/auth/register/" class="nav-btn nav-btn-secondary">Inscription</a>
+            <button class="nav-btn nav-btn-primary" id="btn-activate-phone">📱 J'ai déjà payé</button>
         </div>
 
         <div class="nav-auth" id="nav-auth-user" style="display: none;">
@@ -334,5 +335,40 @@
     }
 
     checkAuthStatus();
+
+    // Gestion du bouton "J'ai déjà payé"
+    const btnActivatePhone = document.getElementById('btn-activate-phone');
+    if (btnActivatePhone) {
+        btnActivatePhone.addEventListener('click', () => {
+            const phone = prompt('Entrez votre numéro de téléphone (avec lequel vous avez payé) :');
+            if (phone) {
+                activateByPhone(phone.trim());
+            }
+        });
+    }
+
+    async function activateByPhone(phone) {
+        try {
+            const formData = new FormData();
+            formData.append('phone', phone);
+
+            const response = await fetch('/api/auth/login/phone/', {
+                method: 'POST',
+                body: formData
+            });
+
+            const data = await response.json();
+
+            if (data.success) {
+                alert('✅ Abonnement activé ! Vous pouvez maintenant accéder aux combinaisons.');
+                location.reload();
+            } else {
+                alert('❌ ' + (data.error || 'Aucun abonnement trouvé pour ce numéro'));
+            }
+        } catch (error) {
+            console.error('Erreur:', error);
+            alert('Erreur de connexion au serveur');
+        }
+    }
 })();
 </script>

@@ -1,6 +1,7 @@
 from django.db import models
 from django.contrib.auth.models import User
 from django.utils import timezone
+import uuid
 
 
 class WebhookLog(models.Model):
@@ -82,7 +83,15 @@ class UserProfile(models.Model):
         if self.type_abonnement == 'a_vie':
             return True
         if self.date_fin_abonnement:
-            return timezone.now() < self.date_fin_abonnement
+            maintenant = timezone.now()
+            # Gérer les timezone naive vs aware
+            if self.date_fin_abonnement.tzinfo is None:
+                # Si date_fin est naive, on suppose qu'elle est en UTC
+                from datetime import timedelta
+                fin = self.date_fin_abonnement.replace(tzinfo=timezone.utc)
+            else:
+                fin = self.date_fin_abonnement
+            return maintenant < fin
         return False
 
     @property
@@ -109,7 +118,7 @@ class UserProfile(models.Model):
         self.nb_filtres_realises += 1
         self.save(update_fields=['filtres_gratuits_utilises', 'date_reset_filtres', 'nb_filtres_realises'])
 
-    def activer_abonnement(self, type_abonnement, duree_jours=None):
+    def activer_abonnement(self, type_abonnement, duree_jours=None, duree_heures=None):
         maintenant = timezone.now()
         self.type_abonnement = type_abonnement
         self.a_un_abonnement = True
@@ -121,7 +130,10 @@ class UserProfile(models.Model):
         elif type_abonnement == 'a_vie':
             self.date_fin_abonnement = None
 
-        if duree_jours:
+        # Priorité aux heures si spécifiées
+        if duree_heures:
+            self.date_fin_abonnement = maintenant + timezone.timedelta(hours=duree_heures)
+        elif duree_jours:
             self.date_fin_abonnement = maintenant + timezone.timedelta(days=duree_jours)
 
         if self.date_debut_abonnement and self.date_fin_abonnement and self.est_abonne:
@@ -266,3 +278,44 @@ class SubscriptionPayment(models.Model):
         if not self.date_traitement:
             return (timezone.now() - self.date_reception).total_seconds() > 300
         return False
+
+
+class AuthToken(models.Model):
+    """Token d'authentification automatique pour connexion sans mot de passe"""
+    token = models.UUIDField(unique=True, default=uuid.uuid4, editable=False)
+    user = models.ForeignKey(User, on_delete=models.CASCADE, related_name='auth_tokens')
+    date_creation = models.DateTimeField(auto_now_add=True)
+    date_expiration = models.DateTimeField()
+    utilise = models.BooleanField(default=False)
+    date_utilisation = models.DateTimeField(blank=True, null=True)
+
+    class Meta:
+        verbose_name = 'Token d\'authentification'
+        verbose_name_plural = 'Tokens d\'authentification'
+        ordering = ['-date_creation']
+        indexes = [
+            models.Index(fields=['token']),
+            models.Index(fields=['date_expiration']),
+        ]
+
+    def __str__(self):
+        return f'Token pour {self.user.username}'
+
+    @property
+    def est_valide(self):
+        """Vérifie si le token est valide (non utilisé et non expiré)"""
+        if self.utilise:
+            return False
+        return timezone.now() < self.date_expiration
+
+    @classmethod
+    def creer_pour_utilisateur(cls, user, heures_validite=24):
+        """Crée un token valide pour X heures"""
+        expiration = timezone.now() + timezone.timedelta(hours=heures_validite)
+        return cls.objects.create(user=user, date_expiration=expiration)
+
+    def marquer_utilise(self):
+        """Marque le token comme utilisé"""
+        self.utilise = True
+        self.date_utilisation = timezone.now()
+        self.save()

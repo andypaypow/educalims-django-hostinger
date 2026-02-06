@@ -1,0 +1,86 @@
+<!DOCTYPE html>
+<html lang='fr'>
+<head>
+    <meta charset='UTF-8'>
+    <meta name='viewport' content='width=device-width, initial-scale=1.0'>
+    <title>Paiement Réussi - Gosen TurfFilter</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #0d0d0d 0%, #1a1a1a 100%);
+            min-height: 100vh;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            color: #f0f0f0;
+        }
+        .container {
+            background-color: #1a1a1a;
+            border-radius: 20px;
+            box-shadow: 0 0 30px rgba(0, 198, 255, 0.5);
+            padding: 50px;
+            width: 100%;
+            max-width: 500px;
+            border: 1px solid #333;
+            text-align: center;
+        }
+        .icon {
+            font-size: 4rem;
+            margin-bottom: 20px;
+        }
+        h1 {
+            color: #00C6FF;
+            font-size: 1.8rem;
+            margin-bottom: 15px;
+        }
+        .message {
+            color: #ccc;
+            font-size: 1rem;
+            margin-bottom: 30px;
+            line-height: 1.6;
+        }
+        .btn-home {
+            display: inline-block;
+            padding: 15px 40px;
+            background: linear-gradient(135deg, #00C6FF 0%, #0077b6 100%);
+            border: none;
+            border-radius: 10px;
+            color: white;
+            font-size: 1.1rem;
+            font-weight: 600;
+            cursor: pointer;
+            text-decoration: none;
+            transition: all 0.3s ease;
+        }
+        .btn-home:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 5px 20px rgba(0, 198, 255, 0.4);
+        }
+        .info {
+            background-color: rgba(0, 198, 255, 0.1);
+            border: 1px solid #00C6FF;
+            color: #00C6FF;
+            padding: 15px;
+            border-radius: 10px;
+            margin-bottom: 20px;
+            font-size: 0.9rem;
+        }
+    </style>
+</head>
+<body>
+    <div class='container'>
+        <div class='icon'>✅</div>
+        <h1>Paiement Réussi !</h1>
+        <p class='message'>{{ message }}</p>
+        <div class='info'>
+            🔑 Vous pouvez maintenant accéder aux combinaisons de Turf Quinté+
+        </div>
+        <a href='/' class='btn-home'>Accéder à l'application</a>
+    </div>
+</body>
+</html>

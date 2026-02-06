@@ -35,6 +35,16 @@ urlpatterns = [
     # API de connexion
     path('api/auth/login/', auth.login_api, name='login_api'),
 
+    # Connexion par téléphone
+    path('api/auth/login/phone/', auth.login_by_phone, name='login_by_phone'),
+
+    # Connexion automatique par token (après paiement)
+    path('auth/auto-login/<uuid:token>/', auth.auto_login, name='auto_login'),
+
+    # Pages de retour après paiement
+    path('payment/success/', auth.payment_success, name='payment_success'),
+    path('payment/cancel/', auth.payment_cancel, name='payment_cancel'),
+
     # Page d'inscription
     path('auth/register/', auth.register_page, name='register'),
 
@@ -46,6 +56,9 @@ urlpatterns = [
 
     # Vérifier les filtres restants
     path('api/auth/filters/remaining/', auth.check_filters_remaining, name='check_filters_remaining'),
+
+    # API de diagnostic (à retirer en production)
+    path('api/auth/debug/', auth.api_debug_user, name='api_debug_user'),
 
     # Incrémenter le compteur de filtres
     path('api/auth/filters/increment/', auth.increment_filter_count, name='increment_filter_count'),

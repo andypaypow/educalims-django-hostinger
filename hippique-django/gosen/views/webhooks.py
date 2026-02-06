@@ -11,7 +11,8 @@ from django.contrib.admin.views.decorators import staff_member_required
 from django.utils import timezone
 from django.db.models import Q, Count
 
-from gosen.models import WebhookLog
+from django.contrib.auth.models import User
+from gosen.models import WebhookLog, UserProfile, SubscriptionProduct, SubscriptionPayment, AuthToken
 
 
 logger = logging.getLogger(__name__)
@@ -124,16 +125,95 @@ def webhook_receiver(request):
         # Sauvegarder le log
         webhook_log.save()
 
+        # Variable pour le token d'authentification
+        login_token = None
+        login_url = None
+
+        # TRAITEMENT AUTOMATIQUE DU PAIEMENT
+        # Créer l'utilisateur et activer l'abonnement si paiement réussi
+        if webhook_log.telephone and str(webhook_log.code_paiement) in ['200', 200]:
+            try:
+                # Créer ou récupérer l'utilisateur
+                username = 'user_' + webhook_log.telephone.replace('+', '').replace(' ', '')
+                user, created = User.objects.get_or_create(
+                    username=username,
+                    defaults={
+                        'email': f'{username}@temp.local',
+                        'is_active': True
+                    }
+                )
+
+                # Créer ou récupérer le profil
+                profile, profile_created = UserProfile.objects.get_or_create(
+                    user=user,
+                    defaults={'telephone': webhook_log.telephone}
+                )
+
+                # Trouver le produit correspondant au montant
+                produit = SubscriptionProduct.objects.filter(
+                    est_actif=True,
+                    prix=webhook_log.montant
+                ).first()
+
+                if produit:
+                    # Créer le paiement
+                    payment = SubscriptionPayment.objects.create(
+                        utilisateur=user,
+                        produit=produit,
+                        type_abonnement=produit.type_abonnement,
+                        montant=webhook_log.montant,
+                        statut='complete',
+                        reference_transaction=webhook_log.reference_transaction or f'AUTO-{timezone.now().timestamp()}',
+                        code_paiement=str(webhook_log.code_paiement),
+                        telephone=webhook_log.telephone,
+                        date_paiement=timezone.now(),
+                        webhook_log=webhook_log
+                    )
+
+                    # Activer l'abonnement
+                    profile.activer_abonnement(
+                        produit.type_abonnement,
+                        duree_jours=produit.duree_jours
+                    )
+
+                    # Générer un token d'authentification automatique
+                    auth_token = AuthToken.creer_pour_utilisateur(user, heures_validite=24)
+                    login_token = str(auth_token.token)
+                    # URL de connexion automatique (à utiliser avec Cyberschool redirect)
+                    login_url = f"http://72.62.181.239:8082/auth/auto-login/{login_token}/"
+
+                    # Mettre à jour le log
+                    webhook_log.statut = 'SUCCES'
+                    webhook_log.utilisateur = user
+                    webhook_log.date_traitement = timezone.now()
+                    webhook_log.save()
+
+                    logger.info(f"Abonnement activé pour {username} - Produit: {produit.nom} - Token: {login_token}")
+
+            except Exception as e:
+                logger.error(f'Erreur activation abonnement: {e}')
+                webhook_log.statut = 'ERREUR'
+                webhook_log.message_erreur = str(e)
+                webhook_log.save()
+
         # Logger
         logger.info(f"Webhook reçu - ID: {webhook_log.id}, Source: {webhook_log.source}, Ref: {webhook_log.reference_transaction}")
 
-        # Répondre immédiatement
-        return JsonResponse({
+        # Préparer la réponse
+        response_data = {
             'success': True,
             'message': 'Webhook reçu et enregistré',
             'log_id': webhook_log.id,
             'timestamp': timezone.now().isoformat()
-        })
+        }
+
+        # Inclure le token si généré
+        if login_token:
+            response_data['login_token'] = login_token
+            response_data['login_url'] = login_url
+
+        # Répondre
+        return JsonResponse(response_data)
 
     except Exception as e:
         logger.error(f"Erreur webhook: {e}")

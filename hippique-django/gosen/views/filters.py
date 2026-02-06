@@ -47,10 +47,10 @@ def api_filter_combinations(request):
     API principale de filtrage - TOUT les calculs se font côté serveur
     Accessible à tous les utilisateurs (formules protégées sur le serveur)
     """
-    
+
     try:
         data = json.loads(request.body)
-        
+
         # Paramètres de base
         n = int(data.get('n', 16))
         k = int(data.get('k', 6))
@@ -159,20 +159,45 @@ def api_filter_combinations(request):
         
         # IMPORTANT: Conserver le vrai nombre de combinaisons filtrées AVANT de vider
         filtered_count = len(filtered_combinations)
-        
+
         # Vérification de l'abonnement
         from django.contrib.auth.models import AnonymousUser
+        from gosen.models import UserProfile
+
         user = request.user
         is_subscribed = False
         combinations_to_return = filtered_combinations
-        
+
+        # 1. Vérifier si l'utilisateur est connecté et abonné
         if not isinstance(user, AnonymousUser) and hasattr(user, 'profile'):
             is_subscribed = user.profile.est_abonne
-        
+
+        # 2. Si pas connecté, vérifier par numéro de téléphone en paramètre POST
+        if not is_subscribed and data.get('phone'):
+            phone = data.get('phone', '').replace('+', '').replace(' ', '')
+            profile = UserProfile.objects.filter(telephone__icontains=phone).first()
+            if profile and profile.est_abonne:
+                is_subscribed = True
+                # Connecter automatiquement l'utilisateur pour les prochaines requêtes
+                from django.contrib.auth import login
+                login(request, profile.user)
+
+        # 3. Si toujours pas abonné, vérifier le cookie user_phone
+        if not is_subscribed:
+            cookie_phone = request.COOKIES.get('user_phone')
+            if cookie_phone:
+                phone_normalized = cookie_phone.replace('+', '').replace(' ', '')
+                profile = UserProfile.objects.filter(telephone__icontains=phone_normalized).first()
+                if profile and profile.est_abonne:
+                    is_subscribed = True
+                    # Connecter automatiquement l'utilisateur
+                    from django.contrib.auth import login
+                    login(request, profile.user)
+
         # Pour les non-abonnés, on renvoie un tableau vide mais on garde filtered_count
         if not is_subscribed:
             combinations_to_return = []
-        
+
         return JsonResponse({
             'success': True,
             'filtered': combinations_to_return,

@@ -1,4 +1,25 @@
         document.addEventListener('DOMContentLoaded', () => {
+            // --- VARIABLE GLOBALE POUR LE TÉLÉPHONE ---
+            let userTelephone = localStorage.getItem('userTelephone') || null;
+
+            // Fonction pour récupérer les infos utilisateur (y compris le téléphone)
+            const fetchUserInfo = async () => {
+                try {
+                    const response = await fetch('/api/auth/check/');
+                    const data = await response.json();
+                    if (data.telephone) {
+                        userTelephone = data.telephone;
+                        localStorage.setItem('userTelephone', data.telephone);
+                        console.log('Téléphone utilisateur stocké:', userTelephone);
+                    }
+                } catch (error) {
+                    console.error('Erreur récupération infos utilisateur:', error);
+                }
+            };
+
+            // Appeler au chargement
+            fetchUserInfo();
+
             // --- SÉLECTION DES ÉLÉMENTS DU DOM ---
             const numPartantsInput = document.getElementById('num-partants');
             const tailleCombinaisonInput = document.getElementById('taille-combinaison');
@@ -599,22 +620,29 @@
 
                 // ====== APPEL API CÔTÉ SERVEUR ======
                 try {
+                    const requestBody = {
+                        n, k,
+                        groups: groupsWithMinMax,
+                        orFilters,
+                        andFilters,
+                        weightFilters,
+                        evenOddFilters,
+                        smallLargeFilters,
+                        consecutiveFilters,
+                        alternanceFilters
+                    };
+
+                    // Ajouter le téléphone si disponible
+                    if (userTelephone) {
+                        requestBody.phone = userTelephone;
+                    }
+
                     const response = await fetch('/api/filter/', {
                         method: 'POST',
                         headers: {
                             'Content-Type': 'application/json',
                         },
-                        body: JSON.stringify({
-                            n, k,
-                            groups: groupsWithMinMax,
-                            orFilters,
-                            andFilters,
-                            weightFilters,
-                            evenOddFilters,
-                            smallLargeFilters,
-                            consecutiveFilters,
-                            alternanceFilters
-                        })
+                        body: JSON.stringify(requestBody)
                     });
 
                     const data = await response.json();
