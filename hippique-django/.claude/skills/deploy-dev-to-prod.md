@@ -189,9 +189,97 @@ docker logs gosen-prod-web --tail 20
 
 ---
 
-## 🔑 Configuration SSH GitHub (Si le serveur n'a pas accès)
+## 🔑 Configuration SSH GitHub pour push depuis le serveur
 
-### Afficher la clé SSH publique du serveur
+### ⚡ Méthode RAPIDE : Utiliser la clé existante du serveur
+
+Le serveur Hostinger a déjà une paire de clés SSH ! Voici comment l'utiliser pour pusher vers GitHub :
+
+```bash
+# 1. Se connecter au serveur
+ssh -i ~/.ssh/id_ed25519 root@72.62.181.239
+
+# 2. Afficher la clé SSH publique du serveur
+cat ~/.ssh/id_ed25519.pub
+
+# Exemple de sortie :
+# ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAINj1hqstZErdl2QZcS3TcXHnsCSGTKh80kiTvazDNXoI hp 360@DESKTOP-765K33B
+```
+
+### Ajouter la clé du serveur à GitHub
+
+1. **Copiez la clé affichée** ci-dessus (commence par `ssh-ed25519`)
+2. Allez sur https://github.com/settings/keys
+3. Cliquez sur **"New SSH key"**
+4. Titre : `Hostinger VPS` ou `filtreexpert.org`
+5. Collez la clé dans le champ "Key"
+6. Cliquez sur **"Add SSH key"**
+
+### Configurer le remote pour utiliser SSH
+
+```bash
+# Depuis le serveur
+cd /root/gosen-filter-dev
+
+# Changer le remote de HTTPS vers SSH
+git remote set-url origin git@github.com:andypaypow/educalims-django-hostinger.git
+
+# Vérifier la nouvelle URL
+git remote -v
+# Résultat attendu :
+# origin  git@github.com:andypaypow/educalims-django-hostinger.git (fetch)
+# origin  git@github.com:andypaypow/educalims-django-hostinger.git (push)
+```
+
+### Tester la connexion
+
+```bash
+# Depuis le serveur, tester la connexion SSH à GitHub
+ssh -T git@github.com
+
+# Réponse attendue en cas de succès :
+# Hi andypaypow! You've successfully authenticated, but GitHub does not provide shell access.
+```
+
+### Pusher depuis le serveur (une fois la clé ajoutée)
+
+```bash
+# Depuis le serveur
+cd /root/gosen-filter-dev
+
+# Ajouter et committer
+git add .
+git commit -m "message du commit"
+
+# Pusher vers dev (fonctionne maintenant avec SSH)
+git push origin dev
+```
+
+---
+
+### 📝 Historique : Comment j'ai obtenu la clé pour pusher
+
+**Problème rencontré :** Lors du déploiement du 6 février 2026, le serveur n'avait pas accès à GitHub pour pusher.
+
+**Commande utilisée :**
+```bash
+# Sur le serveur, vérifier les clés existantes
+ls -la ~/.ssh/
+cat ~/.ssh/id_ed25519.pub
+```
+
+**Résultat :** Le serveur avait déjà une clé SSH générée !
+```
+ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAINj1hqstZErdl2QZcS3TcXHnsCSGTKh80kiTvazDNXoI hp 360@DESKTOP-765K33B
+```
+
+**Solution :** J'ai affiché cette clé publique et je l'ai ajoutée manuellement à GitHub via l'interface web.
+
+**Note :** Cette clé SSH a probablement été générée lors de la configuration initiale du serveur ou lors de la première connexion SSH depuis la machine locale.
+
+---
+
+### Méthode alternative : Afficher la clé SSH publique du serveur
 
 ```bash
 # Se connecter au serveur
@@ -201,26 +289,7 @@ ssh -i ~/.ssh/id_ed25519 root@72.62.181.239
 cat ~/.ssh/id_ed25519.pub
 ```
 
-### Ajouter la clé à GitHub
-
-1. Copiez la clé affichée (commence par `ssh-ed25519` ou `ssh-rsa`)
-2. Allez sur https://github.com/settings/keys
-3. Cliquez sur **"New SSH key"**
-4. Titre : `Hostinger Server` ou `VPS Hostinger`
-5. Collez la clé dans le champ "Key"
-6. Cliquez sur **"Add SSH key"**
-
-### Tester la connexion
-
-```bash
-# Depuis le serveur
-ssh -T git@github.com
-
-# Réponse attendue :
-# Hi <username>! You've successfully authenticated...
-```
-
-### Si la clé SSH ne fonctionne pas
+### Si la clé SSH ne fonctionne pas (méthode Token)
 
 Utilisez un **GitHub Personal Access Token** :
 
@@ -275,6 +344,148 @@ docker compose -f docker-compose.prod.yml up -d --force-recreate
 echo "Déploiement terminé !"
 ENDSSH
 ```
+
+---
+
+## 🚀 Méthode OPTIMISÉE : Utiliser l'image Docker de DEV pour PROD
+
+### ⚡ Pourquoi utiliser l'image de DEV ?
+
+Au lieu de reconstruire l'image Docker sur PROD (ce qui prend 30-60 secondes), on peut **réutiliser l'image déjà construite sur DEV** !
+
+**Avantages :**
+- ⏱️ **Plus rapide** : Pas de reconstruction (30-60 secondes économisées)
+- 💾 **Moindre consommation CPU** : Le build consomme beaucoup de ressources
+- ✅ **Consistance** : Même image utilisée sur DEV et PROD
+- 🔒 **Sécurité** : L'image est déjà testée sur DEV
+
+### Architecture avec images partagées
+
+```
+┌─────────────────────────────────────────────────────────────┐
+│                 Workflow avec images Docker                 │
+├─────────────────────────────────────────────────────────────┤
+│                                                              │
+│  1️⃣ DEV (8082)                                             │
+│     docker compose build --no-cache web                     │
+│     ↓                                                        │
+│     Image créée : gosen-filter-dev-web:latest               │
+│                                                              │
+│  2️⃣ TAGUER L'IMAGE                                         │
+│     docker tag gosen-filter-dev-web:latest \                │
+│                gosen-prod-web:latest                        │
+│                                                              │
+│  3️⃣ PROD (8083)                                             │
+│     docker compose -f docker-compose.prod.yml up -d          │
+│     Utilise l'image taguée → PAS DE REBUILD !               │
+│                                                              │
+└─────────────────────────────────────────────────────────────┘
+```
+
+### Méthode 1 : Tagger l'image DEV pour PROD
+
+```bash
+# Se connecter au serveur
+ssh -i ~/.ssh/id_ed25519 root@72.62.181.239
+
+# 1. Sur DEV : Construire l'image (comme d'habitude)
+cd /root/gosen-filter-dev
+docker compose -f docker-compose.dev.yml build --no-cache web
+
+# 2. Tagger l'image DEV pour PROD
+docker tag gosen-filter-dev-web:latest gosen-prod-web:latest
+
+# 3. Copier les fichiers sur PROD (avec rsync)
+cd /root/gosen-prod
+docker compose -f docker-compose.prod.yml down
+rsync -av --delete \
+  --exclude '*.pyc' \
+  --exclude '__pycache__' \
+  --exclude '.git' \
+  --exclude 'postgres_data' \
+  --exclude 'staticfiles' \
+  --exclude 'db.sqlite3' \
+  /root/gosen-filter-dev/ /root/gosen-prod/
+
+# 4. Démarrer PROD (utilise l'image taguée, PAS de build !)
+docker compose -f docker-compose.prod.yml up -d --force-recreate
+
+# ⚡ Temps économisé : ~30-60 secondes (pas de docker build)
+```
+
+### Méthode 2 : Modifier docker-compose.prod.yml pour utiliser l'image DEV
+
+Modifiez `/root/gosen-prod/docker-compose.prod.yml` :
+
+```yaml
+services:
+  web:
+    # Option 1 : Utiliser l'image de DEV (commenter build)
+    # build: .
+    image: gosen-filter-dev-web:latest  # ← Utiliser l'image de DEV
+
+    # Option 2 : Garder les deux (build en commentaire)
+    # build: .
+    # image: gosen-filter-dev-web:latest
+
+    environment:
+      - DEBUG=False
+      - DATABASE_URL=postgresql://gosen:...
+```
+
+### Script de déploiement optimisé
+
+```bash
+# Déploiement RAPIDE de DEV vers PROD
+ssh -i ~/.ssh/id_ed25519 root@72.62.181.239 << 'ENDSSH'
+
+# 1. Construire sur DEV
+cd /root/gosen-filter-dev
+docker compose -f docker-compose.dev.yml build web
+
+# 2. Tagger pour PROD
+docker tag gosen-filter-dev-web:latest gosen-prod-web:latest
+
+# 3. Synchroniser les fichiers
+cd /root/gosen-prod
+docker compose -f docker-compose.prod.yml down
+rsync -av --delete \
+  --exclude '*.pyc' \
+  --exclude '__pycache__' \
+  --exclude '.git' \
+  --exclude 'postgres_data' \
+  --exclude 'staticfiles' \
+  /root/gosen-filter-dev/ /root/gosen-prod/
+
+# 4. Démarrer PROD (pas de build nécessaire !)
+docker compose -f docker-compose.prod.yml up -d --force-recreate
+
+# 5. Vérifier
+sleep 5
+docker ps | grep gosen
+curl -s -o /dev/null -w "PROD HTTP: %{http_code}\n" http://localhost:8083/
+
+echo "Déploiement terminé en temps record !"
+ENDSSH
+```
+
+### ⚠️ Points d'attention
+
+1. **Fichiers Python** : Les fichiers Python sont copiés dans l'image au build. Si vous modifiez du code Python, vous DEVEZ rebuild sur DEV avant de taguer.
+
+2. **Fichiers statiques** : Les fichiers CSS/JS sont aussi dans l'image. Même chose que pour Python.
+
+3. **Base de données** : La base de données est séparée (volume), donc pas de problème.
+
+4. **Environment variables** : Vérifiez que les variables d'environnement sont correctes dans PROD (DEBUG=False, etc.).
+
+### Quand utiliser quelle méthode ?
+
+| Méthode | Temps | Quand l'utiliser |
+|--------|-------|------------------|
+| **Image DEV taguée** | ~10 sec | Déploiements fréquents, petites modifications |
+| **Rebuild PROD** | ~60 sec | Premiers déploiements, changements majeurs |
+| **Build local + push** | ~2 min | Tests locaux approfondis |
 
 ---
 
