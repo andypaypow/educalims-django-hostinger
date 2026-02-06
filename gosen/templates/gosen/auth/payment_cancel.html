@@ -1,0 +1,107 @@
+{% extends "gosen/base.html" %}
+
+{% block title %}Paiement annulé - Filtre Expert{% endblock %}
+
+{% block content %}
+<div class="payment-container">
+    <div class="payment-card payment-cancel">
+        <div class="payment-icon">❌</div>
+        <h1>Paiement annulé</h1>
+        <p class="payment-message">{{ message|default:"Le paiement a été annulé." }}</p>
+        
+        <div class="payment-info">
+            <p>💳 Vous pouvez réessayer le paiement ultérieurement.</p>
+        </div>
+        
+        <div class="payment-actions">
+            <a href="/auth/subscription/" class="btn btn-primary">Réessayer le paiement</a>
+            <a href="/" class="btn btn-secondary">Retour à l'accueil</a>
+        </div>
+    </div>
+</div>
+
+<style>
+.payment-container {
+    max-width: 600px;
+    margin: 50px auto;
+    padding: 0 20px;
+}
+
+.payment-card {
+    background: linear-gradient(135deg, #1a1a1a 0%, #0d0d0d 100%);
+    border: 1px solid #333;
+    border-radius: 15px;
+    padding: 40px;
+    text-align: center;
+    box-shadow: 0 10px 30px rgba(0, 0, 0, 0.5);
+}
+
+.payment-cancel {
+    border-color: #FF007F;
+}
+
+.payment-icon {
+    font-size: 4rem;
+    margin-bottom: 20px;
+}
+
+.payment-card h1 {
+    color: #FF007F;
+    margin-bottom: 20px;
+}
+
+.payment-message {
+    color: #f0f0f0;
+    font-size: 1.1rem;
+    margin-bottom: 30px;
+}
+
+.payment-info {
+    background: rgba(255, 0, 127, 0.1);
+    border: 1px solid #FF007F;
+    border-radius: 10px;
+    padding: 20px;
+    margin-bottom: 30px;
+}
+
+.payment-info p {
+    color: #FF007F;
+    margin: 0;
+}
+
+.payment-actions {
+    display: flex;
+    gap: 15px;
+    justify-content: center;
+    flex-wrap: wrap;
+}
+
+.btn {
+    padding: 12px 30px;
+    border-radius: 8px;
+    text-decoration: none;
+    font-weight: 600;
+    transition: all 0.3s ease;
+}
+
+.btn-primary {
+    background: linear-gradient(135deg, #00C6FF 0%, #0077b6 100%);
+    color: white;
+}
+
+.btn-primary:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 5px 15px rgba(0, 198, 255, 0.3);
+}
+
+.btn-secondary {
+    background: transparent;
+    border: 1px solid #00C6FF;
+    color: #00C6FF;
+}
+
+.btn-secondary:hover {
+    background: rgba(0, 198, 255, 0.1);
+}
+</style>
+{% endblock %}
