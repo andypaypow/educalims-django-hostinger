@@ -779,6 +779,12 @@
 
             // --- BACKTEST LOGIC ---
             function runBacktest() {
+                // S'assurer que les pronostics sont bien parsés avec les valeurs actuelles
+                parsePronostics();
+
+                // DEBUG: Afficher les groupes dans la console
+                console.log('DEBUG: currentRawGroups =', currentRawGroups);
+
                 const arriveeInput = backtestInput.value;
                 if (!arriveeInput.trim()) {
                     alert("Veuillez entrer une arrivée à tester.");
@@ -809,6 +815,25 @@
 `;
                 report += `Date du test : ${new Date().toLocaleString('fr-FR')}
 `;
+
+                // --- Pronostics Saisis ---
+                // FORCER l'affichage en reparsant si nécessaire
+                if (currentRawGroups.length === 0) {
+                    parsePronostics(); // Réessayer
+                    console.log('DEBUG: Après retry, currentRawGroups =', currentRawGroups);
+                }
+
+                if (currentRawGroups.length > 0) {
+                    report += `
+--- PRONOSTICS SAISIS ---
+`;
+                    currentRawGroups.forEach(group => {
+                        report += `${group.name} : [${group.horses.join(', ')}]
+`;
+                    });
+                    report += `
+`;
+                }
                 
                 // --- Presence Report ---
                 report += `

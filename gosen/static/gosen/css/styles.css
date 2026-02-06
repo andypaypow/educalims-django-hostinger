@@ -688,6 +688,31 @@
         .tab-content {
             padding-top: 10px;
         }
+
+        /* --- Backtest Output Styles --- */
+        .backtest-output {
+            background-color: #1a1a1a;
+            border: 1px solid #444;
+            border-radius: 8px;
+            padding: 15px;
+            white-space: pre-wrap;
+            word-wrap: break-word;
+            color: #f0f0f0;
+            font-family: 'Courier New', Courier, monospace;
+            font-size: 0.9rem;
+            line-height: 1.5;
+            max-height: 400px;
+            overflow-y: auto;
+        }
+        .backtest-output strong {
+            color: var(--primary-color);
+        }
+        .backtest-output .success {
+            color: var(--success-color);
+        }
+        .backtest-output .danger {
+            color: var(--danger-color);
+        }
     @keyframes logo-glow {
     0% { box-shadow: 0 0 5px rgba(0, 198, 255, 0.5); }
     50% { box-shadow: 0 0 20px rgba(0, 198, 255, 1); }

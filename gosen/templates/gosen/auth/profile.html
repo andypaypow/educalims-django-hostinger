@@ -188,14 +188,14 @@
 <body>
     <div class="container">
         <div class="header">
-            <h1>👤 Mon Profil</h1>
-            <button class="btn-back" onclick="window.location.href='/'">← Retour à l'accueil</button>
+            <h1>Mon Profil</h1>
+            <button class="btn-back" onclick="window.location.href='/'">Retour a l'accueil</button>
         </div>
 
         <div class="grid">
             <!-- Informations du compte -->
             <div class="card">
-                <h2>📋 Informations du compte</h2>
+                <h2>Informations du compte</h2>
                 <div class="info-row">
                     <span class="info-label">Nom d'utilisateur</span>
                     <span class="info-value">{{ request.user.username }}</span>
@@ -205,8 +205,8 @@
                     <span class="info-value">{{ request.user.email }}</span>
                 </div>
                 <div class="info-row">
-                    <span class="info-label">Téléphone</span>
-                    <span class="info-value">{{ profile.telephone|default:"Non renseigné" }}</span>
+                    <span class="info-label">Telephone</span>
+                    <span class="info-value">{{ profile.telephone|default:"Non renseigne" }}</span>
                 </div>
                 <div class="info-row">
                     <span class="info-label">Membre depuis</span>
@@ -222,12 +222,10 @@
 
             <!-- Abonnement -->
             <div class="card {% if profile.est_abonne %}subscription-card{% endif %}">
-                <h2>⭐ Abonnement</h2>
+                <h2>Abonnement</h2>
                 <div class="info-row">
                     <span class="info-label">Type</span>
-                    <span class="info-value">
-                        {% if profile.type_abonnement == 'mensuel' %}Mensuel{% elif profile.type_abonnement == 'annuel' %}Annuel{% elif profile.type_abonnement == 'a_vie' %}À vie{% else %}Gratuit{% endif %}
-                    </span>
+                    <span class="info-value">{{ profile.nom_produit_abonnement }}</span>
                 </div>
                 <div class="info-row">
                     <span class="info-label">Statut</span>
@@ -238,7 +236,7 @@
                 {% if profile.est_abonne and profile.type_abonnement != 'a_vie' %}
                 <div class="info-row">
                     <span class="info-label">Expire le</span>
-                    <span class="info-value">{{ profile.date_fin_abonnement|date:"d/m/Y" }}</span>
+                    <span class="info-value">{{ profile.date_fin_abonnement_formattee }}</span>
                 </div>
                 <div class="info-row">
                     <span class="info-label">Jours restants</span>
@@ -247,22 +245,22 @@
                 {% endif %}
                 {% if not profile.est_abonne %}
                 <button class="btn-upgrade" onclick="window.location.href='/auth/subscription/'">
-                    🚀 S'abonner maintenant
+                    S'abonner maintenant
                 </button>
                 {% endif %}
             </div>
 
             <!-- Statistiques -->
             <div class="card">
-                <h2>📊 Mes statistiques</h2>
+                <h2>Mes statistiques</h2>
                 <div class="stats-grid">
                     <div class="stat-item">
                         <div class="stat-value">{{ profile.nb_filtres_realises }}</div>
-                        <div class="stat-label">Filtres réalisés</div>
+                        <div class="stat-label">Filtres realises</div>
                     </div>
                     <div class="stat-item">
                         <div class="stat-value">
-                            {% if profile.est_abonne %}∞{% else %}{{ profile.filtres_gratuits_restants }}{% endif %}
+                            {% if profile.est_abonne %}{% else %}{{ profile.filtres_gratuits_restants }}{% endif %}
                         </div>
                         <div class="stat-label">Filtres disponibles</div>
                     </div>
@@ -271,28 +269,28 @@
 
             <!-- Historique des paiements -->
             <div class="card">
-                <h2>💳 Historique des paiements</h2>
+                <h2>Historique des paiements</h2>
                 {% if payments %}
                 <div class="payments-list">
                     {% for payment in payments %}
                     <div class="payment-item status-{{ payment.statut }}">
                         <div class="payment-header">
                             <span class="payment-type">
-                                {% if payment.type_abonnement == 'mensuel' %}Abonnement Mensuel{% elif payment.type_abonnement == 'annuel' %}Abonnement Annuel{% else %}Abonnement à Vie{% endif %}
+                                {{ payment.produit.nom|default:"Abonnement inconnu" }}
                             </span>
                             <span class="payment-status status-badge status-{{ payment.statut }}">
-                                {% if payment.statut == 'complete' %}Payé{% elif payment.statut == 'en_attente' %}En attente{% else %}Échoué{% endif %}
+                                {% if payment.statut == 'complete' %}Paye{% elif payment.statut == 'en_attente' %}En attente{% else %}Echoue{% endif %}
                             </span>
                         </div>
                         <div class="payment-date">
-                            {{ payment.date_creation|date:"d/m/Y H:i" }} • {{ payment.montant }} {{ payment.devise }}
+                            {{ payment.date_creation|date:"d/m/Y H:i" }}  {{ payment.montant }} {{ payment.devise }}
                         </div>
                     </div>
                     {% endfor %}
                 </div>
                 {% else %}
                 <div class="no-payments">
-                    <p>Aucun paiement enregistré</p>
+                    <p>Aucun paiement enregistre</p>
                 </div>
                 {% endif %}
             </div>

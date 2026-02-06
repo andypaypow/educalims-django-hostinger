@@ -110,6 +110,48 @@ class UserProfile(models.Model):
         # Pour les non-abonnes, 5 filtres TOTAUX (pas de reset quotidien)
         return max(0, 5 - self.filtres_gratuits_utilises)
 
+    @property
+    def nom_produit_abonnement(self):
+        """Retourne le nom du produit d'abonnement actuel"""
+        if not self.est_abonne:
+            return "Gratuit"
+        # Chercher le paiement le plus recent pour cet utilisateur
+        from gosen.models import SubscriptionPayment
+        dernier_paiement = SubscriptionPayment.objects.filter(
+            utilisateur=self.user,
+            statut='complete'
+        ).order_by('-date_paiement').first()
+        if dernier_paiement and dernier_paiement.produit:
+            return dernier_paiement.produit.nom
+        # Fallback sur le type d'abonnement
+        type_mapping = {
+            'mensuel': 'Abonnement Mensuel',
+            'annuel': 'Abonnement Annuel',
+            'a_vie': 'Abonnement à Vie',
+        }
+        return type_mapping.get(self.type_abonnement, 'Gratuit')
+
+    @property
+    def date_fin_abonnement_formattee(self):
+        """Retourne la date de fin formatée avec heure si < 24h"""
+        if not self.est_abonne:
+            return "N/A"
+        if self.type_abonnement == 'a_vie':
+            return "Illimité"
+        if not self.date_fin_abonnement:
+            return "N/A"
+        # Gerer les datetime naive et aware
+        if self.date_fin_abonnement.tzinfo is None:
+            fin = self.date_fin_abonnement.replace(tzinfo=timezone.utc)
+        else:
+            fin = self.date_fin_abonnement
+        maintenant = timezone.now()
+        delta = fin - maintenant
+        # Si moins de 24 heures restantes ou durée totale < 24h, afficher l'heure
+        if delta.total_seconds() < 86400 or delta.total_seconds() > -86400:
+            return fin.strftime('%d/%m/%Y à %H:%M:%S')
+        return fin.strftime('%d/%m/%Y')
+
     def incrementer_filtres(self):
         # Ne pas incrementer pour les abonnes
         if self.est_abonne:
@@ -120,7 +162,7 @@ class UserProfile(models.Model):
         self.nb_filtres_realises += 1
         self.save(update_fields=['filtres_gratuits_utilises', 'nb_filtres_realises'])
 
-    def activer_abonnement(self, type_abonnement, duree_jours=None):
+    def activer_abonnement(self, type_abonnement, duree_jours=None, duree_heures=None):
         maintenant = timezone.now()
         
         # IMPORTANT: Activer l'abonnement
@@ -137,7 +179,9 @@ class UserProfile(models.Model):
         elif type_abonnement == 'a_vie':
             nouvelle_fin = None
 
-        if duree_jours:
+        if duree_heures:
+            nouvelle_fin = maintenant + timezone.timedelta(hours=duree_heures)
+        elif duree_jours:
             nouvelle_fin = maintenant + timezone.timedelta(days=duree_jours)
 
         # Prolongation si deja abonne et que l'ancienne abonnement est encore valide

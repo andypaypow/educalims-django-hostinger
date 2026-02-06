@@ -1,72 +1,68 @@
-<!-- NAVBAR D'AUTHENTIFICATION -->
-<nav class="auth-navbar">
-    <div class="nav-container">
-        <div class="nav-brand">
-            <span class="nav-title">Filtre Expert</span>
-        </div>
-
-        <div class="nav-auth" id="nav-auth-guest">
-            <a href="/auth/login/" class="nav-btn nav-btn-secondary">Connexion</a>
-            <a href="/auth/register/" class="nav-btn nav-btn-primary">Inscription</a>
-        </div>
-
-        <div class="nav-auth" id="nav-auth-user" style="display: none;">
-            <div class="user-info">
-                <span class="user-status" id="user-subscription-badge"></span>
-                <span class="user-filters" id="user-filters-count"></span>
-            </div>
-            <div class="dropdown">
-                <button class="nav-btn nav-btn-user" id="user-menu-btn">
-                    <span class="user-icon">👤</span>
-                    <span class="user-name" id="user-name-display">Utilisateur</span>
-                    <span class="dropdown-arrow">▼</span>
-                </button>
-                <div class="dropdown-menu" id="user-dropdown-menu">
-                    <a href="/auth/profile/" class="dropdown-item">👤 Mon Profil</a>
-                    <a href="/auth/subscription/" class="dropdown-item">⭐ Abonnement</a>
-                    <a href="/auth/dashboard/" class="dropdown-item">📊 Tableau de bord</a>
-                    <div class="dropdown-divider"></div>
-                    <a href="/auth/logout/" class="dropdown-item dropdown-item-logout">🚪 Déconnexion</a>
-                </div>
-            </div>
-        </div>
-
-        <button class="nav-toggle" id="nav-toggle">
-            <span></span>
-            <span></span>
-            <span></span>
-        </button>
-    </div>
+<!-- MENU LATERAL GLISSANT -->
+<nav class="compact-navbar">
+    <button id="menu-toggle" class="hamburger-btn" aria-label="Ouvrir le menu">
+        <span></span>
+        <span></span>
+        <span></span>
+    </button>
 </nav>
 
+<!-- Overlay sombre -->
+<div id="menu-overlay" class="menu-overlay"></div>
+
+<!-- Menu latéral -->
+<aside id="sidebar-menu" class="sidebar-menu">
+    <div class="sidebar-content">
+        <div class="sidebar-user-info">
+            <span class="sidebar-user-name" id="sidebar-user-name">Chargement...</span>
+            <span class="sidebar-badge" id="sidebar-subscription-badge"></span>
+            <span class="sidebar-filters" id="sidebar-filters-count"></span>
+        </div>
+        <nav class="sidebar-nav">
+            <a href="/auth/profile/">👤 Mon Profil</a>
+            <a href="/auth/subscription/">⭐ Abonnement</a>
+            <a href="/auth/dashboard/">📊 Tableau de bord</a>
+            <div class="sidebar-divider"></div>
+            <a href="/auth/logout/" class="sidebar-logout">🚪 Déconnexion</a>
+        </nav>
+    </div>
+</aside>
+
 <style>
-.auth-navbar {
+/* Navbar compact (haut de page) */
+.compact-navbar {
+    display: flex;
+    align-items: center;
+    gap: 15px;
+    padding: 8px 20px;
     background: linear-gradient(135deg, #1a1a1a 0%, #0d0d0d 100%);
     border-bottom: 1px solid #333;
-    padding: 15px 0;
     position: sticky;
     top: 0;
     z-index: 1000;
-    box-shadow: 0 2px 10px rgba(0, 0, 0, 0.3);
+    height: 55px;
+    transition: transform 0.3s ease-in-out;
+    will-change: transform;
 }
 
-.nav-container {
-    max-width: 1200px;
-    margin: 0 auto;
-    padding: 0 20px;
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-}
-
-.nav-brand {
+/* Logo */
+.logo-link {
     display: flex;
     align-items: center;
-    gap: 10px;
+    text-decoration: none;
 }
 
-.nav-logo {
-    font-size: 1.5rem;
+.logo-img {
+    border: none;
+    border-radius: 0;
+    padding: 0;
+    margin: 0;
+    display: block;
+    height: 120px;
+    width: 720px;
+    object-fit: contain;
+    box-shadow: none;
+    filter: none;
 }
 
 .nav-title {
@@ -75,245 +71,271 @@
     font-size: 1.1rem;
 }
 
-.nav-auth {
+/* Bouton hamburger */
+.hamburger-btn {
     display: flex;
+    flex-direction: column;
+    justify-content: center;
     align-items: center;
-    gap: 10px;
+    gap: 5px;
+    background: none;
+    border: none;
+    cursor: pointer;
+    padding: 8px;
+    min-width: 45px;
+    min-height: 40px;
+    z-index: 1002;
+    position: relative;
 }
 
-.nav-btn {
-    padding: 10px 20px;
-    border-radius: 8px;
-    font-weight: 600;
-    text-decoration: none;
+.hamburger-btn span {
+    width: 26px;
+    height: 3px;
+    background: #00C6FF;
+    border-radius: 3px;
     transition: all 0.3s ease;
-    font-size: 0.9rem;
 }
 
-.nav-btn-secondary {
-    background: transparent;
-    border: 1px solid #00C6FF;
+.hamburger-btn:hover span {
+    background: #fff;
+}
+
+/* Animation hamburger → X */
+.hamburger-btn.active span:nth-child(1) {
+    transform: rotate(45deg) translate(6px, 6px);
+}
+.hamburger-btn.active span:nth-child(2) {
+    opacity: 0;
+}
+.hamburger-btn.active span:nth-child(3) {
+    transform: rotate(-45deg) translate(6px, -6px);
+}
+
+/* Overlay sombre */
+.menu-overlay {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background: rgba(0, 0, 0, 0.6);
+    opacity: 0;
+    visibility: hidden;
+    transition: all 0.3s ease;
+    z-index: 1000;
+}
+
+.menu-overlay.active {
+    opacity: 1;
+    visibility: visible;
+}
+
+/* Menu latéral */
+.sidebar-menu {
+    position: fixed;
+    top: 0;
+    left: 0;
+    height: 100%;
+    width: 280px;
+    max-width: 85vw;
+    background: #1a1a1a;
+    transform: translateX(-100%);
+    transition: transform 0.3s ease;
+    z-index: 1001;
+    overflow-y: auto;
+    box-shadow: 2px 0 10px rgba(0, 0, 0, 0.5);
+}
+
+.sidebar-menu.active {
+    transform: translateX(0);
+}
+
+/* Contenu sidebar */
+.sidebar-content {
+    padding: 80px 20px 20px;
+}
+
+.sidebar-user-info {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    padding: 20px;
+    background: #222;
+    border-radius: 10px;
+    margin-bottom: 20px;
+    border: 1px solid #333;
+}
+
+.sidebar-user-name {
+    font-size: 1.2rem;
+    font-weight: 600;
     color: #00C6FF;
 }
 
-.nav-btn-secondary:hover {
-    background: rgba(0, 198, 255, 0.1);
-}
-
-.nav-btn-primary {
-    background: linear-gradient(135deg, #00C6FF 0%, #0077b6 100%);
-    color: white;
-    border: none;
-}
-
-.nav-btn-primary:hover {
-    transform: translateY(-2px);
-    box-shadow: 0 5px 15px rgba(0, 198, 255, 0.3);
-}
-
-.user-info {
-    display: flex;
-    align-items: center;
-    gap: 10px;
-    margin-right: 15px;
-}
-
-.user-status {
+.sidebar-badge {
     padding: 5px 12px;
     border-radius: 20px;
-    font-size: 0.75rem;
+    font-size: 0.85rem;
     font-weight: 600;
+    text-align: center;
 }
 
-.user-status.abonne {
+.sidebar-badge.abonne {
     background: rgba(0, 255, 127, 0.2);
     color: #00FF7F;
 }
 
-.user-status.gratuit {
+.sidebar-badge.gratuit {
     background: rgba(255, 127, 0, 0.2);
     color: #FF7F00;
 }
 
-.user-filters {
-    font-size: 0.8rem;
-    color: #888;
+.sidebar-filters {
+    font-size: 0.9rem;
+    color: #ccc;
+    text-align: center;
 }
 
-.dropdown {
-    position: relative;
-}
-
-.nav-btn-user {
-    display: flex;
-    align-items: center;
-    gap: 8px;
-    background: rgba(0, 198, 255, 0.1);
-    border: 1px solid #00C6FF;
-    color: #00C6FF;
-    padding: 8px 15px;
-    border-radius: 8px;
-    cursor: pointer;
-}
-
-.dropdown-arrow {
-    font-size: 0.7rem;
-    transition: transform 0.3s ease;
-}
-
-.dropdown.open .dropdown-arrow {
-    transform: rotate(180deg);
-}
-
-.dropdown-menu {
-    position: absolute;
-    top: 100%;
-    right: 0;
-    margin-top: 10px;
-    background: #1a1a1a;
-    border: 1px solid #333;
-    border-radius: 10px;
-    min-width: 200px;
-    opacity: 0;
-    visibility: hidden;
-    transform: translateY(-10px);
-    transition: all 0.3s ease;
-    box-shadow: 0 10px 30px rgba(0, 0, 0, 0.5);
-}
-
-.dropdown.open .dropdown-menu {
-    opacity: 1;
-    visibility: visible;
-    transform: translateY(0);
-}
-
-.dropdown-item {
+/* Navigation sidebar */
+.sidebar-nav a {
     display: block;
-    padding: 12px 20px;
+    padding: 15px 20px;
     color: #f0f0f0;
     text-decoration: none;
-    transition: background 0.3s ease;
+    border-radius: 8px;
+    margin-bottom: 5px;
+    transition: background 0.2s;
+    font-size: 1rem;
 }
 
-.dropdown-item:hover {
-    background: rgba(0, 198, 255, 0.1);
+.sidebar-nav a:hover {
+    background: rgba(0, 198, 255, 0.15);
 }
 
-.dropdown-divider {
+.sidebar-nav a:active {
+    background: rgba(0, 198, 255, 0.25);
+}
+
+.sidebar-divider {
     height: 1px;
     background: #333;
-    margin: 5px 0;
+    margin: 15px 0;
 }
 
-.dropdown-item-logout {
+.sidebar-logout {
     color: #FF007F;
 }
 
-.dropdown-item-logout:hover {
-    background: rgba(255, 0, 127, 0.1);
+.sidebar-logout:hover {
+    background: rgba(255, 0, 127, 0.15) !important;
 }
 
-.nav-toggle {
-    display: none;
-    flex-direction: column;
-    gap: 4px;
-    background: none;
-    border: none;
-    cursor: pointer;
-}
-
-.nav-toggle span {
-    width: 25px;
-    height: 3px;
-    background: #00C6FF;
-    border-radius: 2px;
-}
-
+/* Mobile responsive */
 @media (max-width: 768px) {
-    .nav-toggle {
-        display: flex;
+    .sidebar-menu {
+        width: 260px;
     }
 
-    .nav-auth {
-        position: fixed;
-        top: 70px;
-        left: 0;
-        right: 0;
-        background: #1a1a1a;
-        flex-direction: column;
-        padding: 20px;
-        border-bottom: 1px solid #333;
-        display: none;
+    .sidebar-content {
+        padding: 70px 15px 15px;
     }
 
-    .nav-auth.show {
-        display: flex;
-    }
-
-    .nav-btn {
-        width: 100%;
-        text-align: center;
-    }
-
-    .user-info {
-        flex-direction: column;
-        margin-right: 0;
-        margin-bottom: 10px;
+    .logo-img {
+    border: none;
+    border-radius: 0;
+    padding: 0;
+    margin: 0;
+    display: block;
+        height: 100px;
+        width: 600px;
     }
 }
 </style>
 
 <script>
 (function() {
-    const userMenuBtn = document.getElementById('user-menu-btn');
-    const userDropdown = document.querySelector('.dropdown');
-    const navToggle = document.getElementById('nav-toggle');
-    const navAuth = document.querySelector('.nav-auth');
+    const menuToggle = document.getElementById('menu-toggle');
+    const sidebarMenu = document.getElementById('sidebar-menu');
+    const menuOverlay = document.getElementById('menu-overlay');
+    const navbar = document.querySelector('.compact-navbar');
 
-    if (userMenuBtn) {
-        userMenuBtn.addEventListener('click', (e) => {
+    // Ouvrir/fermer le menu
+    function toggleMenu() {
+        sidebarMenu.classList.toggle('active');
+        menuOverlay.classList.toggle('active');
+        menuToggle.classList.toggle('active');
+    }
+
+    // Fermer le menu
+    function closeMenu() {
+        sidebarMenu.classList.remove('active');
+        menuOverlay.classList.remove('active');
+        menuToggle.classList.remove('active');
+    }
+
+    // Event listeners
+    if (menuToggle) {
+        menuToggle.addEventListener('click', (e) => {
             e.stopPropagation();
-            userDropdown.classList.toggle('open');
+            toggleMenu();
         });
     }
 
-    document.addEventListener('click', () => {
-        if (userDropdown) {
-            userDropdown.classList.remove('open');
-        }
+    if (menuOverlay) {
+        menuOverlay.addEventListener('click', closeMenu);
+    }
+
+    // Empêcher la propagation du clic dans le menu
+    if (sidebarMenu) {
+        sidebarMenu.addEventListener('click', (e) => {
+            e.stopPropagation();
+        });
+    }
+
+    // Fermer avec Escape
+    document.addEventListener('keydown', (e) => {
+        if (e.key === 'Escape') closeMenu();
     });
 
-    if (navToggle) {
-        navToggle.addEventListener('click', () => {
-            navAuth.classList.toggle('show');
-        });
-    }
+    // Scroll hide/show navbar
+    let lastScrollTop = 0;
+    const scrollThreshold = 10;
 
+    window.addEventListener('scroll', () => {
+        const scrollTop = window.pageYOffset || document.documentElement.scrollTop;
+
+        if (Math.abs(scrollTop - lastScrollTop) > scrollThreshold) {
+            if (scrollTop > lastScrollTop && scrollTop > 100) {
+                // Scrolling down - hide navbar
+                navbar.style.transform = 'translateY(-100%)';
+            } else {
+                // Scrolling up - show navbar
+                navbar.style.transform = 'translateY(0)';
+            }
+            lastScrollTop = scrollTop;
+        }
+    }, { passive: true });
+
+    // Vérifier le statut d'authentification
     async function checkAuthStatus() {
         try {
             const response = await fetch('/api/auth/check/');
             const data = await response.json();
 
-            const guestNav = document.getElementById('nav-auth-guest');
-            const userNav = document.getElementById('nav-auth-user');
-            const userNameDisplay = document.getElementById('user-name-display');
-            const subscriptionBadge = document.getElementById('user-subscription-badge');
-            const filtersCount = document.getElementById('user-filters-count');
+            const userName = document.getElementById('sidebar-user-name');
+            const subscriptionBadge = document.getElementById('sidebar-subscription-badge');
+            const filtersCount = document.getElementById('sidebar-filters-count');
 
             if (data.is_authenticated) {
-                if (guestNav) guestNav.style.display = 'none';
-                if (userNav) {
-                    userNav.style.display = 'flex';
-                    if (userNameDisplay) userNameDisplay.textContent = data.username;
-                }
+                if (userName) userName.textContent = data.username || 'Utilisateur';
 
                 if (subscriptionBadge) {
                     if (data.est_abonne) {
                         subscriptionBadge.textContent = '⭐ Abonné';
-                        subscriptionBadge.className = 'user-status abonne';
+                        subscriptionBadge.className = 'sidebar-badge abonne';
                     } else {
                         subscriptionBadge.textContent = 'Gratuit';
-                        subscriptionBadge.className = 'user-status gratuit';
+                        subscriptionBadge.className = 'sidebar-badge gratuit';
                     }
                 }
 
@@ -325,8 +347,10 @@
                     }
                 }
             } else {
-                if (guestNav) guestNav.style.display = 'flex';
-                if (userNav) userNav.style.display = 'none';
+                // Rediriger vers login si pas authentifié
+                if (userName) userName.textContent = 'Non connecté';
+                if (subscriptionBadge) subscriptionBadge.style.display = 'none';
+                if (filtersCount) filtersCount.style.display = 'none';
             }
         } catch (error) {
             console.error('Error checking auth status:', error);
