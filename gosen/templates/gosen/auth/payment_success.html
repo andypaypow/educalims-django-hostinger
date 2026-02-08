@@ -1,107 +1,76 @@
-{% extends "gosen/base.html" %}
+{% extends 'gosen/base.html' %}
 
-{% block title %}Paiement réussi - Filtre Expert{% endblock %}
+{% block title %}Paiement reussi - Filtre Expert{% endblock %}
 
 {% block content %}
-<div class="payment-container">
-    <div class="payment-card payment-success">
-        <div class="payment-icon">✅</div>
-        <h1>Paiement réussi !</h1>
-        <p class="payment-message">{{ message|default:"Votre paiement a été traité avec succès." }}</p>
+<div class='payment-container'>
+    <div class='payment-card payment-success'>
+        <div class='payment-icon'>✅</div>
+        <h1>Paiement reussi !</h1>
+        <p class='payment-message'>Votre paiement a ete traite avec succes.</p>
         
-        <div class="payment-info">
-            <p>🎉 Vous pouvez maintenant accéder à toutes les combinaisons.</p>
+        <div class='payment-info'>
+            <p>🎉 Vous pouvez maintenant acceder a toutes les combinaisons.</p>
         </div>
         
-        <div class="payment-actions">
-            <a href="/" class="btn btn-primary">Voir les combinaisons</a>
-            <a href="/auth/profile/" class="btn btn-secondary">Mon profil</a>
+        <div class='phone-login-section'>
+            <p class='phone-login-text'>📱 Connectez-vous avec votre numero de telephone :</p>
+            <form method='post' action='/auth/login/phone/' class='phone-login-form' id='quickLogin'>
+                {% csrf_token %}
+                <div class='input-group'>
+                    <input type='tel' name='telephone' placeholder='Votre numero (ex: 065855171)' required>
+                    <button type='submit' class='btn-connect'>Se connecter</button>
+                </div>
+            </form>
+        </div>
+        
+        <div class='payment-actions'>
+            <a href='/' class='btn btn-primary'>Voir les combinaisons</a>
+            <a href='/auth/profile/' class='btn btn-secondary'>Mon profil</a>
         </div>
     </div>
 </div>
 
 <style>
-.payment-container {
-    max-width: 600px;
-    margin: 50px auto;
-    padding: 0 20px;
-}
-
-.payment-card {
-    background: linear-gradient(135deg, #1a1a1a 0%, #0d0d0d 100%);
-    border: 1px solid #333;
-    border-radius: 15px;
-    padding: 40px;
-    text-align: center;
-    box-shadow: 0 10px 30px rgba(0, 0, 0, 0.5);
-}
-
-.payment-success {
-    border-color: #00FF7F;
-}
-
-.payment-icon {
-    font-size: 4rem;
-    margin-bottom: 20px;
-}
-
-.payment-card h1 {
-    color: #00FF7F;
-    margin-bottom: 20px;
-}
-
-.payment-message {
-    color: #f0f0f0;
-    font-size: 1.1rem;
-    margin-bottom: 30px;
-}
-
-.payment-info {
-    background: rgba(0, 255, 127, 0.1);
-    border: 1px solid #00FF7F;
-    border-radius: 10px;
-    padding: 20px;
-    margin-bottom: 30px;
-}
-
-.payment-info p {
-    color: #00FF7F;
-    margin: 0;
-}
-
-.payment-actions {
-    display: flex;
-    gap: 15px;
-    justify-content: center;
-    flex-wrap: wrap;
-}
-
-.btn {
-    padding: 12px 30px;
-    border-radius: 8px;
-    text-decoration: none;
-    font-weight: 600;
-    transition: all 0.3s ease;
-}
-
-.btn-primary {
-    background: linear-gradient(135deg, #00C6FF 0%, #0077b6 100%);
-    color: white;
-}
-
-.btn-primary:hover {
-    transform: translateY(-2px);
-    box-shadow: 0 5px 15px rgba(0, 198, 255, 0.3);
-}
-
-.btn-secondary {
-    background: transparent;
-    border: 1px solid #00C6FF;
-    color: #00C6FF;
-}
-
-.btn-secondary:hover {
-    background: rgba(0, 198, 255, 0.1);
-}
+.payment-container { max-width: 600px; margin: 50px auto; padding: 0 20px; }
+.payment-card { background: linear-gradient(135deg, #1a1a1a 0%, #0d0d0d 100%); border: 1px solid #333; border-radius: 15px; padding: 40px; text-align: center; box-shadow: 0 10px 30px rgba(0, 0, 0, 0.5); }
+.payment-success { border-color: #00FF7F; }
+.payment-icon { font-size: 4rem; margin-bottom: 20px; }
+.payment-card h1 { color: #00FF7F; margin-bottom: 20px; }
+.payment-message { color: #f0f0f0; font-size: 1.1rem; margin-bottom: 30px; }
+.payment-info { background: rgba(0, 255, 127, 0.1); border: 1px solid #00FF7F; border-radius: 10px; padding: 20px; margin-bottom: 30px; }
+.payment-info p { color: #00FF7F; margin: 0; }
+.phone-login-section { background: rgba(0, 198, 255, 0.1); border: 1px solid #00C6FF; border-radius: 10px; padding: 20px; margin-bottom: 30px; }
+.phone-login-text { color: #00C6FF; margin-bottom: 15px; font-weight: 500; }
+.input-group { display: flex; gap: 10px; max-width: 400px; margin: 0 auto; }
+.input-group input { flex: 1; padding: 12px 15px; border: 1px solid #444; border-radius: 8px; background: rgba(255, 255, 255, 0.05); color: #f0f0f0; font-size: 1rem; }
+.input-group input:focus { outline: none; border-color: #00C6FF; }
+.btn-connect { padding: 12px 25px; background: linear-gradient(135deg, #00C6FF 0%, #0077b6 100%); border: none; border-radius: 8px; color: white; font-weight: 600; cursor: pointer; }
+.payment-actions { display: flex; gap: 15px; justify-content: center; flex-wrap: wrap; }
+.btn { padding: 12px 30px; border-radius: 8px; text-decoration: none; font-weight: 600; }
+.btn-primary { background: linear-gradient(135deg, #00C6FF 0%, #0077b6 100%); color: white; }
+.btn-secondary { background: transparent; border: 1px solid #00C6FF; color: #00C6FF; }
 </style>
+
+<script>
+document.getElementById('quickLogin').addEventListener('submit', function(e) {
+    e.preventDefault();
+    const form = this;
+    const formData = new FormData(form);
+    
+    fetch(form.action, {
+        method: 'POST',
+        body: formData
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.success) {
+            alert('Connexion reussie !');
+            setTimeout(() => window.location.href = data.redirect || '/', 500);
+        } else {
+            alert(data.error || 'Numero non trouve');
+        }
+    });
+});
+</script>
 {% endblock %}

@@ -1,0 +1,184 @@
+{% extends 'gosen/base.html' %}
+
+{% block title %}Connexion par téléphone - Filtre Expert{% endblock %}
+
+{% block content %}
+<div class="auth-container">
+    <div class="auth-card">
+        <div class="auth-header">
+            <h1>Connexion par Telephone</h1>
+            <p class="text-muted">Entrez votre numero de telephone utilise lors du paiement</p>
+        </div>
+
+        <form method="post" class="auth-form" id="loginPhoneForm">
+            {% csrf_token %}
+            
+            <div class="form-group mb-3">
+                <label for="telephone" class="form-label">Numero de telephone</label>
+                <input type="tel" 
+                       class="form-control form-control-lg" 
+                       id="telephone" 
+                       name="telephone" 
+                       placeholder="Ex: 0707123456" 
+                       required
+                       autofocus>
+                <small class="form-text text-muted">Entrez le numero utilise lors de votre paiement</small>
+            </div>
+
+            <button type="submit" class="btn btn-primary btn-lg w-100" id="submitBtn">
+                <span class="btn-text">Se connecter</span>
+                <span class="btn-loading" style="display:none;">
+                    <span class="spinner-border spinner-border-sm me-2"></span>
+                    Connexion...
+                </span>
+            </button>
+
+            <div class="auth-footer mt-4">
+                <p>Vous n"avez pas encore de compte ? <a href="/auth/register/">Creer un compte</a></p>
+                <p><a href="/auth/login/">Connexion par identifiants</a></p>
+            </div>
+        </form>
+    </div>
+</div>
+
+<style>
+.auth-container {
+    min-height: 100vh;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 20px;
+    background: linear-gradient(135deg, #1a1a1a 0%, #0d0d0d 100%);
+}
+
+.auth-card {
+    background: rgba(26, 26, 26, 0.95);
+    border: 1px solid #333;
+    border-radius: 20px;
+    padding: 40px;
+    max-width: 450px;
+    width: 100%;
+    box-shadow: 0 20px 60px rgba(0, 0, 0, 0.5);
+}
+
+.auth-header h1 {
+    color: #00C6FF;
+    margin-bottom: 10px;
+    font-size: 1.8rem;
+}
+
+.auth-header p {
+    color: #888;
+    margin-bottom: 30px;
+}
+
+.form-control {
+    background: rgba(255, 255, 255, 0.05);
+    border: 1px solid #444;
+    color: #f0f0f0;
+}
+
+.form-control:focus {
+    background: rgba(255, 255, 255, 0.1);
+    border-color: #00C6FF;
+    color: #f0f0f0;
+    box-shadow: 0 0 0 0.2rem rgba(0, 198, 255, 0.25);
+}
+
+.btn-primary {
+    background: linear-gradient(135deg, #00C6FF 0%, #0077b6 100%);
+    border: none;
+    padding: 15px;
+    font-weight: 600;
+    transition: all 0.3s ease;
+}
+
+.btn-primary:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 5px 20px rgba(0, 198, 255, 0.4);
+}
+
+.auth-footer {
+    text-align: center;
+    border-top: 1px solid #333;
+    padding-top: 20px;
+}
+
+.auth-footer p {
+    color: #888;
+    margin: 10px 0;
+}
+
+.auth-footer a {
+    color: #00C6FF;
+    text-decoration: none;
+}
+
+.auth-footer a:hover {
+    text-decoration: underline;
+}
+</style>
+
+<script>
+document.getElementById('loginPhoneForm').addEventListener('submit', function(e) {
+    e.preventDefault();
+    
+    const form = this;
+    const submitBtn = document.getElementById('submitBtn');
+    const btnText = submitBtn.querySelector('.btn-text');
+    const btnLoading = submitBtn.querySelector('.btn-loading');
+    const telephone = document.getElementById('telephone').value;
+    
+    // Afficher le chargement
+    btnText.style.display = 'none';
+    btnLoading.style.display = 'inline';
+    submitBtn.disabled = true;
+    
+    fetch(form.action, {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/x-www-form-urlencoded',
+            'X-CSRFToken': document.querySelector('[name=csrfmiddlewaretoken]').value
+        },
+        body: new URLSearchParams(new FormData(form))
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.success) {
+            showMessage(data.message || 'Connexion reussie !', 'success');
+            setTimeout(() => {
+                window.location.href = data.redirect || '/';
+            }, 1000);
+        } else {
+            showMessage(data.error || 'Numero de telephone non trouve', 'error');
+            if (data.redirect) {
+                setTimeout(() => {
+                    window.location.href = data.redirect;
+                }, 2000);
+            }
+        }
+    })
+    .catch(error => {
+        showMessage('Erreur de connexion', 'error');
+    })
+    .finally(() => {
+        btnText.style.display = 'inline';
+        btnLoading.style.display = 'none';
+        submitBtn.disabled = false;
+    });
+});
+
+function showMessage(message, type) {
+    const alertDiv = document.createElement('div');
+    const alertClass = type === 'error' ? 'danger' : 'success';
+    alertDiv.className = 'alert alert-' + alertClass;
+    alertDiv.style.marginTop = '20px';
+    alertDiv.textContent = message;
+    
+    const form = document.getElementById('loginPhoneForm');
+    form.insertBefore(alertDiv, form.firstChild);
+    
+    setTimeout(() => alertDiv.remove(), 5000);
+}
+</script>
+{% endblock %}

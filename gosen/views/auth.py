@@ -54,20 +54,63 @@ def login_api(request):
     return JsonResponse({'success': False, 'error': 'Identifiants incorrects'}, status=401)
 
 
+
+
+@csrf_exempt
+def login_phone(request):
+    """API de connexion par numéro de téléphone"""
+    if request.method != "POST":
+        return JsonResponse({"success": False, "error": "Methode non autorisee"}, status=405)
+
+    telephone = request.POST.get("telephone", "")
+
+    if not telephone:
+        return JsonResponse({"success": False, "error": "Numero de telephone requis"}, status=400)
+
+    # Chercher l"utilisateur par son téléphone
+    try:
+        profile = UserProfile.objects.get(telephone=telephone)
+        user = profile.user
+
+        if user.is_active:
+            login(request, user)
+
+            # Mettre a jour la derniere connexion
+            try:
+                profile.derniere_connexion = timezone.now()
+                profile.save(update_fields=["derniere_connexion"])
+            except Exception:
+                pass
+
+            return JsonResponse({"success": True, "redirect": "/"})
+        else:
+            return JsonResponse({"success": False, "error": "Compte desactive"}, status=401)
+
+    except UserProfile.DoesNotExist:
+        return JsonResponse({"success": False, "error": "Numero de telephone non enregistre"}, status=401)
+
+
 def register_page(request):
     """Page d'inscription"""
     if request.method == 'POST':
         form = CustomUserCreationForm(request.POST)
+
         if form.is_valid():
             try:
                 user = form.save()
                 # Connecter l'utilisateur automatiquement
                 login(request, user)
+
+                # Creer l'empreinte d'appareil (sans bloquer l'inscription)
+                try:
+                    from gosen.utils import get_or_create_device_fingerprint
+                    device_fp, fingerprint = get_or_create_device_fingerprint(request, user)
+                except Exception:
+                    pass  # Ignorer les erreurs de device fingerprint
+
                 return JsonResponse({'success': True, 'redirect': '/'})
-            except IntegrityError:
-                return JsonResponse({'success': False, 'errors': {'__all__': ['Ce nom d\'utilisateur existe déjà.']}}, status=400)
             except Exception as e:
-                return JsonResponse({'success': False, 'errors': {'__all__': [str(e)]}}, status=400)
+                return JsonResponse({'success': False, 'errors': {'__all__': [str(e)]}}, status=500)
         else:
             errors = {}
             for field, errors_list in form.errors.items():
@@ -79,10 +122,31 @@ def register_page(request):
     return render(request, 'gosen/auth/register.html', {'form': form})
 
 
+
+
+
+@login_required
+def payment_success(request):
+    """Page de succes de paiement"""
+    return render(request, "gosen/auth/payment_success.html")
+
+@login_required
+def payment_cancel(request):
+    """Page d'annulation de paiement"""
+    return render(request, "gosen/auth/payment_cancel.html")
+
+
 def logout_view(request):
     """Déconnexion"""
     logout(request)
     return redirect('/')
+
+
+
+
+def device_not_authorized(request):
+    """Page affichee quand l"utilisateur n"est pas autorise sur cet appareil"""
+    return render(request, "gosen/auth/device_not_authorized.html")
 
 
 def check_auth(request):

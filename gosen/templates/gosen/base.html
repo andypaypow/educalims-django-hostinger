@@ -12,7 +12,22 @@
     <link rel="stylesheet" href="/static/gosen/css/styles.css"></head>
 <body>
 {% include "gosen/auth_navbar.html" %}
+
+{% if not user.is_authenticated %}
+<div class="guest-banner">
+    <div class="guest-banner-content">
+        <h2>Bienvenue sur Filtre Expert</h2>
+        <p>Connectez-vous ou inscrivez-vous</p>
+        <div class="guest-banner-actions">
+            <a href="/auth/login/" class="btn btn-primary">Se connecter</a>
+            <a href="/auth/register/" class="btn btn-secondary">S'inscrire</a>
+        </div>
+    </div>
+</div>
+<style>.guest-banner{position:fixed;top:0;left:0;width:100%;height:100%;min-height:100vh;background:#1a1a1a;display:flex;align-items:center;justify-content:center;z-index:999;}.guest-banner-content{text-align:center;color:#f0f0f0;}.guest-banner h2{color:#00C6FF;font-size:2rem;margin-bottom:15px;}.guest-banner .btn{padding:15px 40px;border-radius:8px;text-decoration:none;font-weight:600;margin:10px;display:inline-block;}.guest-banner .btn-primary{background:#00C6FF;color:#fff;}.guest-banner .btn-secondary{border:2px solid #00C6FF;color:#00C6FF;}</style>
+{% else %}
 <div class="main-content">
+{% endif %}
 
     <div class="container">
         <header>
@@ -203,5 +218,6 @@
         </div>
     </div>
 
-    <script src="/static/gosen/js/main.js"></script></body>
+    <script src="/static/gosen/js/main.js"></script>
+</body>
 </html>

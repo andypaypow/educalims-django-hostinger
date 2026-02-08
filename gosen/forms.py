@@ -48,10 +48,10 @@ class CustomUserCreationForm(UserCreationForm):
         user.email = self.cleaned_data['email']
         if commit:
             user.save()
-            # Créer le profil utilisateur
-            UserProfile.objects.create(
+            # Créer le profil utilisateur s'il n'existe pas
+            UserProfile.objects.get_or_create(
                 user=user,
-                telephone=self.cleaned_data.get('telephone', '')
+                defaults={'telephone': self.cleaned_data.get('telephone', '')}
             )
         return user
 

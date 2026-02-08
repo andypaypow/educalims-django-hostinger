@@ -1,6 +1,8 @@
 from django.db import models
 from django.contrib.auth.models import User
 from django.utils import timezone
+from django.db.models.signals import post_save
+from django.dispatch import receiver
 
 
 class WebhookLog(models.Model):
@@ -336,3 +338,26 @@ class SubscriptionPayment(models.Model):
         if not self.date_traitement:
             return (timezone.now() - self.date_reception).total_seconds() > 300
         return False
+
+
+class DeviceFingerprint(models.Model):
+    """Empreinte d'appareil pour lier l'abonnement a un appareil specifique"""
+    user = models.OneToOneField(User, on_delete=models.CASCADE, related_name='device_fingerprint')
+    fingerprint = models.CharField(max_length=255, unique=True, db_index=True)
+    user_agent = models.TextField(blank=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+    last_seen = models.DateTimeField(auto_now=True)
+    is_active = models.BooleanField(default=True)
+    
+    class Meta:
+        verbose_name = 'Empreinte d\'appareil'
+        verbose_name_plural = 'Empreintes d\'appareils'
+    
+    def __str__(self):
+        return f'{self.user.username} - {self.fingerprint[:8]}...'
+
+
+@receiver(post_save, sender=User)
+def create_user_profile(sender, instance, created, **kwargs):
+    if created:
+        UserProfile.objects.get_or_create(user=instance)

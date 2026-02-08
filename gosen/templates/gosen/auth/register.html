@@ -219,8 +219,17 @@
             formErrors.classList.remove('show');
         }
 
+        let isSubmitting = false;
+
         registerForm.addEventListener('submit', async (e) => {
             e.preventDefault();
+
+            if (isSubmitting) return;
+            isSubmitting = true;
+            const submitBtn = registerForm.querySelector(".btn-register");
+            const originalBtnText = submitBtn.textContent;
+            submitBtn.disabled = true;
+            submitBtn.textContent = "Création en cours...";
             hideMessages();
 
             const formData = new FormData(registerForm);
@@ -246,17 +255,27 @@
                     // Afficher les erreurs de formulaire
                     let errorHtml = '<ul>';
                     for (const [field, errors] of Object.entries(data.errors)) {
-                        const fieldName = field === 'username' ? 'Nom d\'utilisateur' :
-                                         field === 'email' ? 'Email' :
-                                         field === 'password1' ? 'Mot de passe' :
-                                         field === 'password2' ? 'Confirmation' : field;
-                        errors.forEach(err => {
-                            errorHtml += `<li><strong>${fieldName}:</strong> ${err}</li>`;
-                        });
+                        // Pour __all__ (erreurs globales), ne pas afficher de label
+                        if (field === '__all__') {
+                            errors.forEach(err => {
+                                errorHtml += `<li>${err}</li>`;
+                            });
+                        } else {
+                            const fieldName = field === 'username' ? 'Nom d\'utilisateur' :
+                                             field === 'email' ? 'Email' :
+                                             field === 'password1' ? 'Mot de passe' :
+                                             field === 'password2' ? 'Confirmation' : field;
+                            errors.forEach(err => {
+                                errorHtml += `<li><strong>${fieldName}:</strong> ${err}</li>`;
+                            });
+                        }
                     }
                     errorHtml += '</ul>';
                     formErrors.innerHTML = errorHtml;
                     formErrors.classList.add('show');
+                    isSubmitting = false;
+                    submitBtn.disabled = false;
+                    submitBtn.textContent = originalBtnText;
                 } else {
                     errorMessage.textContent = data.error || 'Erreur lors de l\'inscription';
                     errorMessage.classList.add('show');

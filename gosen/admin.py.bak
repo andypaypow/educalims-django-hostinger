@@ -8,7 +8,7 @@ from django.utils.html import format_html
 from django.utils import timezone
 import json
 
-from .models import WebhookLog, UserProfile, SubscriptionPayment, SubscriptionProduct, DeviceFingerprint
+from .models import WebhookLog, UserProfile, SubscriptionPayment, SubscriptionProduct
 
 
 # ============================================
@@ -464,19 +464,3 @@ class SubscriptionPaymentAdmin(admin.ModelAdmin):
 
     def has_change_permission(self, request, obj=None):
         return False
-
-
-@admin.register(DeviceFingerprint)
-class DeviceFingerprintAdmin(admin.ModelAdmin):
-    list_display = ["id", "user", "fingerprint", "user_agent_display", "created_at", "last_seen", "is_active"]
-    list_filter = ["is_active", "created_at", "last_seen"]
-    search_fields = ["user__username", "fingerprint", "user_agent"]
-    readonly_fields = ["user", "fingerprint", "user_agent", "created_at", "last_seen"]
-    date_hierarchy = "created_at"
-    ordering = ["-created_at"]
-
-    def user_agent_display(self, obj):
-        if obj.user_agent:
-            return obj.user_agent[:50] + ("..." if len(obj.user_agent) > 50 else "")
-        return "-"
-    user_agent_display.short_description = "User-Agent"

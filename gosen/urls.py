@@ -31,6 +31,8 @@ urlpatterns = [
 
     # Page de connexion
     path('auth/login/', auth.login_page, name='login'),
+    path('auth/login/phone/', auth.login_phone, name='login_phone'),
+    path('auth/device-not-authorized/', auth.device_not_authorized, name='device_not_authorized'),
 
     # API de connexion
     path('api/auth/login/', auth.login_api, name='login_api'),
@@ -71,6 +73,8 @@ urlpatterns = [
 
     # API pour créer un paiement
     path('api/subscriptions/payment/create/', subscriptions.api_create_payment, name='api_create_payment'),
+    path('payment/success/', auth.payment_success, name='payment_success'),
+    path('payment/cancel/', auth.payment_cancel, name='payment_cancel'),
 
     # ============================================
     # WEBHOOKS
