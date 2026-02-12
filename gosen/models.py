@@ -361,3 +361,49 @@ class DeviceFingerprint(models.Model):
 def create_user_profile(sender, instance, created, **kwargs):
     if created:
         UserProfile.objects.get_or_create(user=instance)
+
+
+
+class Partner(models.Model):
+    """Modèle pour les partenaires (logos et liens)"""
+    nom = models.CharField(max_length=200, help_text="Nom du partenaire")
+    logo = models.ImageField(upload_to="partners/", blank=True, null=True, help_text="Logo du partenaire")
+    lien = models.URLField(blank=True, help_text="Lien vers le site du partenaire")
+    description = models.TextField(blank=True, help_text="Description du partenaire")
+    ordre_affichage = models.IntegerField(default=0, help_text="Ordre d'affichage (plus petit = en premier)")
+    est_actif = models.BooleanField(default=True, help_text="Partenaire visible sur le site")
+    date_creation = models.DateTimeField(auto_now_add=True)
+    date_modification = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        verbose_name = "Partenaire"
+        verbose_name_plural = "Partenaires"
+        ordering = ["ordre_affichage", "nom"]
+
+    def __str__(self):
+        return self.nom
+
+
+class ContactMessage(models.Model):
+    """Modèle pour les messages de contact des utilisateurs"""
+    TYPE_DEMANDE_CHOICES = [
+        ("filtre", "Demande de filtre supplémentaire"),
+        ("support", "Support technique"),
+        ("partenariat", "Proposition de partenariat"),
+        ("autre", "Autre"),
+    ]
+
+    nom = models.CharField(max_length=200, help_text="Nom de l'utilisateur")
+    email = models.EmailField(help_text="Email de contact")
+    type_demande = models.CharField(max_length=20, choices=TYPE_DEMANDE_CHOICES, default="autre")
+    message = models.TextField(help_text="Message de l'utilisateur")
+    date_creation = models.DateTimeField(auto_now_add=True)
+    est_traite = models.BooleanField(default=False, help_text="Message traité par l'admin")
+
+    class Meta:
+        verbose_name = "Message de contact"
+        verbose_name_plural = "Messages de contact"
+        ordering = ["-date_creation"]
+
+    def __str__(self):
+        return f"Message de {self.nom} - {self.type_demande}"

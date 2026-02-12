@@ -8,7 +8,7 @@ from django.utils.html import format_html
 from django.utils import timezone
 import json
 
-from .models import WebhookLog, UserProfile, SubscriptionPayment, SubscriptionProduct, DeviceFingerprint
+from .models import WebhookLog, UserProfile, SubscriptionPayment, SubscriptionProduct, DeviceFingerprint, Partner, ContactMessage
 
 
 # ============================================
@@ -480,3 +480,141 @@ class DeviceFingerprintAdmin(admin.ModelAdmin):
             return obj.user_agent[:50] + ("..." if len(obj.user_agent) > 50 else "")
         return "-"
     user_agent_display.short_description = "User-Agent"
+
+
+
+# ============================================
+# PARTNER ADMIN
+# ============================================
+
+@admin.register(Partner)
+class PartnerAdmin(admin.ModelAdmin):
+    """Administration des partenaires"""
+
+    list_display = [
+        'id',
+        'nom',
+        'logo_preview',
+        'lien',
+        'ordre_affichage',
+        'est_actif',
+        'date_creation',
+    ]
+
+    list_filter = [
+        'est_actif',
+        'date_creation',
+    ]
+
+    search_fields = [
+        'nom',
+        'description',
+    ]
+
+    readonly_fields = [
+        'date_creation',
+        'date_modification',
+        'logo_preview',
+    ]
+
+    fieldsets = (
+        ('Informations générales', {
+            'fields': (
+                'nom',
+                'description',
+                'lien',
+                'logo',
+                'logo_preview',
+            )
+        }),
+        ('Affichage', {
+            'fields': (
+                'est_actif',
+                'ordre_affichage',
+            )
+        }),
+        ('Métadonnées', {
+            'fields': (
+                'date_creation',
+                'date_modification',
+            ),
+            'classes': ('collapse',)
+        }),
+    )
+
+    ordering = ['ordre_affichage', 'nom']
+    list_per_page = 20
+
+    def logo_preview(self, obj):
+        """Affiche un aperçu du logo dans la liste"""
+        if obj.logo:
+            return format_html(
+                '<img src="{}" style="width: 50px; height: 50px; object-fit: contain; border-radius: 8px;" />',
+                obj.logo.url
+            )
+        return '-'
+    logo_preview.short_description = 'Logo'
+
+
+# ============================================
+# CONTACT MESSAGE ADMIN
+# ============================================
+
+@admin.register(ContactMessage)
+class ContactMessageAdmin(admin.ModelAdmin):
+    """Administration des messages de contact"""
+
+    list_display = [
+        'id',
+        'nom',
+        'email',
+        'type_demande',
+        'date_creation',
+        'est_traite',
+    ]
+
+    list_filter = [
+        'type_demande',
+        'est_traite',
+        'date_creation',
+    ]
+
+    search_fields = [
+        'nom',
+        'email',
+        'message',
+    ]
+
+    readonly_fields = [
+        'nom',
+        'email',
+        'type_demande',
+        'message',
+        'date_creation',
+    ]
+
+    fieldsets = (
+        ('Message', {
+            'fields': (
+                'nom',
+                'email',
+                'type_demande',
+                'message',
+                'date_creation',
+            )
+        }),
+        ('Statut', {
+            'fields': (
+                'est_traite',
+            )
+        }),
+    )
+
+    ordering = ['-date_creation']
+    list_per_page = 25
+
+    def has_add_permission(self, request):
+        return False
+
+    def has_change_permission(self, request, obj=None):
+        return False

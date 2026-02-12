@@ -20,6 +20,7 @@ services:
     volumes:
       - .:/code
       - static_volume:/code/staticfiles
+      - media_volume:/code/media
     ports:
       - "8082:8000"
     depends_on:
@@ -37,6 +38,7 @@ services:
 volumes:
   postgres_data_dev:
   static_volume:
+  media_volume:
 
 networks:
   gosen-dev-network:

@@ -1025,8 +1025,9 @@ Filtre: ${h3.textContent}
             });
 
             // --- INITIALISATION ---
-            addFilter('standard'); // Ajoute un filtre standard par défaut
-            addFilter('advanced'); // Ajoute un filtre avancé par défaut
+            addFilter('standard'); // Expert 1
+            addFilter('statistic'); // Statistiques
+            addFilter('weight'); // Poids
             updateEventListeners();
             handleInputChange();
 
