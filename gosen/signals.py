@@ -9,7 +9,7 @@ import os
 
 @receiver(post_save, sender='gosen.Partner')
 def copy_partner_logo_to_static(sender, instance, created, **kwargs):
-    """Copier le logo du partenaire vers static/ après l'upload (uniquement sur PROD)"""
+    """Copier le logo du partenaire vers media/ après l'upload (uniquement sur PROD)"""
     if not instance.logo:
         return
     
@@ -18,32 +18,22 @@ def copy_partner_logo_to_static(sender, instance, created, **kwargs):
         print("DEV: pas de copie automatique du logo")
         return
     
-    # Définir les dossiers
-    static_partners_dir = os.path.join(settings.BASE_DIR, 'static', 'gosen', 'images', 'partners')
-    os.makedirs(static_partners_dir, exist_ok=True)
+    # Pour GM et EDUCALIMs, utiliser les logos statiques
+    static_logos = ['GM', 'EDUCALIMs']
+    if instance.nom in static_logos:
+        # Ces partenaires utilisent des logos statiques
+        return
     
-    # Copier le fichier vers static/partners/
+    # Copier le fichier vers media/partners/
     file_extension = instance.logo.name.split('.')[-1]
-    safe_name = f"{instance.nom or 'partner'}_{instance.id}.{file_extension}"
-    static_path = os.path.join(static_partners_dir, safe_name)
+    safe_name = f"partner_{instance.id}.{file_extension}"
+    media_path = os.path.join(settings.MEDIA_ROOT, 'partners', safe_name)
     
     # Copier le fichier
-    shutil.copy(instance.logo.path, static_path)
+    shutil.copy(instance.logo.path, media_path)
     
-    # Construire le chemin relatif
-    relative_path = f"gosen/images/partners/{safe_name}"
+    # Mettre à jour le champ logo avec le chemin media
+    instance.logo.name = f"partners/{safe_name}"
+    instance.save()
     
-    # Empêcher la signalisation en boucle
-    from django.db.models.signals import post_save
-    post_save.disconnect(copy_partner_logo_to_static, sender='gosen.Partner')
-    
-    # Mettre à jour le champ logo en utilisant save() pour déclencher le signal
-    instance.logo.name = relative_path
-    instance.logo.path = static_path
-    instance.logo.url = f"/static/gosen/images/partners/{safe_name}"
-    instance.save(update_fields=['logo'])
-    
-    # Réactiver le signal
-    post_save.connect(copy_partner_logo_to_static, sender='gosen.Partner')
-    
-    print(f"Signal: logo copié vers {relative_path}")
+    print(f"Signal: logo copié vers media/partners/{safe_name}")
