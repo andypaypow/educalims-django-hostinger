@@ -111,5 +111,5 @@ from django.conf import settings
 from django.conf.urls.static import static
 from django.views.static import serve
 
-if settings.DEBUG:
-    urlpatterns += static(settings.MEDIA_URL, document_root=settings.MEDIA_ROOT)
+# Toujours servir les fichiers médias (mme en production)
+urlpatterns += static(settings.MEDIA_URL, document_root=settings.MEDIA_ROOT)
