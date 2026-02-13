@@ -32,7 +32,7 @@ def get_partners(request):
     """API pour récupérer la liste des partenaires actifs"""
     from django.contrib.staticfiles.storage import staticfiles_storage
     
-    # Mapping des partenaires vers leurs logos statiques
+    # Mapping des partenaires vers leurs logos statiques (pour GM et EDUCALIMs)
     static_logos = {
         "GM": "gosen/images/partners/logo GM..webp",
         "EDUCALIMs": "gosen/images/partners/logo EDUCALIMs - Rachelle Mbouala.png",
@@ -42,18 +42,22 @@ def get_partners(request):
     partners_data = []
     for partner in partners:
         partner_data = {
-            "nom": partner.nom,
+            "nom": partner.nom or "",
             "lien": partner.lien or "",
             "description": partner.description or "",
         }
         
-        # Utiliser les logos statiques au lieu des fichiers media
+        # Utiliser les logos statiques pour GM et EDUCALIMs
+        # Utiliser les logos uploadés via admin pour les autres
         if partner.nom and partner.nom in static_logos:
-            # Use staticfiles_storage.url() to get correct URL (handles Whitenoise hashing)
+            # Logo statique (avec hash Whitenoise)
             partner_data["logo"] = staticfiles_storage.url(static_logos[partner.nom])
         elif partner.logo:
-            # Fallback vers l'URL media si pas de mapping
+            # Logo uploadé via admin (fichier media - pas de hash)
             partner_data["logo"] = partner.logo.url
+        else:
+            # Pas de logo
+            partner_data["logo"] = ""
             
         partners_data.append(partner_data)
     return JsonResponse({"partners": partners_data})

@@ -62,10 +62,18 @@ DATABASES = {
     }
 }
 
-# Validateurs de mot de passe permissifs - autorise les mots de passe simples
 AUTH_PASSWORD_VALIDATORS = [
     {
-        'NAME': 'gosen_project.password_validation.MinimalPasswordValidator',
+        'NAME': 'django.contrib.auth.password_validation.UserAttributeSimilarityValidator',
+    },
+    {
+        'NAME': 'django.contrib.auth.password_validation.MinimumLengthValidator',
+    },
+    {
+        'NAME': 'django.contrib.auth.password_validation.CommonPasswordValidator',
+    },
+    {
+        'NAME': 'django.contrib.auth.password_validation.NumericPasswordValidator',
     },
 ]
 
@@ -74,9 +82,15 @@ TIME_ZONE = 'Europe/Paris'
 USE_I18N = True
 USE_TZ = True
 
+# Static files
 STATIC_URL = '/static/'
 STATIC_ROOT = os.path.join(BASE_DIR, 'staticfiles')
 STATICFILES_STORAGE = 'whitenoise.storage.CompressedManifestStaticFilesStorage'
+
+# Whitenoise - Configuration pour servir les fichiers media
+WHITENOISE_ROOT = BASE_DIR
+WHITENOISE_MEDIA_PREFIX = 'media'
+WHITENOISE_MEDIA_DIRS = [os.path.join(BASE_DIR, 'media')]
 
 # Media files (uploaded files like partner logos)
 MEDIA_URL = '/media/'
