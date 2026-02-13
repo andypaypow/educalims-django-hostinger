@@ -14,7 +14,7 @@ def copy_partner_logo_to_static(sender, instance, created, **kwargs):
         return
     
     # Définir les dossiers
-    static_partners_dir = os.path.join(os.environ.get('DJANGO_STATIC_ROOT', '/code/staticfiles'), 'gosen', 'images', 'partners')
+    static_partners_dir = os.path.join('/code/staticfiles', 'gosen', 'images', 'partners')
     os.makedirs(static_partners_dir, exist_ok=True)
     
     # Copier le fichier vers static/partners/
@@ -24,10 +24,7 @@ def copy_partner_logo_to_static(sender, instance, created, **kwargs):
     
     shutil.copy(instance.logo.path, static_path)
     
-    # Mettre à jour le chemin du logo vers static/
-    instance.logo.name = f"gosen/images/partners/{safe_name}"
-    instance.logo.path = static_path
-    instance.logo.url = f"/static/gosen/images/partners/{safe_name}"
-    
-    # Sauvegarder pour mettre à jour le champ logo
-    instance.save(update_fields=['logo'])
+    # Mettre à jour le champ logo pour pointer vers le fichier statique
+    from gosen.models import Partner
+    relative_path = f"gosen/images/partners/{safe_name}"
+    Partner.objects.filter(id=instance.id).update(logo=relative_path)
