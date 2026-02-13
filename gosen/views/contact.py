@@ -1,4 +1,3 @@
-
 """
 Vues pour le formulaire de contact
 """
@@ -31,6 +30,12 @@ def contact_page(request):
 
 def get_partners(request):
     """API pour récupérer la liste des partenaires actifs"""
+    # Mapping des partenaires vers leurs logos statiques
+    static_logos = {
+        "GM": "/static/gosen/images/partners/logo GM..webp",
+        "EDUCALIMs": "/static/gosen/images/partners/logo EDUCALIMs - Rachelle Mbouala.png",
+    }
+    
     partners = Partner.objects.filter(est_actif=True).order_by("ordre_affichage", "nom")
     partners_data = []
     for partner in partners:
@@ -39,8 +44,14 @@ def get_partners(request):
             "lien": partner.lien or "",
             "description": partner.description or "",
         }
-        if partner.logo:
+        
+        # Utiliser les logos statiques au lieu des fichiers media
+        if partner.nom and partner.nom in static_logos:
+            partner_data["logo"] = static_logos[partner.nom]
+        elif partner.logo:
+            # Fallback vers l'URL media si pas de mapping
             partner_data["logo"] = partner.logo.url
+            
         partners_data.append(partner_data)
     return JsonResponse({"partners": partners_data})
 
@@ -60,19 +71,22 @@ def submit_contact(request):
         
         # Validation
         if not nom:
-            return JsonResponse({"success": False, "error": "Le nom est requis"}, status=400)
+            return JsonResponse({"success": False, "error": "Le nom est obligatoire"}, status=400)
         if not email:
-            return JsonResponse({"success": False, "error": "L\"email est requis"}, status=400)
+            return JsonResponse({"success": False, "error": "L'email est obligatoire"}, status=400)
+        
         try:
             validate_email(email)
         except ValidationError:
-            return JsonResponse({"success": False, "error": "L\"email n\"est pas valide"}, status=400)
+            return JsonResponse({"success": False, "error": "Email invalide"}, status=400)
+        
         if not message:
-            return JsonResponse({"success": False, "error": "Le message est requis"}, status=400)
+            return JsonResponse({"success": False, "error": "Le message est obligatoire"}, status=400)
+        
         if len(message) < 10:
             return JsonResponse({"success": False, "error": "Le message doit contenir au moins 10 caractères"}, status=400)
         
-        # Créer le message
+        # Enregistrer le message
         ContactMessage.objects.create(
             nom=nom,
             email=email,
@@ -80,9 +94,9 @@ def submit_contact(request):
             message=message
         )
         
-        return JsonResponse({"success": True, "message": "Votre message a été envoyé avec succès !"})
-        
+        return JsonResponse({"success": True, "message": "Message envoyé avec succès"})
+    
     except json.JSONDecodeError:
-        return JsonResponse({"success": False, "error": "Données invalides"}, status=400)
+        return JsonResponse({"success": False, "error": "Données JSON invalides"}, status=400)
     except Exception as e:
         return JsonResponse({"success": False, "error": str(e)}, status=500)
