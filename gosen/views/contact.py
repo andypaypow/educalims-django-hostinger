@@ -30,10 +30,12 @@ def contact_page(request):
 
 def get_partners(request):
     """API pour récupérer la liste des partenaires actifs"""
+    from django.contrib.staticfiles.storage import staticfiles_storage
+    
     # Mapping des partenaires vers leurs logos statiques
     static_logos = {
-        "GM": "/static/gosen/images/partners/logo GM..webp",
-        "EDUCALIMs": "/static/gosen/images/partners/logo EDUCALIMs - Rachelle Mbouala.png",
+        "GM": "gosen/images/partners/logo GM..webp",
+        "EDUCALIMs": "gosen/images/partners/logo EDUCALIMs - Rachelle Mbouala.png",
     }
     
     partners = Partner.objects.filter(est_actif=True).order_by("ordre_affichage", "nom")
@@ -47,7 +49,8 @@ def get_partners(request):
         
         # Utiliser les logos statiques au lieu des fichiers media
         if partner.nom and partner.nom in static_logos:
-            partner_data["logo"] = static_logos[partner.nom]
+            # Use staticfiles_storage.url() to get correct URL (handles Whitenoise hashing)
+            partner_data["logo"] = staticfiles_storage.url(static_logos[partner.nom])
         elif partner.logo:
             # Fallback vers l'URL media si pas de mapping
             partner_data["logo"] = partner.logo.url
