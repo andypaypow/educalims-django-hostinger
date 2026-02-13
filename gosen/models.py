@@ -366,7 +366,7 @@ def create_user_profile(sender, instance, created, **kwargs):
 
 class Partner(models.Model):
     """Modèle pour les partenaires (logos et liens)"""
-    nom = models.CharField(max_length=200, help_text="Nom du partenaire")
+    nom = models.CharField(max_length=200, blank=True, null=True, default='', help_text="Nom du partenaire (optionnel)")
     logo = models.ImageField(upload_to="partners/", blank=True, null=True, help_text="Logo du partenaire")
     lien = models.URLField(blank=True, help_text="Lien vers le site du partenaire")
     description = models.TextField(blank=True, help_text="Description du partenaire")
@@ -381,7 +381,7 @@ class Partner(models.Model):
         ordering = ["ordre_affichage", "nom"]
 
     def __str__(self):
-        return self.nom
+        return self.nom or "Partenaire sans nom"
 
 
 class ContactMessage(models.Model):

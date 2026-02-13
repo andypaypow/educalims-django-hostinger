@@ -1092,4 +1092,44 @@ Filtre: ${h3.textContent}
                 }
             }
 
-                });
+            // --- CHARGEMENT DES PARTENAIRES ---
+            async function loadPartners() {
+                try {
+                    const response = await fetch('/api/partners/');
+                    const result = await response.json();
+                    
+                    const container = document.getElementById('partners-container');
+                    if (!container) return;
+
+                    if (result.partners && result.partners.length > 0) {
+                        let html = '';
+                        result.partners.forEach(function(partner) {
+                            const logo = partner.logo || '';
+                            const lien = partner.lien || '#';
+                            const nom = partner.nom || '';
+                            html += '<div style="text-align: center;">';
+                            html += '<a href="' + lien + '" target="_blank" style="text-decoration: none;">';
+                            if (logo) {
+                                html += '<img src="' + logo + '" alt="' + nom + '" style="max-height: 100px; width: auto; transition: transform 0.3s ease; border-radius: 8px;" onmouseover="this.style.transform=\'scale(1.1)\'" onmouseout="this.style.transform=\'scale(1)\'">';
+                            }
+                            if (nom) {
+                            html += '<p style="margin-top: 10px; color: var(--primary-color); font-weight: 600;">' + nom + '</p>';
+                        }
+                            html += '</a></div>';
+                        });
+                        container.innerHTML = html;
+                    } else {
+                        container.innerHTML = '<p style="color: #666;">Aucun partenaire pour le moment.</p>';
+                    }
+                } catch (error) {
+                    console.error('Error loading partners:', error);
+                    const container = document.getElementById('partners-container');
+                    if (container) {
+                        container.innerHTML = '<p style="color: #666;">Impossible de charger les partenaires.</p>';
+                    }
+                }
+            }
+
+            // Charger les partenaires au chargement de la page
+            loadPartners();
+            });

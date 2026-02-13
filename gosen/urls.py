@@ -3,7 +3,7 @@ URLs pour l'application Gosen TurfFilter
 """
 from django.urls import path
 from .views import webhooks, base, filters, auth, subscriptions, contact
-from .views.contact import contact_page
+from .views.contact import contact_page, submit_contact
 
 
 app_name = 'gosen'
@@ -18,6 +18,8 @@ urlpatterns = [
     path('', base.index, name='home'),
     # Page de contact
     path('contact/', contact_page, name='contact'),
+    # API pour soumettre un message de contact
+    path('api/contact/submit/', submit_contact, name='api_contact_submit'),
 
     # API pour les partenaires
     path('api/partners/', contact.get_partners, name='api_partners'),
