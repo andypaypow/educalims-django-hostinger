@@ -2,7 +2,8 @@
 URLs pour l'application Gosen TurfFilter
 """
 from django.urls import path
-from .views import webhooks, base, filters, auth, subscriptions
+from .views import webhooks, base, filters, auth, subscriptions, contact
+from .views.contact import contact_page
 
 
 app_name = 'gosen'
@@ -15,6 +16,11 @@ urlpatterns = [
 
     # Page d'accueil (application Gosen TurfFilter)
     path('', base.index, name='home'),
+    # Page de contact
+    path('contact/', contact_page, name='contact'),
+
+    # API pour les partenaires
+    path('api/partners/', contact.get_partners, name='api_partners'),
 
     # API pour compter les combinaisons
     path('api/combinations/count/', base.api_combinations_count, name='api_combinations_count'),
@@ -95,3 +101,13 @@ urlpatterns = [
     # Supprimer un log webhook (admin uniquement)
     path('webhook/logs/<int:log_id>/delete/', webhooks.webhook_log_delete, name='webhook_log_delete'),
 ]
+
+# ============================================
+# SERVEUR DE FICHIERS MEDIA (DEV ONLY)
+# ============================================
+from django.conf import settings
+from django.conf.urls.static import static
+from django.views.static import serve
+
+if settings.DEBUG:
+    urlpatterns += static(settings.MEDIA_URL, document_root=settings.MEDIA_ROOT)

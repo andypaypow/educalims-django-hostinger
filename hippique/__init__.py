@@ -1,0 +1,1 @@
+# Hippique app package

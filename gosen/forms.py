@@ -1,7 +1,7 @@
 from django import forms
 from django.contrib.auth.models import User
 from django.contrib.auth.forms import UserCreationForm
-from .models import UserProfile
+from .models import UserProfile, ContactMessage
 
 
 class CustomUserCreationForm(UserCreationForm):
@@ -116,3 +116,44 @@ class SubscriptionForm(forms.Form):
         required=True,
         widget=forms.CheckboxInput(attrs={'class': 'form-check-input'})
     )
+
+
+class ContactForm(forms.ModelForm):
+    """Formulaire de contact"""
+    TYPE_DEMANDE_CHOICES = [
+        ("filtre", "Demande de filtre supplémentaire"),
+        ("support", "Support technique"),
+        ("partenariat", "Proposition de partenariat"),
+        ("autre", "Autre"),
+    ]
+
+    nom = forms.CharField(
+        max_length=200,
+        widget=forms.TextInput(attrs={
+            "class": "contact-input",
+            "placeholder": "Votre nom *"
+        })
+    )
+    email = forms.EmailField(
+        widget=forms.EmailInput(attrs={
+            "class": "contact-input",
+            "placeholder": "Votre email *"
+        })
+    )
+    type_demande = forms.ChoiceField(
+        choices=TYPE_DEMANDE_CHOICES,
+        widget=forms.Select(attrs={
+            "class": "contact-select"
+        })
+    )
+    message = forms.CharField(
+        widget=forms.Textarea(attrs={
+            "class": "contact-textarea",
+            "placeholder": "Votre message...",
+            "rows": 5
+        })
+    )
+
+    class Meta:
+        model = ContactMessage
+        fields = ["nom", "email", "type_demande", "message"]

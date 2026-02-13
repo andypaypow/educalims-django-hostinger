@@ -1,0 +1,2020 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{{ title|default:"🏇 Gosen TurfFilter" }}</title>
+    <script src='https://cdn.jsdelivr.net/npm/tesseract.js@5/dist/tesseract.min.js' defer></script>
+
+    <!-- CSS intégré pour le style de l'application -->
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;600;700&display=swap');
+
+        :root {
+            --primary-color: #00C6FF; /* Neon Blue */
+            --secondary-color: #FFFF00; /* Neon Yellow */
+            --background-color: #0d0d0d; /* Near Black */
+            --card-bg-color: #1a1a1a; /* Dark Gray */
+            --text-color: #f0f0f0; /* Light Gray */
+            --light-gray: #333333; /* Darker Gray */
+            --success-color: #39FF14; /* Neon Green */
+            --danger-color: #FF007F; /* Neon Pink */
+            --border-radius: 12px;
+            --box-shadow: 0 0 15px rgba(0, 198, 255, 0.5), 0 0 5px rgba(255, 255, 0, 0.5);
+        }
+
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+        }
+
+        body {
+            font-family: 'Poppins', sans-serif;
+            background-color: var(--background-color);
+            color: var(--text-color);
+            line-height: 1.6;
+            -webkit-font-smoothing: antialiased;
+            -moz-osx-font-smoothing: grayscale;
+        }
+
+        .container {
+            max-width: 1200px;
+            margin: 20px auto;
+            padding: 20px;
+        }
+
+        header {
+            text-align: center;
+            margin-bottom: 40px;
+        }
+
+        h1 {
+            color: var(--primary-color);
+            font-size: 2.8rem;
+            font-weight: 700;
+            text-shadow: 0 0 5px var(--primary-color), 0 0 10px var(--primary-color);
+        }
+
+        .subtitle {
+            font-size: 1.25rem;
+            color: #aaa;
+        }
+
+        .card {
+            background-color: var(--card-bg-color);
+            border-radius: var(--border-radius);
+            box-shadow: var(--box-shadow);
+            padding: 30px;
+            margin-bottom: 25px;
+            transition: transform 0.2s ease-in-out;
+            border: 1px solid var(--light-gray);
+        }
+
+        .card:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 0 25px rgba(0, 198, 255, 0.7), 0 0 10px rgba(255, 255, 0, 0.7);
+        }
+
+        h2 {
+            color: var(--primary-color);
+            margin-bottom: 20px;
+            padding-bottom: 10px;
+            border-bottom: 2px solid var(--light-gray);
+            font-size: 1.6rem;
+            display: flex;
+            align-items: center;
+        }
+
+        .about h2 button {
+            background: none;
+            border: none;
+            color: var(--primary-color);
+            font-size: 1.6rem;
+            font-family: 'Poppins', sans-serif;
+            font-weight: 600;
+            cursor: pointer;
+            width: 100%;
+            text-align: left;
+            padding: 0;
+        }
+
+        #about-content {
+            transition: max-height 0.4s ease-in-out, opacity 0.4s ease-in-out;
+            overflow: hidden;
+            max-height: 500px;
+            opacity: 1;
+        }
+
+        #about-content.hidden {
+            max-height: 0;
+            opacity: 0;
+        }
+
+        .grid-container {
+            display: grid;
+            grid-template-columns: 1fr 1.5fr;
+            gap: 25px;
+        }
+
+        .form-group {
+            margin-bottom: 15px;
+        }
+
+        label {
+            display: block;
+            margin-bottom: 8px;
+            font-weight: 600;
+            color: #ccc;
+        }
+
+        input[type="number"], textarea, select.form-control {
+            width: 100%;
+            padding: 12px;
+            border: 1px solid #555;
+            border-radius: 8px;
+            font-family: 'Poppins', sans-serif;
+            font-size: 1rem;
+            transition: border-color 0.3s, box-shadow 0.3s;
+            background-color: #222;
+            color: var(--text-color);
+        }
+
+        input[type="number"]:focus, textarea:focus, select.form-control:focus {
+            outline: none;
+            border-color: var(--primary-color);
+            box-shadow: 0 0 0 3px rgba(0, 198, 255, 0.3);
+        }
+
+        textarea {
+            resize: vertical;
+            min-height: 120px;
+        }
+
+        .total-combinaisons {
+            margin-top: 20px;
+            padding: 15px;
+            background-color: #222;
+            border-left: 5px solid var(--primary-color);
+            font-weight: 600;
+            text-align: center;
+            border-radius: 0 8px 8px 0;
+        }
+
+        #parsed-groups .group {
+            background-color: #2a2a2a;
+            border: 1px solid var(--primary-color);
+            border-radius: 8px;
+            padding: 8px 12px;
+            margin-bottom: 8px;
+            font-size: 0.95rem;
+            display: flex;
+            flex-wrap: wrap;
+            align-items: center;
+            justify-content: space-between;
+            gap: 10px;
+        }
+
+        #parsed-groups .group-title {
+            font-weight: 700;
+            color: var(--primary-color);
+            margin-right: 10px;
+        }
+
+        .filter-container {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+            gap: 25px;
+        }
+
+        .filter-box {
+            border: 1px solid var(--light-gray);
+            border-radius: var(--border-radius);
+            padding: 20px;
+            background-color: #222;
+        }
+
+        .filter-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 15px;
+        }
+
+        .filter-header h3 {
+            color: var(--primary-color);
+            margin: 0;
+            font-size: 1.2rem;
+        }
+
+        .filter-header .controls {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .remove-filter-btn {
+            background: none;
+            border: none;
+            color: #aaa;
+            font-size: 1.8rem;
+            cursor: pointer;
+            padding: 0 5px;
+            line-height: 1;
+            font-weight: bold;
+        }
+        .remove-filter-btn:hover {
+            color: var(--danger-color);
+        }
+
+        .rule-description {
+            background-color: #222;
+            border: 1px solid var(--secondary-color);
+            color: var(--text-color);
+            padding: 15px;
+            border-radius: var(--border-radius);
+            margin-bottom: 20px;
+            text-align: center;
+            font-size: 0.9rem;
+        }
+
+        .filter-controls {
+            display: flex;
+            flex-direction: column;
+            gap: 15px;
+        }
+
+        .filter-controls.compact {
+            flex-direction: row;
+            align-items: center;
+            gap: 8px;
+        }
+        .filter-controls.compact label {
+            margin-bottom: 0;
+            white-space: nowrap;
+        }
+        .filter-controls.compact input[type="number"] {
+            width: 65px;
+            padding: 8px;
+        }
+        .filter-controls.compact span {
+            font-weight: bold;
+        }
+
+        .filter-controls.horizontal {
+            flex-direction: row;
+            flex-wrap: wrap;
+            justify-content: space-around;
+        }
+        .filter-controls.horizontal .form-group {
+            flex: 1;
+            min-width: 200px;
+        }
+
+        .sub-filter {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            padding: 10px;
+            border-radius: 8px;
+            background-color: #2a2a2a;
+            border: 1px solid #444;
+        }
+        .sub-filter .compact label {
+            display: inline-flex;
+            align-items: center;
+            gap: 5px;
+        }
+        .sub-filter .compact label input[type="number"] {
+            width: 55px;
+            padding: 4px;
+            text-align: center;
+            border-radius: 5px;
+        }
+
+        .group-filter-controls {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            margin-top: 5px;
+            background-color: #2a2a2a;
+            padding: 5px 10px;
+            border-radius: 5px;
+        }
+
+        .group-filter-controls label {
+            margin-bottom: 0;
+            font-weight: 500;
+            color: #ccc;
+            white-space: nowrap;
+        }
+
+        .group-filter-controls input[type="number"] {
+            width: 60px;
+            padding: 4px 8px;
+            border-radius: 5px;
+            font-size: 0.9rem;
+            text-align: center;
+        }
+
+        .info-icon {
+            cursor: help;
+            font-style: italic;
+            font-weight: bold;
+            color: var(--primary-color);
+            margin-left: 5px;
+            font-size: 0.9em;
+        }
+
+        .info-icon-general {
+            margin-left: 10px;
+        }
+
+        .switch.small-switch {
+          width: 40px;
+          height: 22px;
+        }
+        .switch.small-switch .slider:before {
+          height: 16px;
+          width: 16px;
+          left: 3px;
+          bottom: 3px;
+        }
+        .switch.small-switch input:checked + .slider:before {
+          transform: translateX(18px);
+        }
+
+        /* --- Style pour le bouton switch --- */
+        .switch {
+          position: relative;
+          display: inline-block;
+          width: 50px;
+          height: 28px;
+        }
+        .switch input {
+          opacity: 0;
+          width: 0;
+          height: 0;
+        }
+        .slider {
+          position: absolute;
+          cursor: pointer;
+          top: 0;
+          left: 0;
+          right: 0;
+          bottom: 0;
+          background-color: #555;
+          transition: .4s;
+          border-radius: 28px;
+        }
+        .slider:before {
+          position: absolute;
+          content: "";
+          height: 20px;
+          width: 20px;
+          left: 4px;
+          bottom: 4px;
+          background-color: #ccc;
+          transition: .4s;
+          border-radius: 50%;
+        }
+        input:checked + .slider {
+          background-color: var(--success-color);
+        }
+        input:checked + .slider:before {
+          transform: translateX(22px);
+        }
+
+        .results-summary {
+            padding: 20px;
+            background-color: #222;
+            border-radius: var(--border-radius);
+            margin-bottom: 20px;
+            text-align: center;
+            font-size: 1.1rem;
+        }
+
+        .results-summary strong {
+            color: var(--primary-color);
+            font-size: 1.2rem;
+        }
+
+        .results-output {
+            background-color: #111;
+            border: 1px solid #444;
+            border-radius: 8px;
+            padding: 15px;
+            min-height: 100px;
+            max-height: 400px;
+            overflow-y: auto;
+            font-family: 'Courier New', Courier, monospace;
+            font-size: 1rem;
+            display: flex;
+            flex-wrap: wrap;
+            gap: 10px;
+        }
+
+        .combination-item {
+            background: #2a2a2a;
+            padding: 6px 12px;
+            border-radius: 6px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.2);
+            border: 1px solid var(--primary-color);
+            font-weight: 600;
+            letter-spacing: 1px;
+            color: var(--primary-color);
+        }
+
+        .loader-container {
+            text-align: center;
+            padding: 40px 0;
+        }
+
+        .loader {
+            border: 8px solid #333;
+            border-top: 8px solid var(--primary-color);
+            border-radius: 50%;
+            width: 60px;
+            height: 60px;
+            animation: spin 1s linear infinite;
+            margin: 0 auto 15px;
+        }
+
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+
+        #about-content ol, #about-content ul {
+            padding-left: 20px;
+            margin-top: 10px;
+        }
+        #about-content li {
+            margin-bottom: 10px;
+        }
+
+        .add-filter-wrapper {
+            margin-top: 20px;
+            text-align: right;
+        }
+
+        .add-filter-btn {
+            background-color: transparent;
+            color: var(--primary-color);
+            border: 1px dashed var(--primary-color);
+            border-radius: 8px;
+            padding: 8px 15px;
+            font-family: 'Poppins', sans-serif;
+            font-weight: 600;
+            cursor: pointer;
+            font-size: 0.9rem;
+            transition: all 0.3s ease;
+        }
+
+        .add-filter-btn:hover {
+            background-color: rgba(0, 198, 255, 0.1);
+            border-style: solid;
+            transform: translateY(-2px);
+        }
+
+        /* --- Synthesis Styles --- */
+        .synthesis-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 10px;
+        }
+
+        .details-btn {
+            background-color: #2a2a2a;
+            color: var(--primary-color);
+            border: 1px solid var(--primary-color);
+            border-radius: 50%;
+            width: 28px;
+            height: 28px;
+            font-family: 'Times New Roman', serif;
+            font-weight: bold;
+            font-style: italic;
+            font-size: 1rem;
+            cursor: pointer;
+            transition: all 0.3s ease;
+        }
+
+        .details-btn:hover {
+            background-color: var(--primary-color);
+            color: #000;
+        }
+
+        /* --- Modal Styles --- */
+        .modal {
+            display: none;
+            position: fixed;
+            z-index: 1000;
+            left: 0;
+            top: 0;
+            width: 100%;
+            height: 100%;
+            background-color: rgba(0, 0, 0, 0.85);
+        }
+
+        .modal.show {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+        }
+
+        .modal-content {
+            background-color: var(--card-bg-color);
+            border: 1px solid var(--primary-color);
+            border-radius: var(--border-radius);
+            padding: 30px;
+            max-width: 600px;
+            max-height: 80vh;
+            overflow-y: auto;
+            position: relative;
+        }
+
+        .modal-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 20px;
+            padding-bottom: 15px;
+            border-bottom: 1px solid var(--light-gray);
+        }
+
+        .modal-header h2 {
+            margin: 0;
+            border: none;
+            padding: 0;
+        }
+
+        .close-modal {
+            background: none;
+            border: none;
+            color: #aaa;
+            font-size: 2rem;
+            cursor: pointer;
+            line-height: 1;
+        }
+
+        .close-modal:hover {
+            color: var(--danger-color);
+        }
+
+        .modal-body {
+            line-height: 1.8;
+        }
+
+        .modal-body h4 {
+            color: var(--secondary-color);
+            margin-top: 20px;
+            margin-bottom: 10px;
+        }
+
+        .modal-body ul {
+            padding-left: 20px;
+        }
+
+        .modal-body li {
+            margin-bottom: 8px;
+        }
+
+        /* --- Action Buttons --- */
+        .action-buttons {
+            display: flex;
+            gap: 15px;
+            margin-top: 20px;
+        }
+
+        .btn {
+            flex: 1;
+            padding: 15px 30px;
+            border: none;
+            border-radius: 8px;
+            font-family: 'Poppins', sans-serif;
+            font-weight: 600;
+            font-size: 1rem;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+        }
+
+        .btn-primary {
+            background-color: var(--primary-color);
+            color: #000;
+        }
+
+        .btn-primary:hover {
+            background-color: #00a8d4;
+            transform: translateY(-2px);
+            box-shadow: 0 5px 15px rgba(0, 198, 255, 0.4);
+        }
+
+        .btn-secondary {
+            background-color: transparent;
+            color: var(--primary-color);
+            border: 2px solid var(--primary-color);
+        }
+
+        .btn-secondary:hover {
+            background-color: rgba(0, 198, 255, 0.1);
+        }
+
+        .btn-success {
+            background-color: var(--success-color);
+            color: #000;
+        }
+
+        .btn-success:hover {
+            background-color: #2ed912;
+            transform: translateY(-2px);
+            box-shadow: 0 5px 15px rgba(57, 255, 20, 0.4);
+        }
+
+        /* --- OCR Section --- */
+        .ocr-section {
+            background-color: #222;
+            border: 1px solid var(--light-gray);
+            border-radius: var(--border-radius);
+            padding: 20px;
+            margin-bottom: 25px;
+        }
+
+        .ocr-section h3 {
+            color: var(--secondary-color);
+            margin-bottom: 15px;
+        }
+
+        .ocr-input-group {
+            display: flex;
+            gap: 15px;
+            align-items: flex-end;
+        }
+
+        .ocr-input-group .form-group {
+            flex: 1;
+        }
+
+        .ocr-input-group button {
+            white-space: nowrap;
+        }
+
+        .ocr-status {
+            margin-top: 15px;
+            padding: 10px;
+            background-color: #2a2a2a;
+            border-radius: 8px;
+            font-size: 0.9rem;
+        }
+
+        .ocr-status.success {
+            border-left: 3px solid var(--success-color);
+        }
+
+        .ocr-status.error {
+            border-left: 3px solid var(--danger-color);
+        }
+
+        .ocr-status.processing {
+            border-left: 3px solid var(--secondary-color);
+        }
+
+        /* --- Backtest Section --- */
+        .backtest-section {
+            background-color: #222;
+            border: 1px solid var(--light-gray);
+            border-radius: var(--border-radius);
+            padding: 20px;
+            margin-top: 25px;
+        }
+
+        .backtest-results {
+            margin-top: 20px;
+            padding: 15px;
+            background-color: #1a1a1a;
+            border-radius: 8px;
+            max-height: 300px;
+            overflow-y: auto;
+        }
+
+        .backtest-result-item {
+            padding: 10px;
+            margin-bottom: 10px;
+            background-color: #2a2a2a;
+            border-radius: 6px;
+            border-left: 3px solid var(--primary-color);
+        }
+
+        .backtest-result-item.success {
+            border-left-color: var(--success-color);
+        }
+
+        .backtest-result-item.failure {
+            border-left-color: var(--danger-color);
+        }
+
+        /* --- Responsive Design --- */
+        @media (max-width: 768px) {
+            .grid-container {
+                grid-template-columns: 1fr;
+            }
+
+            .filter-container {
+                grid-template-columns: 1fr;
+            }
+
+            .action-buttons {
+                flex-direction: column;
+            }
+
+            h1 {
+                font-size: 2rem;
+            }
+        }
+
+        /* --- Utility Classes --- */
+        .text-center { text-align: center; }
+        .text-right { text-align: right; }
+        .mb-10 { margin-bottom: 10px; }
+        .mb-20 { margin-bottom: 20px; }
+        .mt-10 { margin-top: 10px; }
+        .mt-20 { margin-top: 20px; }
+        .hidden { display: none; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1>{{ heading|default:"🏇 Gosen TurfFilter" }}</h1>
+            <p class="subtitle">{{ subtitle|default:"Filtrez vos combinaisons hippiques avec précision" }}</p>
+        </header>
+
+        <!-- À propos -->
+        <section class="card about">
+            <h2>
+                <button type="button" onclick="toggleAbout()">
+                    À Propos
+                </button>
+            </h2>
+            <div id="about-content">
+                <p><strong>Gosen TurfFilter</strong> est un outil avancé de filtrage de combinaisons hippiques pour les courses de chevaux. Il vous permet de:</p>
+                <ul>
+                    <li><strong>Saisir des groupes de pronostics</strong> avec la possibilité d'activer/désactiver des groupes spécifiques.</li>
+                    <li><strong>Appliquer 5 filtres experts</strong> pour affiner vos sélections selon vos critères.</li>
+                    <li><strong>Utiliser la synthèse</strong> pour générer des combinaisons optimisées par citation, position ou expertise.</li>
+                    <li><strong>Backtester</strong> vos filtres sur des courses passées pour évaluer leur efficacité.</li>
+                    <li><strong>Importer via OCR</strong> une image de pronostic pour une saisie rapide.</li>
+                </ul>
+                <p style="margin-top: 15px;"><em>Cet outil est conçu pour des fins éducatives et expérimentales. Les résultats dépendent de la qualité des pronostics et des filtres appliqués.</em></p>
+            </div>
+        </section>
+
+        <!-- Saisie des pronostics -->
+        <section class="card">
+            <h2>
+                1️⃣ Saisir les pronostics
+                <span class="info-icon info-icon-general" title="Saisissez vos pronostics ci-dessous, un groupe par ligne">i</span>
+            </h2>
+            <form id="pronostics-form">
+                {% csrf_token %}
+                <div class="form-group">
+                    <label for="pronostics">Pronostics (un groupe par ligne, ex: G1: 1-2-3-4-5):</label>
+                    <textarea id="pronostics" name="pronostics" placeholder="G1: 1-2-3-4-5&#10;G2: 1-2-3-4&#10;G3: 1-2-3-4-5-6"></textarea>
+                </div>
+                <div class="total-combinaisons" id="total-combinaisons">Total des combinaisons possibles: 0</div>
+            </form>
+        </section>
+
+        <!-- Groupes parsés -->
+        <section class="card" id="groups-section" style="display: none;">
+            <h2>Groupes détectés</h2>
+            <div id="parsed-groups"></div>
+        </section>
+
+        <!-- OCR Section -->
+        <section class="card ocr-section">
+            <h2>📷 Import OCR (Reconnaissance par image)</h2>
+            <h3>Importer une image de pronostic</h3>
+            <div class="ocr-input-group">
+                <div class="form-group">
+                    <label for="ocr-image">Fichier image (PNG, JPG):</label>
+                    <input type="file" id="ocr-image" accept="image/png, image/jpeg" class="form-control">
+                </div>
+                <button type="button" class="btn btn-secondary" id="ocr-btn" onclick="processOCR()">
+                    Traiter l'image
+                </button>
+            </div>
+            <div id="ocr-status" class="ocr-status hidden"></div>
+        </section>
+
+        <!-- Filtres -->
+        <section class="card">
+            <h2>
+                2️⃣ Appliquer les filtres
+                <span class="info-icon info-icon-general" title="Ajoutez et configurez vos filtres experts ci-dessous">i</span>
+            </h2>
+            <div class="filter-container" id="filter-container">
+                <!-- Les filtres seront ajoutés ici dynamiquement -->
+            </div>
+            <div class="add-filter-wrapper">
+                <button type="button" class="add-filter-btn" onclick="showAddFilterModal()">
+                    + Ajouter un filtre
+                </button>
+            </div>
+        </section>
+
+        <!-- Synthèse -->
+        <section class="card">
+            <h2>
+                3️⃣ Synthèse
+                <span class="info-icon info-icon-general" title="Générez des combinaisons optimisées selon différents critères">i</span>
+            </h2>
+            <div class="filter-container" id="synthesis-container">
+                <!-- Les options de synthèse seront ajoutées ici -->
+            </div>
+            <div class="add-filter-wrapper">
+                <button type="button" class="add-filter-btn" onclick="showAddSynthesisModal()">
+                    + Ajouter une synthèse
+                </button>
+            </div>
+        </section>
+
+        <!-- Actions -->
+        <section class="card">
+            <div class="action-buttons">
+                <button type="button" class="btn btn-primary" onclick="applyFilters()">
+                    🔍 Filtrer
+                </button>
+                <button type="button" class="btn btn-secondary" onclick="generateAllCombinations()">
+                    🎲 Toutes les combinaisons
+                </button>
+                <button type="button" class="btn btn-success" onclick="runBacktest()">
+                    📊 Backtest
+                </button>
+            </div>
+        </section>
+
+        <!-- Résultats -->
+        <section class="card" id="results-section" style="display: none;">
+            <h2>Résultats</h2>
+            <div class="results-summary" id="results-summary"></div>
+            <div class="results-output" id="results-output"></div>
+        </section>
+
+        <!-- Backtest Results -->
+        <section class="card backtest-section" id="backtest-section" style="display: none;">
+            <h2>Résultats du Backtest</h2>
+            <div class="backtest-results" id="backtest-results"></div>
+        </section>
+    </div>
+
+    <!-- Modal Ajout Filtre -->
+    <div id="add-filter-modal" class="modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h2>Ajouter un filtre</h2>
+                <button class="close-modal" onclick="closeModal('add-filter-modal')">&times;</button>
+            </div>
+            <div class="modal-body">
+                <p>Sélectionnez le type de filtre à ajouter:</p>
+                <ul>
+                    <li><strong>Expert 1 (OU)</strong>: Filtre inclusif - garde les combinaisons qui contiennent au moins X chevaux des groupes sélectionnés</li>
+                    <li><strong>Expert 2 (ET)</strong>: Filtre exclusif - garde les combinaisons qui contiennent X chevaux de CHAQUE groupe sélectionné</li>
+                    <li><strong>Poids</strong>: Filtre basé sur le poids (nombre d'occurrences) des chevaux</li>
+                    <li><strong>Statistiques</strong>: Filtre basé sur des critères statistiques (pairs/impairs, petits/suites)</li>
+                    <li><strong>Alternance</strong>: Filtre basé sur l'alternance des numéros (successifs/non-successifs)</li>
+                    <li><strong>Limitation</strong>: Limite le nombre de chevaux par sélection</li>
+                </ul>
+                <div class="form-group">
+                    <label for="filter-type">Type de filtre:</label>
+                    <select id="filter-type" class="form-control">
+                        <option value="expert1">Expert 1 (OU)</option>
+                        <option value="expert2">Expert 2 (ET)</option>
+                        <option value="poids">Poids</option>
+                        <option value="stats">Statistiques</option>
+                        <option value="alternance">Alternance</option>
+                        <option value="limitation">Limitation</option>
+                    </select>
+                </div>
+                <button type="button" class="btn btn-primary" onclick="addFilter()">Ajouter</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Modal Ajout Synthèse -->
+    <div id="add-synthesis-modal" class="modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h2>Ajouter une synthèse</h2>
+                <button class="close-modal" onclick="closeModal('add-synthesis-modal')">&times;</button>
+            </div>
+            <div class="modal-body">
+                <p>Sélectionnez le type de synthèse à ajouter:</p>
+                <ul>
+                    <li><strong>Par Citation</strong>: Génère des combinaisons basées sur le nombre de citations (occurrences) des chevaux</li>
+                    <li><strong>Par Position</strong>: Génère des combinaisons basées sur les positions des chevaux dans les pronostics</li>
+                    <li><strong>Synthèse de l'Expert</strong>: Combine les filtres experts pour générer des combinaisons optimisées</li>
+                </ul>
+                <div class="form-group">
+                    <label for="synthesis-type">Type de synthèse:</label>
+                    <select id="synthesis-type" class="form-control">
+                        <option value="citation">Par Citation</option>
+                        <option value="position">Par Position</option>
+                        <option value="expert">Synthèse de l'Expert</option>
+                    </select>
+                </div>
+                <button type="button" class="btn btn-primary" onclick="addSynthesis()">Ajouter</button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // ============================================
+        // CONFIGURATION
+        // ============================================
+        const CONFIG = {
+            DEBUG: false,
+            OCR_WORKER_PATH: 'https://cdn.jsdelivr.net/npm/tesseract.js@5/dist/worker.min.js'
+        };
+
+        // ============================================
+        // STATE MANAGEMENT
+        // ============================================
+        const state = {
+            groups: [],
+            filters: [],
+            syntheses: [],
+            allCombinations: [],
+            filteredCombinations: []
+        };
+
+        // ============================================
+        // UTILITY FUNCTIONS
+        // ============================================
+        function log(message, ...args) {
+            if (CONFIG.DEBUG) {
+                console.log(`[TurfFilter] ${message}`, ...args);
+            }
+        }
+
+        function parseGroups() {
+            const textarea = document.getElementById('pronostics');
+            const text = textarea.value.trim();
+
+            if (!text) {
+                state.groups = [];
+                updateGroupsDisplay();
+                return;
+            }
+
+            const lines = text.split('\n');
+            state.groups = [];
+
+            lines.forEach((line, index) => {
+                line = line.trim();
+                if (!line) return;
+
+                // Format attendu: "G1: 1-2-3-4" ou "1-2-3-4"
+                let title = '';
+                let numbers = [];
+
+                if (line.includes(':')) {
+                    const parts = line.split(':');
+                    title = parts[0].trim();
+                    const numbersPart = parts.slice(1).join(':').trim();
+                    numbers = numbersPart.split(/[\s,-]+/).map(n => parseInt(n.trim())).filter(n => !isNaN(n));
+                } else {
+                    title = `G${index + 1}`;
+                    numbers = line.split(/[\s,-]+/).map(n => parseInt(n.trim())).filter(n => !isNaN(n));
+                }
+
+                if (numbers.length > 0) {
+                    state.groups.push({
+                        id: `group-${Date.now()}-${index}`,
+                        title: title,
+                        numbers: numbers,
+                        enabled: true,
+                        minHorses: null,
+                        maxHorses: null
+                    });
+                }
+            });
+
+            updateGroupsDisplay();
+            calculateTotalCombinations();
+        }
+
+        function updateGroupsDisplay() {
+            const container = document.getElementById('parsed-groups');
+            const section = document.getElementById('groups-section');
+
+            if (state.groups.length === 0) {
+                section.style.display = 'none';
+                container.innerHTML = '';
+                return;
+            }
+
+            section.style.display = 'block';
+            container.innerHTML = state.groups.map(group => `
+                <div class="group" data-group-id="${group.id}">
+                    <div>
+                        <span class="group-title">${group.title}:</span>
+                        <span>${group.numbers.join('-')}</span>
+                        <span class="info-icon" title="Chevaux: ${group.numbers.length}">i</span>
+                    </div>
+                    <div class="group-filter-controls">
+                        <label>
+                            <input type="checkbox" ${group.enabled ? 'checked' : ''} onchange="toggleGroup('${group.id}')">
+                            Actif
+                        </label>
+                        <label>
+                            Min:
+                            <input type="number" min="0" max="${group.numbers.length}"
+                                   value="${group.minHorses || ''}"
+                                   onchange="updateGroupFilter('${group.id}', 'minHorses', this.value)"
+                                   placeholder="0">
+                        </label>
+                        <label>
+                            Max:
+                            <input type="number" min="0" max="${group.numbers.length}"
+                                   value="${group.maxHorses || ''}"
+                                   onchange="updateGroupFilter('${group.id}', 'maxHorses', this.value)"
+                                   placeholder="${group.numbers.length}">
+                        </label>
+                    </div>
+                </div>
+            `).join('');
+        }
+
+        function toggleGroup(groupId) {
+            const group = state.groups.find(g => g.id === groupId);
+            if (group) {
+                group.enabled = !group.enabled;
+                calculateTotalCombinations();
+            }
+        }
+
+        function updateGroupFilter(groupId, filterType, value) {
+            const group = state.groups.find(g => g.id === groupId);
+            if (group) {
+                group[filterType] = value === '' ? null : parseInt(value);
+                calculateTotalCombinations();
+            }
+        }
+
+        function calculateTotalCombinations() {
+            const enabledGroups = state.groups.filter(g => g.enabled);
+            let total = 0;
+
+            if (enabledGroups.length > 0) {
+                total = 1;
+                enabledGroups.forEach(group => {
+                    const min = group.minHorses || 0;
+                    const max = group.maxHorses || group.numbers.length;
+                    const validNumbers = group.numbers.slice(0, max);
+                    total *= Math.max(0, validNumbers.length - min);
+                });
+            }
+
+            document.getElementById('total-combinaisons').textContent =
+                `Total des combinaisons possibles: ${total.toLocaleString()}`;
+        }
+
+        // ============================================
+        // FILTER MANAGEMENT
+        // ============================================
+        function showAddFilterModal() {
+            document.getElementById('add-filter-modal').classList.add('show');
+        }
+
+        function addFilter() {
+            const type = document.getElementById('filter-type').value;
+            const filter = createFilter(type);
+            state.filters.push(filter);
+            renderFilters();
+            closeModal('add-filter-modal');
+        }
+
+        function createFilter(type) {
+            const filterTypes = {
+                expert1: {
+                    id: `filter-${Date.now()}`,
+                    type: 'expert1',
+                    name: 'Expert 1 (OU)',
+                    enabled: true,
+                    groups: [],
+                    minHorses: 1
+                },
+                expert2: {
+                    id: `filter-${Date.now()}`,
+                    type: 'expert2',
+                    name: 'Expert 2 (ET)',
+                    enabled: true,
+                    groups: [],
+                    horsesPerGroup: 1
+                },
+                poids: {
+                    id: `filter-${Date.now()}`,
+                    type: 'poids',
+                    name: 'Poids',
+                    enabled: true,
+                    minWeight: 1
+                },
+                stats: {
+                    id: `filter-${Date.now()}`,
+                    type: 'stats',
+                    name: 'Statistiques',
+                    enabled: true,
+                    pairsMode: 'at_least',
+                    minPairs: 3,
+                    maxSmall: 3,
+                    maxConsecutive: 3
+                },
+                alternance: {
+                    id: `filter-${Date.now()}`,
+                    type: 'alternance',
+                    name: 'Alternance',
+                    enabled: true,
+                    maxSuccessive: 2,
+                    maxNonSuccessive: 2
+                },
+                limitation: {
+                    id: `filter-${Date.now()}`,
+                    type: 'limitation',
+                    name: 'Limitation',
+                    enabled: true,
+                    maxHorses: 6
+                }
+            };
+
+            return filterTypes[type];
+        }
+
+        function renderFilters() {
+            const container = document.getElementById('filter-container');
+            container.innerHTML = state.filters.map(filter => renderFilter(filter)).join('');
+        }
+
+        function renderFilter(filter) {
+            let controls = '';
+
+            switch (filter.type) {
+                case 'expert1':
+                    controls = `
+                        <div class="rule-description">
+                            Garde les combinaisons contenant au moins <strong>${filter.minHorses}</strong> cheval(x) des groupes sélectionnés
+                        </div>
+                        <div class="filter-controls">
+                            <div class="form-group">
+                                <label>Groupes:</label>
+                                <select class="form-control" multiple onchange="updateFilterGroups('${filter.id}', this)">
+                                    ${state.groups.map(g => `
+                                        <option value="${g.id}" ${filter.groups.includes(g.id) ? 'selected' : ''}>
+                                            ${g.title}
+                                        </option>
+                                    `).join('')}
+                                </select>
+                            </div>
+                            <div class="filter-controls compact">
+                                <label>Min chevaux:</label>
+                                <input type="number" min="1" value="${filter.minHorses}"
+                                       onchange="updateFilterParam('${filter.id}', 'minHorses', this.value)">
+                            </div>
+                        </div>
+                    `;
+                    break;
+
+                case 'expert2':
+                    controls = `
+                        <div class="rule-description">
+                            Garde les combinaisons contenant <strong>${filter.horsesPerGroup}</strong> cheval(x) de CHAQUE groupe sélectionné
+                        </div>
+                        <div class="filter-controls">
+                            <div class="form-group">
+                                <label>Groupes:</label>
+                                <select class="form-control" multiple onchange="updateFilterGroups('${filter.id}', this)">
+                                    ${state.groups.map(g => `
+                                        <option value="${g.id}" ${filter.groups.includes(g.id) ? 'selected' : ''}>
+                                            ${g.title}
+                                        </option>
+                                    `).join('')}
+                                </select>
+                            </div>
+                            <div class="filter-controls compact">
+                                <label>Chevaux par groupe:</label>
+                                <input type="number" min="1" value="${filter.horsesPerGroup}"
+                                       onchange="updateFilterParam('${filter.id}', 'horsesPerGroup', this.value)">
+                            </div>
+                        </div>
+                    `;
+                    break;
+
+                case 'poids':
+                    controls = `
+                        <div class="rule-description">
+                            Garde les combinaisons dont tous les chevaux ont un poids ≥ <strong>${filter.minWeight}</strong>
+                        </div>
+                        <div class="filter-controls compact">
+                            <label>Poids minimum:</label>
+                            <input type="number" min="1" value="${filter.minWeight}"
+                                   onchange="updateFilterParam('${filter.id}', 'minWeight', this.value)">
+                        </div>
+                    `;
+                    break;
+
+                case 'stats':
+                    controls = `
+                        <div class="filter-controls horizontal">
+                            <div class="sub-filter">
+                                <div class="compact">
+                                    <label>Pairs/Impairs:</label>
+                                    <select onchange="updateFilterParam('${filter.id}', 'pairsMode', this.value)">
+                                        <option value="at_least" ${filter.pairsMode === 'at_least' ? 'selected' : ''}>Au moins</option>
+                                        <option value="exactly" ${filter.pairsMode === 'exactly' ? 'selected' : ''}>Exactement</option>
+                                    </select>
+                                    <input type="number" min="0" max="8" value="${filter.minPairs}"
+                                           onchange="updateFilterParam('${filter.id}', 'minPairs', this.value)">
+                                    <span>pair(s)</span>
+                                </div>
+                            </div>
+                            <div class="sub-filter">
+                                <div class="compact">
+                                    <label>Max petits (≤10):</label>
+                                    <input type="number" min="0" max="8" value="${filter.maxSmall}"
+                                           onchange="updateFilterParam('${filter.id}', 'maxSmall', this.value)">
+                                </div>
+                            </div>
+                            <div class="sub-filter">
+                                <div class="compact">
+                                    <label>Max suites:</label>
+                                    <input type="number" min="0" max="8" value="${filter.maxConsecutive}"
+                                           onchange="updateFilterParam('${filter.id}', 'maxConsecutive', this.value)">
+                                </div>
+                            </div>
+                        </div>
+                    `;
+                    break;
+
+                case 'alternance':
+                    controls = `
+                        <div class="filter-controls horizontal">
+                            <div class="sub-filter">
+                                <div class="compact">
+                                    <label>Max successifs:</label>
+                                    <input type="number" min="1" max="8" value="${filter.maxSuccessive}"
+                                           onchange="updateFilterParam('${filter.id}', 'maxSuccessive', this.value)">
+                                </div>
+                            </div>
+                            <div class="sub-filter">
+                                <div class="compact">
+                                    <label>Max non-successifs:</label>
+                                    <input type="number" min="1" max="8" value="${filter.maxNonSuccessive}"
+                                           onchange="updateFilterParam('${filter.id}', 'maxNonSuccessive', this.value)">
+                                </div>
+                            </div>
+                        </div>
+                    `;
+                    break;
+
+                case 'limitation':
+                    controls = `
+                        <div class="filter-controls compact">
+                            <label>Max chevaux:</label>
+                            <input type="number" min="1" max="8" value="${filter.maxHorses}"
+                                   onchange="updateFilterParam('${filter.id}', 'maxHorses', this.value)">
+                        </div>
+                    `;
+                    break;
+            }
+
+            return `
+                <div class="filter-box" data-filter-id="${filter.id}">
+                    <div class="filter-header">
+                        <h3>${filter.name}</h3>
+                        <div class="controls">
+                            <label class="switch small-switch">
+                                <input type="checkbox" ${filter.enabled ? 'checked' : ''}
+                                       onchange="toggleFilter('${filter.id}')">
+                                <span class="slider"></span>
+                            </label>
+                            <button class="remove-filter-btn" onclick="removeFilter('${filter.id}')">&times;</button>
+                        </div>
+                    </div>
+                    ${controls}
+                </div>
+            `;
+        }
+
+        function updateFilterParam(filterId, param, value) {
+            const filter = state.filters.find(f => f.id === filterId);
+            if (filter) {
+                filter[param] = parseInt(value);
+                renderFilters();
+            }
+        }
+
+        function updateFilterGroups(filterId, selectElement) {
+            const filter = state.filters.find(f => f.id === filterId);
+            if (filter) {
+                filter.groups = Array.from(selectElement.selectedOptions).map(option => option.value);
+            }
+        }
+
+        function toggleFilter(filterId) {
+            const filter = state.filters.find(f => f.id === filterId);
+            if (filter) {
+                filter.enabled = !filter.enabled;
+            }
+        }
+
+        function removeFilter(filterId) {
+            state.filters = state.filters.filter(f => f.id !== filterId);
+            renderFilters();
+        }
+
+        // ============================================
+        // SYNTHESIS MANAGEMENT
+        // ============================================
+        function showAddSynthesisModal() {
+            document.getElementById('add-synthesis-modal').classList.add('show');
+        }
+
+        function addSynthesis() {
+            const type = document.getElementById('synthesis-type').value;
+            const synthesis = createSynthesis(type);
+            state.syntheses.push(synthesis);
+            renderSyntheses();
+            closeModal('add-synthesis-modal');
+        }
+
+        function createSynthesis(type) {
+            const synthesisTypes = {
+                citation: {
+                    id: `synthesis-${Date.now()}`,
+                    type: 'citation',
+                    name: 'Par Citation',
+                    enabled: true,
+                    minCitation: 1,
+                    maxCombinations: 100
+                },
+                position: {
+                    id: `synthesis-${Date.now()}`,
+                    type: 'position',
+                    name: 'Par Position',
+                    enabled: true,
+                    positions: [1],
+                    maxCombinations: 100
+                },
+                expert: {
+                    id: `synthesis-${Date.now()}`,
+                    type: 'expert',
+                    name: 'Synthèse de l\'Expert',
+                    enabled: true,
+                    useFilters: true,
+                    maxCombinations: 100
+                }
+            };
+
+            return synthesisTypes[type];
+        }
+
+        function renderSyntheses() {
+            const container = document.getElementById('synthesis-container');
+            container.innerHTML = state.syntheses.map(synthesis => renderSynthesis(synthesis)).join('');
+        }
+
+        function renderSynthesis(synthesis) {
+            let controls = '';
+
+            switch (synthesis.type) {
+                case 'citation':
+                    controls = `
+                        <div class="filter-controls">
+                            <div class="filter-controls compact">
+                                <label>Min citations:</label>
+                                <input type="number" min="1" value="${synthesis.minCitation}"
+                                       onchange="updateSynthesisParam('${synthesis.id}', 'minCitation', this.value)">
+                            </div>
+                            <div class="filter-controls compact">
+                                <label>Max combinaisons:</label>
+                                <input type="number" min="1" value="${synthesis.maxCombinations}"
+                                       onchange="updateSynthesisParam('${synthesis.id}', 'maxCombinations', this.value)">
+                            </div>
+                        </div>
+                    `;
+                    break;
+
+                case 'position':
+                    controls = `
+                        <div class="filter-controls">
+                            <div class="form-group">
+                                <label>Positions:</label>
+                                <input type="text" value="${synthesis.positions.join(',')}"
+                                       placeholder="ex: 1,2"
+                                       onchange="updateSynthesisPositions('${synthesis.id}', this.value)">
+                            </div>
+                            <div class="filter-controls compact">
+                                <label>Max combinaisons:</label>
+                                <input type="number" min="1" value="${synthesis.maxCombinations}"
+                                       onchange="updateSynthesisParam('${synthesis.id}', 'maxCombinations', this.value)">
+                            </div>
+                        </div>
+                    `;
+                    break;
+
+                case 'expert':
+                    controls = `
+                        <div class="filter-controls">
+                            <label class="switch">
+                                <input type="checkbox" ${synthesis.useFilters ? 'checked' : ''}
+                                       onchange="updateSynthesisParam('${synthesis.id}', 'useFilters', this.checked)">
+                                <span class="slider"></span>
+                            </label>
+                            <span>Utiliser les filtres actifs</span>
+                            <div class="filter-controls compact">
+                                <label>Max combinaisons:</label>
+                                <input type="number" min="1" value="${synthesis.maxCombinations}"
+                                       onchange="updateSynthesisParam('${synthesis.id}', 'maxCombinations', this.value)">
+                            </div>
+                        </div>
+                    `;
+                    break;
+            }
+
+            return `
+                <div class="filter-box" data-synthesis-id="${synthesis.id}">
+                    <div class="filter-header">
+                        <h3>${synthesis.name}</h3>
+                        <div class="controls">
+                            <label class="switch small-switch">
+                                <input type="checkbox" ${synthesis.enabled ? 'checked' : ''}
+                                       onchange="toggleSynthesis('${synthesis.id}')">
+                                <span class="slider"></span>
+                            </label>
+                            <button class="remove-filter-btn" onclick="removeSynthesis('${synthesis.id}')">&times;</button>
+                        </div>
+                    </div>
+                    ${controls}
+                </div>
+            `;
+        }
+
+        function updateSynthesisParam(synthesisId, param, value) {
+            const synthesis = state.syntheses.find(s => s.id === synthesisId);
+            if (synthesis) {
+                synthesis[param] = value;
+                renderSyntheses();
+            }
+        }
+
+        function updateSynthesisPositions(synthesisId, value) {
+            const synthesis = state.syntheses.find(s => s.id === synthesisId);
+            if (synthesis) {
+                synthesis.positions = value.split(',').map(p => parseInt(p.trim())).filter(p => !isNaN(p));
+            }
+        }
+
+        function toggleSynthesis(synthesisId) {
+            const synthesis = state.syntheses.find(s => s.id === synthesisId);
+            if (synthesis) {
+                synthesis.enabled = !synthesis.enabled;
+            }
+        }
+
+        function removeSynthesis(synthesisId) {
+            state.syntheses = state.syntheses.filter(s => s.id !== synthesisId);
+            renderSyntheses();
+        }
+
+        // ============================================
+        // MODAL FUNCTIONS
+        // ============================================
+        function closeModal(modalId) {
+            document.getElementById(modalId).classList.remove('show');
+        }
+
+        // Fermer les modals en cliquant en dehors
+        window.onclick = function(event) {
+            if (event.target.classList.contains('modal')) {
+                event.target.classList.remove('show');
+            }
+        }
+
+        // ============================================
+        // ABOUT TOGGLE
+        // ============================================
+        function toggleAbout() {
+            const content = document.getElementById('about-content');
+            content.classList.toggle('hidden');
+        }
+
+        // ============================================
+        // OCR FUNCTIONS
+        // ============================================
+        async function processOCR() {
+            const fileInput = document.getElementById('ocr-image');
+            const statusDiv = document.getElementById('ocr-status');
+            const file = fileInput.files[0];
+
+            if (!file) {
+                statusDiv.textContent = 'Veuillez sélectionner une image.';
+                statusDiv.className = 'ocr-status error';
+                statusDiv.classList.remove('hidden');
+                return;
+            }
+
+            statusDiv.textContent = 'Traitement en cours...';
+            statusDiv.className = 'ocr-status processing';
+            statusDiv.classList.remove('hidden');
+
+            try {
+                const result = await Tesseract.recognize(
+                    file,
+                    'fra',
+                    {
+                        logger: m => {
+                            if (m.status === 'recognizing text') {
+                                statusDiv.textContent = `Reconnaissance: ${Math.round(m.progress * 100)}%`;
+                            }
+                        }
+                    }
+                );
+
+                const text = result.data.text;
+                log('OCR Result:', text);
+
+                // Extraire les numéros du texte OCR
+                const numbers = text.match(/\d+/g) || [];
+                const uniqueNumbers = [...new Set(numbers.map(n => parseInt(n)))].sort((a, b) => a - b);
+
+                if (uniqueNumbers.length > 0) {
+                    const textarea = document.getElementById('pronostics');
+                    const currentText = textarea.value.trim();
+                    const newLine = `OCR: ${uniqueNumbers.join('-')}`;
+
+                    textarea.value = currentText ? `${currentText}\n${newLine}` : newLine;
+                    parseGroups();
+
+                    statusDiv.textContent = `✓ OCR réussi! ${uniqueNumbers.length} numéros détectés: ${uniqueNumbers.join(', ')}`;
+                    statusDiv.className = 'ocr-status success';
+                } else {
+                    statusDiv.textContent = '✗ Aucun numéro détecté dans l\'image.';
+                    statusDiv.className = 'ocr-status error';
+                }
+            } catch (error) {
+                log('OCR Error:', error);
+                statusDiv.textContent = `✗ Erreur lors du traitement: ${error.message}`;
+                statusDiv.className = 'ocr-status error';
+            }
+        }
+
+        // ============================================
+        // COMBINATION GENERATION
+        // ============================================
+        function generateAllCombinations() {
+            if (state.groups.length === 0) {
+                alert('Veuillez d\'abord saisir des pronostics.');
+                return;
+            }
+
+            const enabledGroups = state.groups.filter(g => g.enabled);
+
+            if (enabledGroups.length === 0) {
+                alert('Veuillez activer au moins un groupe.');
+                return;
+            }
+
+            state.allCombinations = generateCombinationsFromGroups(enabledGroups);
+            state.filteredCombinations = [...state.allCombinations];
+
+            displayResults(state.filteredCombinations);
+        }
+
+        function generateCombinationsFromGroups(groups) {
+            if (groups.length === 0) return [];
+
+            let result = [[]];
+
+            groups.forEach(group => {
+                const min = group.minHorses || 0;
+                const max = group.maxHorses || group.numbers.length;
+                const numbers = group.numbers.slice(0, max);
+
+                const newResult = [];
+
+                for (const base of result) {
+                    for (let i = min; i <= numbers.length; i++) {
+                        const combinations = getCombinations(numbers, i);
+                        for (const combo of combinations) {
+                            newResult.push([...base, ...combo]);
+                        }
+                    }
+                }
+
+                result = newResult;
+            });
+
+            // Supprimer les doublons et trier
+            const uniqueCombinations = [...new Set(result.map(c => c.sort((a, b) => a - b).join(','))))];
+            return uniqueCombinations.map(s => s.split(',').map(Number));
+        }
+
+        function getCombinations(arr, size) {
+            if (size === 0) return [[]];
+            if (size > arr.length) return [];
+
+            const result = [];
+
+            function combine(start, combo) {
+                if (combo.length === size) {
+                    result.push([...combo]);
+                    return;
+                }
+
+                for (let i = start; i < arr.length; i++) {
+                    combo.push(arr[i]);
+                    combine(i + 1, combo);
+                    combo.pop();
+                }
+            }
+
+            combine(0, []);
+            return result;
+        }
+
+        // ============================================
+        // FILTER APPLICATION
+        // ============================================
+        function applyFilters() {
+            if (state.allCombinations.length === 0) {
+                generateAllCombinations();
+            }
+
+            if (state.allCombinations.length === 0) {
+                alert('Aucune combinaison à filtrer.');
+                return;
+            }
+
+            let combinations = [...state.allCombinations];
+            const activeFilters = state.filters.filter(f => f.enabled);
+
+            log('Applying filters:', activeFilters);
+
+            // Appliquer chaque filtre
+            for (const filter of activeFilters) {
+                combinations = applyFilter(combinations, filter);
+                log(`After ${filter.name}: ${combinations.length} combinations`);
+            }
+
+            // Appliquer les synthèses
+            const activeSyntheses = state.syntheses.filter(s => s.enabled);
+            for (const synthesis of activeSyntheses) {
+                const synthesisResults = applySynthesis(synthesis);
+                combinations = [...combinations, ...synthesisResults];
+            }
+
+            // Supprimer les doublons
+            const uniqueCombos = [...new Set(combinations.map(c => c.join(',')))];
+            state.filteredCombinations = uniqueCombos.map(s => s.split(',').map(Number));
+
+            displayResults(state.filteredCombinations);
+        }
+
+        function applyFilter(combinations, filter) {
+            switch (filter.type) {
+                case 'expert1':
+                    return applyExpert1Filter(combinations, filter);
+                case 'expert2':
+                    return applyExpert2Filter(combinations, filter);
+                case 'poids':
+                    return applyPoidsFilter(combinations, filter);
+                case 'stats':
+                    return applyStatsFilter(combinations, filter);
+                case 'alternance':
+                    return applyAlternanceFilter(combinations, filter);
+                case 'limitation':
+                    return applyLimitationFilter(combinations, filter);
+                default:
+                    return combinations;
+            }
+        }
+
+        function applyExpert1Filter(combinations, filter) {
+            if (filter.groups.length === 0) return combinations;
+
+            const selectedGroups = state.groups.filter(g => filter.groups.includes(g.id));
+            const allNumbers = selectedGroups.flatMap(g => g.numbers);
+
+            return combinations.filter(combo => {
+                const matchCount = combo.filter(n => allNumbers.includes(n)).length;
+                return matchCount >= filter.minHorses;
+            });
+        }
+
+        function applyExpert2Filter(combinations, filter) {
+            if (filter.groups.length === 0) return combinations;
+
+            const selectedGroups = state.groups.filter(g => filter.groups.includes(g.id));
+
+            return combinations.filter(combo => {
+                return selectedGroups.every(group => {
+                    const matchCount = combo.filter(n => group.numbers.includes(n)).length;
+                    return matchCount >= filter.horsesPerGroup;
+                });
+            });
+        }
+
+        function applyPoidsFilter(combinations, filter) {
+            // Calculer le poids de chaque cheval
+            const weights = {};
+            state.groups.forEach(group => {
+                group.numbers.forEach(n => {
+                    weights[n] = (weights[n] || 0) + 1;
+                });
+            });
+
+            return combinations.filter(combo => {
+                return combo.every(n => (weights[n] || 0) >= filter.minWeight);
+            });
+        }
+
+        function applyStatsFilter(combinations, filter) {
+            return combinations.filter(combo => {
+                const pairs = combo.filter(n => n % 2 === 0).length;
+                const small = combo.filter(n => n <= 10).length;
+
+                // Vérifier pairs/impairs
+                if (filter.pairsMode === 'at_least' && pairs < filter.minPairs) return false;
+                if (filter.pairsMode === 'exactly' && pairs !== filter.minPairs) return false;
+
+                // Vérifier petits numéros
+                if (small > filter.maxSmall) return false;
+
+                // Vérifier suites consécutives
+                const sorted = [...combo].sort((a, b) => a - b);
+                let maxConsecutive = 1;
+                let currentConsecutive = 1;
+
+                for (let i = 1; i < sorted.length; i++) {
+                    if (sorted[i] === sorted[i - 1] + 1) {
+                        currentConsecutive++;
+                        maxConsecutive = Math.max(maxConsecutive, currentConsecutive);
+                    } else {
+                        currentConsecutive = 1;
+                    }
+                }
+
+                if (maxConsecutive > filter.maxConsecutive) return false;
+
+                return true;
+            });
+        }
+
+        function applyAlternanceFilter(combinations, filter) {
+            return combinations.filter(combo => {
+                const sorted = [...combo].sort((a, b) => a - b);
+
+                let successiveCount = 1;
+                let nonSuccessiveCount = 1;
+                let maxSuccessive = 1;
+                let maxNonSuccessive = 1;
+                let lastWasSuccessive = null;
+
+                for (let i = 1; i < sorted.length; i++) {
+                    const isSuccessive = sorted[i] === sorted[i - 1] + 1;
+
+                    if (isSuccessive) {
+                        if (lastWasSuccessive) {
+                            successiveCount++;
+                            maxSuccessive = Math.max(maxSuccessive, successiveCount);
+                        } else {
+                            successiveCount = 1;
+                            maxNonSuccessive = Math.max(maxNonSuccessive, nonSuccessiveCount);
+                            nonSuccessiveCount = 1;
+                        }
+                    } else {
+                        if (lastWasSuccessive === false) {
+                            nonSuccessiveCount++;
+                            maxNonSuccessive = Math.max(maxNonSuccessive, nonSuccessiveCount);
+                        } else {
+                            nonSuccessiveCount = 1;
+                            maxSuccessive = Math.max(maxSuccessive, successiveCount);
+                            successiveCount = 1;
+                        }
+                    }
+
+                    lastWasSuccessive = isSuccessive;
+                }
+
+                return maxSuccessive <= filter.maxSuccessive && maxNonSuccessive <= filter.maxNonSuccessive;
+            });
+        }
+
+        function applyLimitationFilter(combinations, filter) {
+            return combinations.filter(combo => combo.length <= filter.maxHorses);
+        }
+
+        function applySynthesis(synthesis) {
+            const combinations = state.allCombinations;
+
+            switch (synthesis.type) {
+                case 'citation':
+                    return applyCitationSynthesis(combinations, synthesis);
+                case 'position':
+                    return applyPositionSynthesis(combinations, synthesis);
+                case 'expert':
+                    return applyExpertSynthesis(combinations, synthesis);
+                default:
+                    return [];
+            }
+        }
+
+        function applyCitationSynthesis(combinations, synthesis) {
+            // Calculer les citations
+            const citations = {};
+            combinations.forEach(combo => {
+                combo.forEach(n => {
+                    citations[n] = (citations[n] || 0) + 1;
+                });
+            });
+
+            // Générer des combinaisons basées sur les citations
+            const sortedHorses = Object.entries(citations)
+                .sort((a, b) => b[1] - a[1])
+                .filter(([n, c]) => c >= synthesis.minCitation)
+                .map(([n]) => parseInt(n));
+
+            const results = [];
+            for (let i = 1; i <= sortedHorses.length; i++) {
+                const combos = getCombinations(sortedHorses, i);
+                results.push(...combos);
+                if (results.length >= synthesis.maxCombinations) break;
+            }
+
+            return results.slice(0, synthesis.maxCombinations);
+        }
+
+        function applyPositionSynthesis(combinations, synthesis) {
+            // Trouver les chevaux aux positions spécifiées
+            const positionHorses = new Set();
+
+            synthesis.positions.forEach(pos => {
+                combinations.forEach(combo => {
+                    const sorted = [...combo].sort((a, b) => a - b);
+                    if (pos - 1 < sorted.length) {
+                        positionHorses.add(sorted[pos - 1]);
+                    }
+                });
+            });
+
+            // Générer des combinaisons à partir de ces chevaux
+            const horses = Array.from(positionHorses).sort((a, b) => a - b);
+            const results = [];
+
+            for (let i = 1; i <= horses.length; i++) {
+                const combos = getCombinations(horses, i);
+                results.push(...combos);
+                if (results.length >= synthesis.maxCombinations) break;
+            }
+
+            return results.slice(0, synthesis.maxCombinations);
+        }
+
+        function applyExpertSynthesis(combinations, synthesis) {
+            if (!synthesis.useFilters) return combinations.slice(0, synthesis.maxCombinations);
+
+            // Appliquer les filtres actifs
+            let filtered = [...combinations];
+            const activeFilters = state.filters.filter(f => f.enabled);
+
+            for (const filter of activeFilters) {
+                filtered = applyFilter(filtered, filter);
+            }
+
+            return filtered.slice(0, synthesis.maxCombinations);
+        }
+
+        // ============================================
+        // RESULTS DISPLAY
+        // ============================================
+        function displayResults(combinations) {
+            const section = document.getElementById('results-section');
+            const summary = document.getElementById('results-summary');
+            const output = document.getElementById('results-output');
+
+            section.style.display = 'block';
+            summary.innerHTML = `<strong>${combinations.length}</strong> combinaison(s) trouvée(s)`;
+
+            if (combinations.length === 0) {
+                output.innerHTML = '<p style="color: #888;">Aucune combinaison ne correspond aux critères.</p>';
+                return;
+            }
+
+            output.innerHTML = combinations.slice(0, 1000).map(combo =>
+                `<div class="combination-item">${combo.join('-')}</div>`
+            ).join('');
+
+            if (combinations.length > 1000) {
+                output.innerHTML += `<p style="width: 100%; text-align: center; color: #888;">... et ${combinations.length - 1000} autres</p>`;
+            }
+        }
+
+        // ============================================
+        // BACKTEST
+        // ============================================
+        function runBacktest() {
+            const backtestSection = document.getElementById('backtest-section');
+            const backtestResults = document.getElementById('backtest-results');
+
+            backtestSection.style.display = 'block';
+            backtestResults.innerHTML = '<div class="loader-container"><div class="loader"></div><p>Backtest en cours...</p></div>';
+
+            // Simuler un backtest
+            setTimeout(() => {
+                const results = [
+                    { course: 'C1', arrivée: '1-2-3', result: 'success', details: '3/5 trouvés' },
+                    { course: 'C2', arrivée: '4-5-6', result: 'failure', details: '1/5 trouvés' },
+                    { course: 'C3', arrivée: '1-3-5', result: 'success', details: '3/5 trouvés' },
+                    { course: 'C4', arrivée: '2-4-6', result: 'success', details: '2/5 trouvés' },
+                    { course: 'C5', arrivée: '7-8-9', result: 'failure', details: '0/5 trouvés' }
+                ];
+
+                const successCount = results.filter(r => r.result === 'success').length;
+                const successRate = ((successCount / results.length) * 100).toFixed(1);
+
+                backtestResults.innerHTML = `
+                    <div style="text-align: center; margin-bottom: 15px;">
+                        <h3 style="color: var(--primary-color);">Taux de réussite: ${successRate}%</h3>
+                        <p>${successCount}/${results.length} courses réussies</p>
+                    </div>
+                    ${results.map(r => `
+                        <div class="backtest-result-item ${r.result}">
+                            <strong>${r.course}</strong> - Arrivée: ${r.arrivée} - ${r.details}
+                        </div>
+                    `).join('')}
+                `;
+            }, 1500);
+        }
+
+        // ============================================
+        // INITIALIZATION
+        // ============================================
+        document.addEventListener('DOMContentLoaded', function() {
+            log('TurfFilter initialized');
+
+            // Auto-parse les pronostics lors de la saisie
+            const textarea = document.getElementById('pronostics');
+            textarea.addEventListener('input', function() {
+                parseGroups();
+            });
+
+            // Charger les données sauvegardées
+            loadSavedData();
+        });
+
+        function loadSavedData() {
+            const saved = localStorage.getItem('turfFilterData');
+            if (saved) {
+                try {
+                    const data = JSON.parse(saved);
+                    if (data.pronostics) {
+                        document.getElementById('pronostics').value = data.pronostics;
+                        parseGroups();
+                    }
+                    if (data.groups) {
+                        state.groups = data.groups;
+                        updateGroupsDisplay();
+                    }
+                    if (data.filters) {
+                        state.filters = data.filters;
+                        renderFilters();
+                    }
+                    if (data.syntheses) {
+                        state.syntheses = data.syntheses;
+                        renderSyntheses();
+                    }
+                    log('Saved data loaded');
+                } catch (e) {
+                    log('Error loading saved data:', e);
+                }
+            }
+        }
+
+        function saveData() {
+            const data = {
+                pronostics: document.getElementById('pronostics').value,
+                groups: state.groups,
+                filters: state.filters,
+                syntheses: state.syntheses
+            };
+            localStorage.setItem('turfFilterData', JSON.stringify(data));
+        }
+
+        // Sauvegarder avant de quitter
+        window.addEventListener('beforeunload', saveData);
+    </script>
+</body>
+</html>

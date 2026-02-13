@@ -1,0 +1,75 @@
+<!-- Footer Moderne -->
+<footer class="modern-footer">
+    <div class="footer-wave"></div>
+    
+    <div class="footer-container">
+        <div class="footer-content">
+        </div>
+
+        <div class="footer-bottom">
+            <div class="footer-bottom-content">
+                <p class="footer-copyright">
+                    &copy; 2025 Filtre Expert. Tous droits rservs.
+                </p>
+            </div>
+        </div>
+    </div>
+</footer>
+
+<style>
+.footer-wave svg { display: block; width: 100%; height: 50px; }
+.footer-wave path { fill: var(--card-bg-color); }
+.modern-footer { position: relative; z-index: 1; }
+.modern-footer {
+    position: relative;
+    background: linear-gradient(135deg, #0d0d0d 0%, #1a1a1a 100%);
+    margin-top: 60px;
+    overflow: hidden;
+}
+.footer-wave {
+    position: absolute;
+    top: -50px;
+    left: 0;
+    width: 100%;
+    height: 50px;
+    overflow: hidden;
+}
+.footer-wave svg {
+    display: block;
+    width: 100%;
+    height: 50px;
+}
+.footer-wave path {
+    fill: var(--card-bg-color);
+}
+.footer-container {
+    position: relative;
+    max-width: 1200px;
+    margin: 0 auto;
+    padding: 40px 20px 20px;
+}
+.footer-content {
+    display: flex;
+    justify-content: center;
+    gap: 30px;
+    flex-wrap: wrap;
+}
+.footer-bottom {
+    border-top: 1px solid rgba(255, 255, 255, 0.1);
+    padding-top: 20px;
+}
+.footer-bottom-content {
+    display: flex;
+    justify-content: center;
+    padding: 15px 0;
+}
+.footer-copyright {
+    color: #888;
+    font-size: 0.85rem;
+}
+@media (max-width: 768px) {
+    .footer-content {
+        flex-direction: column;
+    }
+}
+</style>

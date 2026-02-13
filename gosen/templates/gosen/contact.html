@@ -1,0 +1,213 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Contact - Filtre Expert</title>
+    <link rel="stylesheet" href="{% static 'gosen/css/styles.css' %}">
+    <style>
+        .contact-page-container {
+            max-width: 800px;
+            margin: 40px auto;
+            padding: 20px;
+        }
+        .contact-header {
+            text-align: center;
+            margin-bottom: 40px;
+        }
+        .contact-header h1 {
+            color: var(--primary-color);
+            font-size: 2.5rem;
+            margin-bottom: 15px;
+        }
+        .contact-header p {
+            color: #aaa;
+            font-size: 1.1rem;
+        }
+        .contact-card {
+            background-color: var(--card-bg-color);
+            border-radius: var(--border-radius);
+            padding: 40px;
+            box-shadow: var(--box-shadow);
+            border: 1px solid var(--light-gray);
+        }
+        .contact-form {
+            display: flex;
+            flex-direction: column;
+            gap: 20px;
+        }
+        .contact-input {
+            width: 100%;
+            padding: 15px;
+            border: 1px solid #555;
+            border-radius: 8px;
+            font-family: 'Poppins', sans-serif;
+            font-size: 1rem;
+            background-color: #222;
+            color: var(--text-color);
+            transition: border-color 0.3s, box-shadow 0.3s;
+        }
+        .contact-input:focus {
+            outline: none;
+            border-color: var(--primary-color);
+            box-shadow: 0 0 0 3px rgba(0, 198, 255, 0.3);
+        }
+        .contact-select {
+            width: 100%;
+            padding: 15px;
+            border: 1px solid #555;
+            border-radius: 8px;
+            font-family: 'Poppins', sans-serif;
+            font-size: 1rem;
+            background-color: #222;
+            color: var(--text-color);
+            cursor: pointer;
+        }
+        .contact-textarea {
+            width: 100%;
+            padding: 15px;
+            border: 1px solid #555;
+            border-radius: 8px;
+            font-family: 'Poppins', sans-serif;
+            font-size: 1rem;
+            background-color: #222;
+            color: var(--text-color);
+            resize: vertical;
+            min-height: 150px;
+        }
+        .contact-btn {
+            background: linear-gradient(135deg, var(--primary-color), #0088cc);
+            color: #111;
+            border: none;
+            border-radius: 8px;
+            padding: 15px 30px;
+            font-family: 'Poppins', sans-serif;
+            font-size: 1.1rem;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+        }
+        .contact-btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 5px 20px rgba(0, 198, 255, 0.5);
+        }
+        .contact-btn:active {
+            transform: translateY(0);
+        }
+        .contact-info {
+            margin-top: 30px;
+            padding: 20px;
+            background-color: #222;
+            border-radius: 8px;
+            text-align: center;
+        }
+        .contact-info h3 {
+            color: var(--primary-color);
+            margin-bottom: 15px;
+        }
+        .contact-info a {
+            color: var(--secondary-color);
+            text-decoration: none;
+            font-weight: 600;
+        }
+        .contact-info a:hover {
+            text-decoration: underline;
+        }
+        .alert {
+            padding: 15px;
+            border-radius: 8px;
+            margin-bottom: 20px;
+            font-weight: 600;
+        }
+        .alert-success {
+            background-color: rgba(57, 255, 20, 0.1);
+            border: 1px solid var(--success-color);
+            color: var(--success-color);
+        }
+        .alert-danger {
+            background-color: rgba(255, 0, 127, 0.1);
+            border: 1px solid var(--danger-color);
+            color: var(--danger-color);
+        }
+        @media (max-width: 600px) {
+            .contact-page-container {
+                margin: 20px auto;
+                padding: 10px;
+            }
+            .contact-card {
+                padding: 25px;
+            }
+            .contact-header h1 {
+                font-size: 2rem;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="contact-page-container">
+        <div class="contact-header">
+            <h1>Nous Contacter</h1>
+            <p>Une question ? Un probleme ? N'hesitez pas a nous contacter !</p>
+        </div>
+        
+        <div class="contact-card">
+            {% if messages %}
+                {% for message in messages %}
+                    <div class="alert {% if message.tags == 'success' %}alert-success{% elif message.tags == 'error' %}alert-danger{% endif %}">
+                        {{ message }}
+                    </div>
+                {% endfor %}
+            {% endif %}
+            
+            <form method="post" class="contact-form">
+                {% csrf_token %}
+                
+                <div>
+                    <label for="{{ form.nom.id_for_label }}" style="color: #ccc; font-weight: 600;">Nom *</label>
+                    {{ form.nom }}
+                    {% if form.nom.errors %}
+                        <div class="error" style="color: var(--danger-color); margin-top: 5px;">{{ form.nom.errors }}</div>
+                    {% endif %}
+                </div>
+                
+                <div>
+                    <label for="{{ form.email.id_for_label }}" style="color: #ccc; font-weight: 600;">Email *</label>
+                    {{ form.email }}
+                    {% if form.email.errors %}
+                        <div class="error" style="color: var(--danger-color); margin-top: 5px;">{{ form.email.errors }}</div>
+                    {% endif %}
+                </div>
+                
+                <div>
+                    <label for="{{ form.type_demande.id_for_label }}" style="color: #ccc; font-weight: 600;">Type de demande</label>
+                    {{ form.type_demande }}
+                    {% if form.type_demande.errors %}
+                        <div class="error" style="color: var(--danger-color); margin-top: 5px;">{{ form.type_demande.errors }}</div>
+                    {% endif %}
+                </div>
+                
+                <div>
+                    <label for="{{ form.message.id_for_label }}" style="color: #ccc; font-weight: 600;">Message *</label>
+                    {{ form.message }}
+                    {% if form.message.errors %}
+                        <div class="error" style="color: var(--danger-color); margin-top: 5px;">{{ form.message.errors }}</div>
+                    {% endif %}
+                </div>
+                
+                <button type="submit" class="contact-btn">Envoyer le message</button>
+            </form>
+            
+            <div class="contact-info">
+                <h3>Autres moyens de contact</h3>
+                <p>Vous pouvez aussi nous contacter via :</p>
+                <p><a href="https://wa.me/241077045354" target="_blank">WhatsApp</a></p>
+            </div>
+        </div>
+    </div>
+    
+    {% include "gosen/footer.html" %}
+</body>
+</html>
