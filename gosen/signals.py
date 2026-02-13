@@ -3,7 +3,6 @@ Signaux Django pour gérer les fichiers uploadés des partenaires
 """
 from django.db.models.signals import post_save
 from django.dispatch import receiver
-from django.core.files.storage import default_storage
 from django.conf import settings
 import shutil
 import os
@@ -31,11 +30,20 @@ def copy_partner_logo_to_static(sender, instance, created, **kwargs):
     # Copier le fichier
     shutil.copy(instance.logo.path, static_path)
     
-    # Mettre à jour le champ logo pour pointer vers le fichier statique
-    from gosen.models import Partner
+    # Construire le chemin relatif
     relative_path = f"gosen/images/partners/{safe_name}"
     
-    # Mettre à jour avec le chemin relatif
-    Partner.objects.filter(id=instance.id).update(logo=relative_path)
+    # Empêcher la signalisation en boucle
+    from django.db.models.signals import post_save
+    post_save.disconnect(copy_partner_logo_to_static, sender='gosen.Partner')
+    
+    # Mettre à jour le champ logo en utilisant save() pour déclencher le signal
+    instance.logo.name = relative_path
+    instance.logo.path = static_path
+    instance.logo.url = f"/static/gosen/images/partners/{safe_name}"
+    instance.save(update_fields=['logo'])
+    
+    # Réactiver le signal
+    post_save.connect(copy_partner_logo_to_static, sender='gosen.Partner')
     
     print(f"Signal: logo copié vers {relative_path}")
