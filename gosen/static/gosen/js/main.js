@@ -140,8 +140,8 @@
                     <div class="filter-header"><h3>Expert 1</h3><div class="controls"><label class="switch"><input type="checkbox" class="filter-enable" checked><span class="slider"></span></label><button class="remove-filter-btn">&times;</button></div></div>
                     <p class="rule-description">"Garder si au moins <strong>X</strong> chevaux sont dans au moins <strong>Y</strong> groupes"</p>
                     <div class="filter-controls horizontal">
-                        <div class="form-group compact"><label> Chevaux min (X):</label><input type="number" class="chevaux-min" value="1" min="1"></div>
-                        <div class="form-group compact"><label>Groupes min (Y):</label><input type="number" class="groupes-min" value="1" min="1"></div>
+                        <div class="form-group compact"><label> Chevaux min (X):</label><input type="number" class="chevaux-min" value="0" min="0"></div>
+                        <div class="form-group compact"><label>Groupes min (Y):</label><input type="number" class="groupes-min" value="0" min="0"></div>
                     </div>
                 </div>`;
 
@@ -150,8 +150,8 @@
                     <div class="filter-header"><h3>Expert 2</h3><div class="controls"><label class="switch"><input type="checkbox" class="filter-enable" checked><span class="slider"></span></label><button class="remove-filter-btn">&times;</button></div></div>
                     <p class="rule-description">"Garder si au moins <strong>X</strong> chevaux <strong>communs</strong> existent dans au moins <strong>Y</strong> groupes"</p>
                     <div class="filter-controls horizontal">
-                        <div class="form-group compact"><label>Chevaux communs min (X):</label><input type="number" class="chevaux-min" value="1" min="1"></div>
-                        <div class="form-group compact"><label>Groupes min (Y):</label><input type="number" class="groupes-min" value="1" min="1"></div>
+                        <div class="form-group compact"><label>Chevaux communs min (X):</label><input type="number" class="chevaux-min" value="0" min="0"></div>
+                        <div class="form-group compact"><label>Groupes min (Y):</label><input type="number" class="groupes-min" value="0" min="0"></div>
                     </div>
                 </div>`;
             
