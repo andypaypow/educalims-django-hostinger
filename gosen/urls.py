@@ -104,12 +104,54 @@ urlpatterns = [
     path('webhook/logs/<int:log_id>/delete/', webhooks.webhook_log_delete, name='webhook_log_delete'),
 ]
 
-# ============================================
-# SERVEUR DE FICHIERS MEDIA (DEV ONLY)
-# ============================================
-from django.conf import settings
-from django.conf.urls.static import static
-from django.views.static import serve
 
-# Toujours servir les fichiers médias (mme en production)
-urlpatterns += static(settings.MEDIA_URL, document_root=settings.MEDIA_ROOT)
+# Vue pour servir les logos des partenaires (y compris uploadés via admin)
+def serve_partner_logo(request, partner_id):
+    """Serve le logo d\'un partenaire"""
+    from django.http import HttpResponse, Http404
+    from django.shortcuts import get_object_or_404
+    from gosen.models import Partner
+    import os
+    
+    partner = get_object_or_404(Partner, id=partner_id, est_actif=True)
+    
+    if not partner.logo:
+        raise Http404("Ce partenaire n\'a pas de logo")
+    
+    # Lire et retourner le fichier
+    try:
+        with open(partner.logo.path, 'rb') as f:
+            return HttpResponse(f.read(), content_type='image/' + partner.logo.name.split('.')[-1])
+    except FileNotFoundError:
+        raise Http404("Logo non trouvé")
+
+# Vue pour servir les fichiers media individuellement (pour logos uploadés via admin)
+from django.http import HttpResponse, Http404
+from django.shortcuts import get_object_or_404
+from django.contrib.auth.decorators import login_required
+import os
+
+def serve_media_file(request, path):
+    """Servir un fichier media individuellement"""
+    from django.conf import settings
+    import mimetypes
+    
+    # Sécurité: vérifier que le fichier est dans media
+    full_path = os.path.join(settings.MEDIA_ROOT, path)
+    
+    # Normaliser le chemin pour éviter les attaques path traversal
+    full_path = os.path.normpath(full_path)
+    if not full_path.startswith(os.path.normpath(settings.MEDIA_ROOT)):
+        raise Http404("Accès non autorisé")
+    
+    if not os.path.exists(full_path) or os.path.isdir(full_path):
+        raise Http404("Fichier non trouvé")
+    
+    # Déterminer le type MIME
+    mime_type, _ = mimetypes.guess_type(full_path)
+    if mime_type is None:
+        mime_type = 'application/octet-stream'
+    
+    # Lire et retourner le fichier
+    with open(full_path, 'rb') as f:
+        return HttpResponse(f.read(), content_type=mime_type)

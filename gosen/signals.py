@@ -10,6 +10,10 @@ import os
 @receiver(post_save, sender='gosen.Partner')
 def copy_partner_logo_to_static(sender, instance, created, **kwargs):
     """Copier le logo du partenaire vers media/ après l'upload (uniquement sur PROD)"""
+    # Éviter la boucle infinie - ne pas traiter si le logo commence déjà par partners/
+    if instance.logo and instance.logo.name.startswith('partners/'):
+        return
+    
     if not instance.logo:
         return
     
@@ -29,11 +33,13 @@ def copy_partner_logo_to_static(sender, instance, created, **kwargs):
     safe_name = f"partner_{instance.id}.{file_extension}"
     media_path = os.path.join(settings.MEDIA_ROOT, 'partners', safe_name)
     
+    # Créer le dossier si nécessaire
+    os.makedirs(os.path.dirname(media_path), exist_ok=True)
+    
     # Copier le fichier
     shutil.copy(instance.logo.path, media_path)
     
-    # Mettre à jour le champ logo avec le chemin media
-    instance.logo.name = f"partners/{safe_name}"
-    instance.save()
+    # Mettre à jour le champ logo DIRECTEMENT dans la base pour éviter la boucle
+    sender.objects.filter(id=instance.id).update(logo=f"partners/{safe_name}")
     
     print(f"Signal: logo copié vers media/partners/{safe_name}")
