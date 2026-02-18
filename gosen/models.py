@@ -407,3 +407,42 @@ class ContactMessage(models.Model):
 
     def __str__(self):
         return f"Message de {self.nom} - {self.type_demande}"
+
+
+class BacktestAnalysis(models.Model):
+    """Modèle pour sauvegarder les analyses de backtest des utilisateurs"""
+    user = models.ForeignKey(User, on_delete=models.CASCADE, related_name='backtest_analyses')
+    
+    # Configuration initiale
+    num_partants = models.IntegerField(help_text="Nombre de partants")
+    taille_combinaison = models.IntegerField(help_text="Taille des combinaisons")
+    
+    # Pronostics saisis (JSON)
+    pronostics = models.JSONField(help_text="Groupes de pronostics saisis")
+    
+    # Critères de filtrage (JSON)
+    criteres_filtres = models.JSONField(help_text="Critères de filtrage utilisés")
+    
+    # Arrivée testée
+    arrivee = models.JSONField(help_text="Arrivée testée (liste de numéros)")
+    
+    # Résultats du backtest
+    combinaisons_filtrees = models.JSONField(help_text="Combinaisons après filtrage")
+    combinaisons_trouvees = models.JSONField(help_text="Combinaisons contenant l'arrivée")
+    nombre_trouvees = models.IntegerField(default=0, help_text="Nombre de combinaisons trouvées")
+    
+    # Rapport complet
+    rapport = models.TextField(help_text="Rapport complet du backtest")
+    
+    # Métadonnées
+    date_creation = models.DateTimeField(auto_now_add=True)
+    nom = models.CharField(max_length=200, blank=True, default='', help_text="Nom personnalisé de l'analyse")
+
+    class Meta:
+        verbose_name = "Analyse de Backtest"
+        verbose_name_plural = "Analyses de Backtest"
+        ordering = ["-date_creation"]
+
+    def __str__(self):
+        arrivee_str = ', '.join(map(str, self.arrivee)) if self.arrivee else 'N/A'
+        return f'Backtest {self.user.username} - Arrivée [{arrivee_str}] - {self.date_creation.strftime("%d/%m/%Y %H:%M")}'
