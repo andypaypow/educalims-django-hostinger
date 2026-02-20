@@ -344,8 +344,9 @@
                 <div style="color: #888; margin-top: 5px;">Abonnes Actifs</div>
             </div>
             <div style="background: #1a1a1a; border: 1px solid #333; border-radius: 10px; padding: 20px; text-align: center;">
-                <div style="font-size: 1.8rem; font-weight: 700; color: #00FF7F;">{{ connectes_maintenant }}</div>
-                <div style="color: #888; margin-top: 5px;">Connectes Maintenant</div>
+                <div style="font-size: 1.8rem; font-weight: 700; color: #00FF7F;">{{ total_appareils_actifs }}</div>
+                <div style="color: #888; margin-top: 5px;">Appareils Actifs</div>
+                <div style="color: #666; font-size: 0.75rem;">({{ connectes_maintenant }} connectes + {{ anonymes_actifs }} anonymes)</div>
             </div>
             <div style="background: #1a1a1a; border: 1px solid #333; border-radius: 10px; padding: 20px; text-align: center;">
                 <div style="font-size: 1.8rem; font-weight: 700; color: #00FF7F;">{{ revenus_today }} XAF</div>
@@ -353,20 +354,57 @@
             </div>
         </div>
 
-        <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(400px, 1fr)); gap: 20px; margin-top: 20px;">
+        <!-- Formulaire de filtre admin -->
+        <div style="background: #1a1a1a; border: 1px solid #333; border-radius: 10px; padding: 20px; margin-top: 20px;">
+            <h3 style="color: #00C6FF; margin-bottom: 15px;">Filtres - Stats par Jour/Semaine/Mois</h3>
+            <div style="display: flex; gap: 15px; flex-wrap: wrap; align-items: flex-end;">
+                <div>
+                    <label style="color: #888; font-size: 0.85rem; display: block; margin-bottom: 5px;">Periode</label>
+                    <select id="filterPeriode" style="background: #252525; border: 1px solid #444; color: #f0f0f0; padding: 10px; border-radius: 5px; min-width: 150px;">
+                        <option value="jour">Par Jour</option>
+                        <option value="semaine">Par Semaine</option>
+                        <option value="mois">Par Mois</option>
+                    </select>
+                </div>
+                <div>
+                    <label style="color: #888; font-size: 0.85rem; display: block; margin-bottom: 5px;">Date Debut</label>
+                    <input type="date" id="filterDateDebut" style="background: #252525; border: 1px solid #444; color: #f0f0f0; padding: 10px; border-radius: 5px;">
+                </div>
+                <div>
+                    <label style="color: #888; font-size: 0.85rem; display: block; margin-bottom: 5px;">Date Fin</label>
+                    <input type="date" id="filterDateFin" style="background: #252525; border: 1px solid #444; color: #f0f0f0; padding: 10px; border-radius: 5px;">
+                </div>
+                <div>
+                    <button onclick="filterStats()" style="background: linear-gradient(135deg, #00C6FF 0%, #0077b6 100%); border: none; color: white; padding: 10px 20px; border-radius: 5px; cursor: pointer; font-weight: 600;">Filtrer</button>
+                </div>
+            </div>
+        </div>
+
+        <div id="statsResult" style="background: #1a1a1a; border: 1px solid #333; border-radius: 10px; padding: 20px; margin-top: 20px;">
+            <h3 style="color: #00C6FF; margin-bottom: 15px;">Resultats</h3>
+            <div id="statsTable"><p style="color: #888; text-align: center;">Selectionnez dates et cliquez sur Filtrer</p></div>
+        </div>
+
+                <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(400px, 1fr)); gap: 20px; margin-top: 20px;">
             <div style="background: #1a1a1a; border: 1px solid #333; border-radius: 10px; padding: 20px;">
-                <h3 style="color: #00C6FF; margin-bottom: 15px;">Sessions Actives</h3>
-                {% if sessions_data %}
+                <h3 style="color: #00C6FF; margin-bottom: 15px;">Tous les Appareils Actifs ({{ appareils_data|length }})</h3>
+                {% if appareils_data %}
                 <table style="width: 100%; border-collapse: collapse;">
-                    <thead><tr style="border-bottom: 1px solid #333;"><th style="padding: 10px; text-align: left; color: #888;">User</th><th style="padding: 10px; text-align: left; color: #888;">IP</th><th style="padding: 10px; text-align: left; color: #888;">Duree</th></tr></thead>
+                    <thead><tr style="border-bottom: 1px solid #333;"><th style="padding: 10px; text-align: left; color: #888;">User</th><th style="padding: 10px; text-align: left; color: #888;">IP</th><th style="padding: 10px; text-align: left; color: #888;">User-Agent</th><th style="padding: 10px; text-align: left; color: #888;">Duree</th><th style="padding: 10px; text-align: left; color: #888;">Visites</th></tr></thead>
                     <tbody>
-                        {% for s in sessions_data %}
-                        <tr style="border-bottom: 1px solid #2a2a2a;"><td style="padding: 10px;">{{ s.username }}</td><td style="padding: 10px;">{{ s.ip }}</td><td style="padding: 10px;">{{ s.duree }}</td></tr>
+                        {% for a in appareils_data %}
+                        <tr style="border-bottom: 1px solid #2a2a2a;">
+                            <td style="padding: 10px;">{% if a.username == 'Anonyme' %}<span style="color: #FF7F00;">{{ a.username }}</span>{% else %}{{ a.username }}{% endif %}</td>
+                            <td style="padding: 10px;">{{ a.ip }}</td>
+                            <td style="padding: 10px; font-size: 0.75rem; color: #888;">{{ a.user_agent }}</td>
+                            <td style="padding: 10px;">{{ a.duree }}</td>
+                            <td style="padding: 10px;">{{ a.visites }}</td>
+                        </tr>
                         {% endfor %}
                     </tbody>
                 </table>
                 {% else %}
-                <p style="color: #888; text-align: center;">Aucune session active</p>
+                <p style="color: #888; text-align: center;">Aucun appareil actif</p>
                 {% endif %}
             </div>
 
@@ -427,6 +465,99 @@ async function loadUserStats() {
 
 // Charger les stats au chargement de la page
 document.addEventListener('DOMContentLoaded', loadUserStats);
+    // Fonction pour filtrer les stats
+    async function filterStats() {
+    const periode = document.getElementById('filterPeriode').value;
+    const debut = document.getElementById('filterDateDebut').value;
+    const fin = document.getElementById('filterDateFin').value;
+    const params = new URLSearchParams({periode: periode, date_debut: debut, date_fin: fin});
+    try {
+        document.getElementById('statsTable').innerHTML = '<p style=\"color:#00C6FF;text-align:center;\">Chargement...</p>';
+        const r = await fetch('/api/admin/stats/filter/?' + params, { credentials: 'same-origin' });
+        const res = await r.json();
+        if (res.success) {
+            let html = '<table style=\"width:100%; border-collapse:collapse;\"><thead>';
+            if (periode === 'jour') {
+                html += '<tr style=\"border-bottom:1px solid #333;\"><th style=\"padding:10px;text-align:left;color:#888;\">Date</th><th style=\"padding:10px;text-align:right;color:#888;\">Appareils</th><th style=\"padding:10px;text-align:right;color:#888;\">Visites</th><th style=\"padding:10px;text-align:center;color:#888;\">Details</th></tr></thead><tbody>';
+                res.stats.forEach((s, idx) => {
+                    html += '<tr style=\"border-bottom:1px solid #2a2a2a;\"><td style=\"padding:8px;\">' + s.date + '</td><td style=\"padding:8px;text-align:right;color:#00C6FF;\">' + s.appareils_uniques + '</td><td style=\"padding:8px;text-align:right;color:#00FF7F;\">' + s.visites + '</td><td style=\"padding:8px;text-align:center;\"><button onclick=\"showDetails(' + idx + ', \'jour\')\" style=\"background:#333;color:#fff;border:none;padding:5px 10px;border-radius:3px;cursor:pointer;font-size:0.8rem;\">Voir</button></td></tr>';
+                    html += '<tr id=\"details-' + idx + '\" style=\"display:none;background:#151515;\"><td colspan=\"4\" style=\"padding:15px;\"><div id=\"details-content-' + idx + '\" style=\"font-size:0.85rem;color:#ccc;\"></div></td></tr>';
+                });
+            } else if (periode === 'semaine') {
+                html += '<tr style=\"border-bottom:1px solid #333;\"><th style=\"padding:10px;text-align:left;color:#888;\">Semaine</th><th style=\"padding:10px;text-align:left;color:#888;\">Du</th><th style=\"padding:10px;text-align:left;color:#888;\">Au</th><th style=\"padding:10px;text-align:right;color:#888;\">Appareils</th><th style=\"padding:10px;text-align:right;color:#888;\">Visites</th><th style=\"padding:10px;text-align:center;color:#888;\">Details</th></tr></thead><tbody>';
+                res.stats.forEach((s, idx) => {
+                    html += '<tr style=\"border-bottom:1px solid #2a2a2a;\"><td style=\"padding:8px;\">' + s.semaine + '</td><td style=\"padding:8px;\">' + s.du + '</td><td style=\"padding:8px;\">' + s.au + '</td><td style=\"padding:8px;text-align:right;color:#00C6FF;\">' + s.appareils_uniques + '</td><td style=\"padding:8px;text-align:right;color:#00FF7F;\">' + s.visites + '</td><td style=\"padding:8px;text-align:center;\"><button onclick=\"showDetails(' + idx + ', \'semaine\')\" style=\"background:#333;color:#fff;border:none;padding:5px 10px;border-radius:3px;cursor:pointer;font-size:0.8rem;\">Voir</button></td></tr>';
+                    html += '<tr id=\"details-' + idx + '\" style=\"display:none;background:#151515;\"><td colspan=\"6\" style=\"padding:15px;\"><div id=\"details-content-' + idx + '\" style=\"font-size:0.85rem;color:#ccc;\"></div></td></tr>';
+                });
+            } else if (periode === 'mois') {
+                html += '<tr style=\"border-bottom:1px solid #333;\"><th style=\"padding:10px;text-align:left;color:#888;\">Mois</th><th style=\"padding:10px;text-align:left;color:#888;\">Annee</th><th style=\"padding:10px;text-align:right;color:#888;\">Appareils</th><th style=\"padding:10px;text-align:right;color:#888;\">Visites</th><th style=\"padding:10px;text-align:center;color:#888;\">Details</th></tr></thead><tbody>';
+                res.stats.forEach((s, idx) => {
+                    html += '<tr style=\"border-bottom:1px solid #2a2a2a;\"><td style=\"padding:8px;\">' + s.mois + '</td><td style=\"padding:8px;\">' + s.annee + '</td><td style=\"padding:8px;text-align:right;color:#00C6FF;\">' + s.appareils_uniques + '</td><td style=\"padding:8px;text-align:right;color:#00FF7F;\">' + s.visites + '</td><td style=\"padding:8px;text-align:center;\"><button onclick=\"showDetails(' + idx + ', \'mois\')\" style=\"background:#333;color:#fff;border:none;padding:5px 10px;border-radius:3px;cursor:pointer;font-size:0.8rem;\">Voir</button></td></tr>';
+                    html += '<tr id=\"details-' + idx + '\" style=\"display:none;background:#151515;\"><td colspan=\"5\" style=\"padding:15px;\"><div id=\"details-content-' + idx + '\" style=\"font-size:0.85rem;color:#ccc;\"></div></td></tr>';
+                });
+            }
+            html += '</tbody></table>';
+            document.getElementById('statsTable').innerHTML = html;
+            window.currentStats = res.stats;
+        } else {
+            document.getElementById('statsTable').innerHTML = '<p style=\"color:#ff4448;\">Erreur: ' + (res.error || 'Erreur inconnue') + '</p>';
+        }
+    } catch(e) {
+        console.error(e);
+        document.getElementById('statsTable').innerHTML = '<p style=\"color:#ff4448;\">Erreur lors du chargement</p>';
+    }
+}
+async function showDetails(idx, periode) {
+    const row = document.getElementById('details-' + idx);
+    const content = document.getElementById('details-content-' + idx);
+    if (row.style.display === 'none') {
+        row.style.display = 'table-row';
+        content.innerHTML = '<p style=\"color:#00C6FF;\">Chargement des details...</p>';
+        try {
+            const s = window.currentStats[idx];
+            const params = new URLSearchParams({ periode: periode, idx: idx });
+            if (periode === 'jour') {
+                params.append('date', s.date_raw);
+            } else if (periode === 'semaine') {
+                params.append('debut', s.debut_raw);
+                params.append('fin', s.fin_raw);
+            } else if (periode === 'mois') {
+                params.append('mois', s.mois_raw);
+                params.append('annee', s.annee);
+            }
+            const r = await fetch('/api/admin/stats/details/?' + params, { credentials: 'same-origin' });
+            const res = await r.json();
+            if (res.success) {
+                let html = '<h4 style=\"color:#00C6FF;margin-bottom:10px;\">Appareils (' + res.details.length + ')</h4>';
+                html += '<table style=\"width:100%;border-collapse:collapse;font-size:0.8rem;\">';
+                html += '<thead><tr style=\"border-bottom:1px solid #333;\"><th style=\"padding:5px;text-align:left;\">IP</th><th style=\"padding:5px;text-align:left;\">User-Agent</th><th style=\"padding:5px;text-align:right;\">Visites</th><th style=\"padding:5px;text-align:right;\">Pages</th></tr></thead><tbody>';
+                res.details.forEach(d => {
+                    html += '<tr style=\"border-bottom:1px solid #2a2a2a;\">';
+                    html += '<td style=\"padding:5px;color:#888;\">' + d.ip_address + '</td>';
+                    html += '<td style=\"padding:5px;\"><div style=\"max-width:300px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;\" title=\"' + escapeHtml(d.user_agent || 'N/A') + '\">' + escapeHtml(d.user_agent || 'N/A').substring(0, 50) + '...</div></td>';
+                    html += '<td style=\"padding:5px;text-align:right;color:#00FF7F;\">' + d.nombre_visites + '</td>';
+                    html += '<td style=\"padding:5px;text-align:right;color:#00C6FF;\">' + d.nombre_pages_vues + '</td>';
+                    html += '</tr>';
+                });
+                html += '</tbody></table>';
+                content.innerHTML = html;
+            } else {
+                content.innerHTML = '<p style=\"color:#ff4448;\">Erreur: ' + (res.error || 'Erreur') + '</p>';
+            }
+        } catch(e) {
+            console.error(e);
+            content.innerHTML = '<p style=\"color:#ff4448;\">Erreur de chargement</p>';
+        }
+    } else {
+        row.style.display = 'none';
+    }
+}
+function escapeHtml(text) {
+    const div = document.createElement('div');
+    div.textContent = text;
+    return div.innerHTML;
+}
+
 </script>
 </body>
 </html>

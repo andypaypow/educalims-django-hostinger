@@ -8,7 +8,7 @@ from django.utils.html import format_html
 from django.utils import timezone
 import json
 
-from .models import WebhookLog, UserProfile, SubscriptionPayment, SubscriptionProduct, DeviceFingerprint, Partner, ContactMessage, UserSession, ActivityLog, BacktestAnalysis
+from .models import WebhookLog, UserProfile, SubscriptionPayment, SubscriptionProduct, DeviceFingerprint, Partner, ContactMessage, UserSession, ActivityLog, BacktestAnalysis, DeviceTracking
 
 
 # ============================================
@@ -672,6 +672,36 @@ class BacktestAnalysisAdmin(admin.ModelAdmin):
             return ', '.join(map(str, obj.arrivee))
         return '-'
     arrivee_display.short_description = 'Arrivee'
+
+    def has_add_permission(self, request):
+        return False
+
+    def has_change_permission(self, request, obj=None):
+        return False
+
+
+@admin.register(DeviceTracking)
+class DeviceTrackingAdmin(admin.ModelAdmin):
+    """Administration du tracking des appareils"""
+    list_display = ['user_display', 'ip_address', 'premiere_visite', 'duree_session', 'est_actif', 'nombre_visites']
+    list_filter = ['est_actif', 'premiere_visite', 'pays']
+    search_fields = ['user__username', 'ip_address', 'fingerprint', 'user_agent']
+    readonly_fields = ['fingerprint', 'session_key', 'user', 'ip_address', 'user_agent', 'premiere_visite', 
+                       'derniere_activite', 'est_actif', 'nombre_visites', 'nombre_pages_vues', 
+                       'pages_vues_session', 'pays', 'ville']
+    date_hierarchy = 'premiere_visite'
+    ordering = ['-derniere_activite']
+
+    def user_display(self, obj):
+        if obj.user:
+            return obj.user.username
+        return '<span style="color: #FF7F00;">Anonyme</span>'
+    user_display.short_description = 'User'
+    user_display.allow_tags = True
+
+    def duree_session(self, obj):
+        return obj.duree_session()
+    duree_session.short_description = 'Duree'
 
     def has_add_permission(self, request):
         return False

@@ -562,3 +562,113 @@ class ActivityLog(models.Model):
         else:
             ip = request.META.get('REMOTE_ADDR')
         return ip
+
+
+class DeviceTracking(models.Model):
+    """Tracking de tous les appareils qui se connectent au site (meme non-inscrits)"""
+    
+    # Identifiants de l'appareil
+    fingerprint = models.CharField(max_length=255, db_index=True)
+    session_key = models.CharField(max_length=255, blank=True, null=True, db_index=True)
+    
+    # Infos utilisateur (si connecte)
+    user = models.ForeignKey(User, on_delete=models.SET_NULL, null=True, blank=True, related_name='device_tracks')
+    
+    # Infos de connexion
+    ip_address = models.GenericIPAddressField(db_index=True)
+    user_agent = models.TextField(blank=True)
+    
+    # Premieres et dernieres activites
+    premiere_visite = models.DateTimeField(auto_now_add=True, db_index=True)
+    derniere_activite = models.DateTimeField(auto_now=True, db_index=True)
+    est_actif = models.BooleanField(default=True, db_index=True)
+    
+    # Statistiques de visite
+    nombre_visites = models.IntegerField(default=1)
+    nombre_pages_vues = models.IntegerField(default=1)
+    
+    # Infos sur la session actuelle
+    pages_vues_session = models.JSONField(default=list, blank=True)
+    
+    # Localisation (optionnel)
+    pays = models.CharField(max_length=100, blank=True, null=True)
+    ville = models.CharField(max_length=100, blank=True, null=True)
+    
+    class Meta:
+        verbose_name = 'Tracking Appareil'
+        verbose_name_plural = 'Tracking Appareils'
+        ordering = ['-derniere_activite']
+        indexes = [
+            models.Index(fields=['fingerprint']),
+            models.Index(fields=['ip_address']),
+            models.Index(fields=['-derniere_activite']),
+            models.Index(fields=['est_actif']),
+        ]
+    
+    def __str__(self):
+        user_str = self.user.username if self.user else 'Anonyme'
+        return f'{user_str} - {self.ip_address}'
+    
+    def duree_session(self):
+        """Retourne la duree de la session actuelle"""
+        delta = timezone.now() - self.premiere_visite
+        heures = int(delta.total_seconds() // 3600)
+        minutes = int((delta.total_seconds() % 3600) // 60)
+        if heures > 0:
+            return f'{heures}h {minutes}min'
+        return f'{minutes}min'
+    
+    @classmethod
+    def nettoyer_inactifs(cls):
+        """Marque comme inactifs les appareils sans activite depuis 30 minutes"""
+        seuil = timezone.now() - timezone.timedelta(minutes=30)
+        cls.objects.filter(est_actif=True, derniere_activite__lt=seuil).update(est_actif=False)
+    
+    @classmethod
+    def get_appareils_actifs(cls):
+        """Retourne tous les appareils actifs (connectes et anonymes)"""
+        cls.nettoyer_inactifs()
+        return cls.objects.filter(est_actif=True).select_related('user')
+    
+    @classmethod
+    def get_or_create_appareil(cls, request):
+        """Recupere ou cree un tracking d'appareil"""
+        from .middleware import UserActivityMiddleware
+        
+        ip = UserActivityMiddleware.get_client_ip(request)
+        ua = request.META.get('HTTP_USER_AGENT', '')[:500]
+        
+        # Generer un fingerprint basé sur IP et User-Agent
+        import hashlib
+        fingerprint_data = f'{ip}_{ua[:100]}'
+        fingerprint = hashlib.md5(fingerprint_data.encode()).hexdigest()
+        
+        session_key = request.session.session_key if hasattr(request, 'session') else None
+        
+        # Chercher un appareil existant
+        appareil = cls.objects.filter(
+            fingerprint=fingerprint,
+            ip_address=ip
+        ).first()
+        
+        if appareil:
+            # Mettre a jour l'appareil existant
+            appareil.derniere_activite = timezone.now()
+            appareil.est_actif = True
+            appareil.nombre_visites += 1
+            if session_key:
+                appareil.session_key = session_key
+            if request.user.is_authenticated:
+                appareil.user = request.user
+            appareil.save(update_fields=['derniere_activite', 'est_actif', 'nombre_visites', 'session_key', 'user'])
+        else:
+            # Creer un nouvel appareil
+            appareil = cls.objects.create(
+                fingerprint=fingerprint,
+                ip_address=ip,
+                user_agent=ua,
+                session_key=session_key,
+                user=request.user if request.user.is_authenticated else None
+            )
+        
+        return appareil

@@ -4,37 +4,39 @@ import json
 
 
 class UserActivityMiddleware:
-    """Middleware pour tracker les sessions utilisateurs et logger les activités"""
+    """Middleware pour tracker tous les appareils (connectes et anonymes)"""
 
     def __init__(self, get_response):
         self.get_response = get_response
 
     def __call__(self, request):
-        # Traiter la requête
+        # Traiter la requete
         response = self.get_response(request)
 
-        # Tracker l'activité après traitement
+        # Tracker l'activite apres traitement
         self.track_activity(request, response)
 
         return response
 
     def track_activity(self, request, response):
-        """Track l'activité utilisateur et met à jour la session"""
-        user = getattr(request, 'user', None)
-
-        # Ignorer les utilisateurs anonymes et les requêtes API/Static
-        if not user or isinstance(user, AnonymousUser):
-            return
-
+        """Track tous les appareils (connectes et anonymes)"""
         # Ignorer les fichiers statiques et media
         path = request.path.lower()
         if path.startswith(('/static/', '/media/')):
             return
 
         try:
-            from .models import UserSession, ActivityLog
+            from .models import UserSession, ActivityLog, DeviceTracking
+            
+            # Toujours tracker l'appareil (meme anonyme)
+            DeviceTracking.get_or_create_appareil(request)
+            
+            # Suite: tracker les sessions utilisateurs connectes
+            user = getattr(request, 'user', None)
+            if not user or isinstance(user, AnonymousUser):
+                return
 
-            # Récupérer ou créer la session
+            # Récupérer ou créer la session utilisateur
             session_key = request.session.session_key
             if not session_key:
                 request.session.create()

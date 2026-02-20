@@ -115,6 +115,8 @@ urlpatterns = [
     # ============================================
     path("staff/dashboard/", admin_dashboard.admin_dashboard, name="staff_dashboard"),
     path("staff/dashboard/api/stats/", admin_dashboard.admin_api_stats, name="staff_api_stats"),
+    path("api/admin/stats/filter/", auth.api_stats_filter, name="api_admin_stats_filter"),
+    path("api/admin/stats/details/", auth.api_stats_details, name="api_admin_stats_details"),
 ]
 
 
