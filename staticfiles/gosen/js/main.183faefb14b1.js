@@ -140,8 +140,8 @@
                     <div class="filter-header"><h3>Expert 1</h3><div class="controls"><label class="switch"><input type="checkbox" class="filter-enable" checked><span class="slider"></span></label><button class="remove-filter-btn">&times;</button></div></div>
                     <p class="rule-description">"Garder si au moins <strong>X</strong> chevaux sont dans au moins <strong>Y</strong> groupes"</p>
                     <div class="filter-controls horizontal">
-                        <div class="form-group compact"><label> Chevaux min (X):</label><input type="number" class="chevaux-min" value="1" min="1"></div>
-                        <div class="form-group compact"><label>Groupes min (Y):</label><input type="number" class="groupes-min" value="1" min="1"></div>
+                        <div class="form-group compact"><label> Chevaux min (X):</label><input type="number" class="chevaux-min" value="0" min="0"></div>
+                        <div class="form-group compact"><label>Groupes min (Y):</label><input type="number" class="groupes-min" value="0" min="0"></div>
                     </div>
                 </div>`;
 
@@ -150,8 +150,8 @@
                     <div class="filter-header"><h3>Expert 2</h3><div class="controls"><label class="switch"><input type="checkbox" class="filter-enable" checked><span class="slider"></span></label><button class="remove-filter-btn">&times;</button></div></div>
                     <p class="rule-description">"Garder si au moins <strong>X</strong> chevaux <strong>communs</strong> existent dans au moins <strong>Y</strong> groupes"</p>
                     <div class="filter-controls horizontal">
-                        <div class="form-group compact"><label>Chevaux communs min (X):</label><input type="number" class="chevaux-min" value="1" min="1"></div>
-                        <div class="form-group compact"><label>Groupes min (Y):</label><input type="number" class="groupes-min" value="1" min="1"></div>
+                        <div class="form-group compact"><label>Chevaux communs min (X):</label><input type="number" class="chevaux-min" value="0" min="0"></div>
+                        <div class="form-group compact"><label>Groupes min (Y):</label><input type="number" class="groupes-min" value="0" min="0"></div>
                     </div>
                 </div>`;
             
@@ -967,22 +967,8 @@ Filtre: ${h3.textContent}
             }
 
             function saveBacktestResult() {
-                const textToSave = backtestResultsOutput.textContent;
-                if (!textToSave) {
-                    alert("Il n y a aucun résultat de backtest à sauvegarder.");
-                    return;
-                }
-                const blob = new Blob([textToSave], { type: 'text/plain' });
-                const url = URL.createObjectURL(blob);
-                const a = document.createElement('a');
-                a.href = url;
-                a.download = `rapport-backtest-${new Date().toISOString().slice(0, 10)}.txt`;
-                document.body.appendChild(a);
-                a.click();
-                document.body.removeChild(a);
-                URL.revokeObjectURL(url);
+                saveBacktestToDatabase();
             }
-
             // --- GESTIONNAIRES D ÉVÉNEMENTS ---
             // --- Tab Switching Logic ---
             const tabButtons = document.querySelectorAll('.tab-btn');
@@ -1130,6 +1116,164 @@ Filtre: ${h3.textContent}
                 }
             }
 
+            // --- BACKTEST SAVE & LOAD ---
+            async function saveBacktestToDatabase() {
+                const textToSave = backtestResultsOutput.textContent;
+                if (!textToSave) {
+                    alert("Aucun resultat a sauvegarder");
+                    return;
+                }
+                const nom = prompt("Nommez cette analyse (optionnel) :");
+                if (nom === null) return;
+                try {
+                    const arrivee = backtestInput.value.match(/\d+/g).map(Number).sort((a, b) => a - b);
+                    const arriveeSet = new Set(arrivee);
+                    const combinaisons_trouvees = currentFilteredCombinations.filter(c => {
+                        const s = new Set(c);
+                        for (const n of arriveeSet) { if (!s.has(n)) return false; }
+                        return true;
+                    });
+                    const data = {
+                        num_partants: parseInt(numPartantsInput.value),
+                        taille_combinaison: parseInt(tailleCombinaisonInput.value),
+                        pronostics: currentRawGroups,
+                        criteres_filtres: collectFilterCriteria(),
+                        arrivee: arrivee,
+                        combinaisons_filtrees: currentFilteredCombinations,
+                        combinaisons_trouvees: combinaisons_trouvees,
+                        nombre_trouvees: combinaisons_trouvees.length,
+                        rapport: textToSave,
+                        nom: nom || ""
+                    };
+                    const response = await fetch("/api/backtest/save/", {
+                        method: "POST",
+                        headers: { "Content-Type": "application/json", "X-CSRFToken": getCsrfToken() },
+                        body: JSON.stringify(data)
+                    });
+                    const result = await response.json();
+                    if (result.success) {
+                        alert("Analyse sauvegardee !");
+                        loadSavedAnalyses();
+                    } else {
+                        alert("Erreur: " + (result.error || "Erreur"));
+                    }
+                } catch (e) {
+                    console.error(e);
+                    alert("Erreur connexion");
+                }
+            }
+            function collectFilterCriteria() {
+                const criteria = { filters: [] };
+                document.querySelectorAll(".filter-box").forEach(box => {
+                    const h3 = box.querySelector("h3");
+                    if (!h3) return;
+                    const f = { title: h3.textContent, enabled: box.querySelector(".filter-enable")?.checked || false, type: null, params: {} };
+                    if (box.classList.contains("standard-filter") || box.classList.contains("advanced-filter")) {
+                        f.type = "expert";
+                        f.params = { chevaux_min: box.querySelector(".chevaux-min")?.value, groupes_min: box.querySelector(".groupes-min")?.value };
+                    } else if (box.classList.contains("weight-filter")) {
+                        f.type = "weight";
+                        f.params = { source: box.querySelector(".weight-source")?.value, poids_min: box.querySelector(".weight-min")?.value, poids_max: box.querySelector(".weight-max")?.value };
+                    } else if (box.classList.contains("alternance-filter")) {
+                        f.type = "alternance";
+                        f.params = { source: box.querySelector(".alternance-source")?.value, alternances_min: box.querySelector(".alternance-min")?.value, alternances_max: box.querySelector(".alternance-max")?.value };
+                    } else if (box.classList.contains("statistic-filter")) {
+                        f.type = "statistic";
+                        f.params = {
+                            evenOdd: box.querySelector('[data-subfilter="evenOdd"]')?.checked,
+                            even_min: box.querySelector(".even-min")?.value,
+                            even_max: box.querySelector(".even-max")?.value,
+                            smallLarge: box.querySelector('[data-subfilter="smallLarge"]')?.checked,
+                            small_min: box.querySelector(".small-min")?.value,
+                            small_max: box.querySelector(".small-max")?.value,
+                            consecutive: box.querySelector('[data-subfilter="consecutive"]')?.checked,
+                            consecutive_min: box.querySelector(".consecutive-min")?.value,
+                            consecutive_max: box.querySelector(".consecutive-max")?.value
+                        };
+                    }
+                    criteria.filters.push(f);
+                });
+                return criteria;
+            }
+            async function loadSavedAnalyses() {
+                try {
+                    const response = await fetch("/api/backtest/list/");
+                    const result = await response.json();
+                    if (result.success) displaySavedAnalyses(result.analyses);
+                } catch (e) { console.error(e); }
+            }
+            function displaySavedAnalyses(analyses) {
+                const container = document.getElementById("saved-analyses-container");
+                if (!container) return;
+                if (analyses.length === 0) {
+                    container.innerHTML = "<p>Aucune analyse.</p>";
+                    return;
+                }
+                container.innerHTML = analyses.map(a => "<div class=\"saved-analysis-item\" data-id=\"" + a.id + "\"><div class=\"analysis-header\"><span class=\"analysis-name\">" + escapeHtml(a.nom) + "</span><span class=\"analysis-date\">" + new Date(a.date_creation).toLocaleString("fr-FR") + "</span></div><div class=\"analysis-details\">Arrivee: [" + a.arrivee + "] | Trouve: " + a.nombre_trouvees + "</div><div class=\"analysis-actions\"><button class=\"load-analysis-btn\" data-id=\"" + a.id + "\">Charger</button><button class=\"view-report-btn\" data-id=\"" + a.id + "\">Voir</button><button class=\"delete-analysis-btn\" data-id=\"" + a.id + "\">Supprimer</button></div></div>").join("");
+                container.querySelectorAll(".load-analysis-btn").forEach(btn => btn.addEventListener("click", () => loadAndRestoreAnalysis(parseInt(btn.dataset.id))));
+                container.querySelectorAll(".view-report-btn").forEach(btn => btn.addEventListener("click", () => viewAnalysisReport(parseInt(btn.dataset.id))));
+                container.querySelectorAll(".delete-analysis-btn").forEach(btn => btn.addEventListener("click", () => deleteAnalysis(parseInt(btn.dataset.id))));
+            }
+            async function loadAndRestoreAnalysis(id) {
+                try {
+                    const response = await fetch("/api/backtest/load/" + id + "/");
+                    const result = await response.json();
+                    if (result.success) {
+                        const a = result.analysis;
+                        numPartantsInput.value = a.num_partants;
+                        tailleCombinaisonInput.value = a.taille_combinaison;
+                        pronosticsTextarea.value = formatPronosticsFromData(a.pronostics);
+                        parsePronostics();
+                        restoreFilters(a.criteres_filtres);
+                        currentFilteredCombinations = a.combinaisons_filtrees;
+                        backtestInput.value = a.arrivee.join(", ");
+                        document.querySelector('[data-tab="results-tab-content"]').click();
+                        alert("Analyse chargee !");
+                    } else { alert("Erreur: " + (result.error || "Erreur")); }
+                } catch (e) { console.error(e); alert("Erreur connexion"); }
+            }
+            function formatPronosticsFromData(pronostics) {
+                if (!pronostics || pronostics.length === 0) return "";
+                return pronostics.map(g => g.name + " : " + g.horses.join(", ")).join("\n");
+            }
+            function restoreFilters(criteria) {
+                document.querySelectorAll(".filter-box").forEach(b => b.remove());
+                if (!criteria || !criteria.filters) return;
+                updateSynthesis();
+            }
+            async function viewAnalysisReport(id) {
+                try {
+                    const response = await fetch("/api/backtest/load/" + id + "/");
+                    const result = await response.json();
+                    if (result.success) {
+                        document.querySelector('[data-tab="backtest-tab-content"]').click();
+                        backtestResultsOutput.textContent = result.analysis.rapport;
+                        backtestResultsContainer.style.display = "block";
+                        backtestInput.value = result.analysis.arrivee.join(", ");
+                    } else { alert("Erreur: " + (result.error || "Erreur")); }
+                } catch (e) { console.error(e); alert("Erreur connexion"); }
+            }
+            async function deleteAnalysis(id) {
+                if (!confirm("Supprimer cette analyse ?")) return;
+                try {
+                    const response = await fetch("/api/backtest/delete/" + id + "/", { method: "DELETE", headers: { "X-CSRFToken": getCsrfToken() } });
+                    const result = await response.json();
+                    if (result.success) {
+                        alert("Analyse supprimee !");
+                        loadSavedAnalyses();
+                    } else { alert("Erreur: " + (result.error || "Erreur")); }
+                } catch (e) { console.error(e); alert("Erreur connexion"); }
+            }
+            function getCsrfToken() {
+                const cookies = document.cookie.split(";");
+                for (const c of cookies) {
+                    const [name, value] = c.trim().split("=");
+                    if (name === "csrftoken") return decodeURIComponent(value);
+                }
+                return "";
+            }
+            function escapeHtml(t) { const d = document.createElement("div"); d.textContent = t; return d.innerHTML; }
             // Charger les partenaires au chargement de la page
             loadPartners();
+            loadSavedAnalyses();
             });
