@@ -8,7 +8,7 @@ from django.utils.html import format_html
 from django.utils import timezone
 import json
 
-from .models import WebhookLog, UserProfile, SubscriptionPayment, SubscriptionProduct, DeviceFingerprint, Partner, ContactMessage
+from .models import WebhookLog, UserProfile, SubscriptionPayment, SubscriptionProduct, DeviceFingerprint, Partner, ContactMessage, UserSession, ActivityLog, BacktestAnalysis
 
 
 # ============================================
@@ -612,6 +612,66 @@ class ContactMessageAdmin(admin.ModelAdmin):
 
     ordering = ['-date_creation']
     list_per_page = 25
+
+    def has_add_permission(self, request):
+        return False
+
+    def has_change_permission(self, request, obj=None):
+        return False
+
+
+@admin.register(UserSession)
+class UserSessionAdmin(admin.ModelAdmin):
+    list_display = ['user', 'ip_address', 'date_connexion', 'duree_session', 'est_actif']
+    list_filter = ['est_actif', 'date_connexion']
+    search_fields = ['user__username', 'ip_address', 'session_key']
+    readonly_fields = ['user', 'session_key', 'ip_address', 'user_agent', 'date_connexion', 'derniere_activite']
+    date_hierarchy = 'date_connexion'
+    ordering = ['-derniere_activite']
+
+    def duree_session(self, obj):
+        return obj.duree_session()
+    duree_session.short_description = 'Duree'
+
+    def has_add_permission(self, request):
+        return False
+
+    def has_change_permission(self, request, obj=None):
+        return False
+
+
+@admin.register(ActivityLog)
+class ActivityLogAdmin(admin.ModelAdmin):
+    list_display = ['type_action', 'user', 'description', 'date_creation']
+    list_filter = ['type_action', 'date_creation']
+    search_fields = ['user__username', 'description', 'ip_address']
+    readonly_fields = ['user', 'type_action', 'description', 'donnees', 'ip_address', 'user_agent', 'date_creation']
+    date_hierarchy = 'date_creation'
+    ordering = ['-date_creation']
+
+    def has_add_permission(self, request):
+        return False
+
+    def has_change_permission(self, request, obj=None):
+        return False
+
+
+@admin.register(BacktestAnalysis)
+class BacktestAnalysisAdmin(admin.ModelAdmin):
+    list_display = ['user', 'arrivee_display', 'nombre_trouvees', 'date_creation']
+    list_filter = ['date_creation', 'nombre_trouvees']
+    search_fields = ['user__username', 'nom']
+    readonly_fields = ['user', 'num_partants', 'taille_combinaison', 'pronostics', 'criteres_filtres', 
+                       'arrivee', 'combinaisons_filtrees', 'combinaisons_trouvees', 'nombre_trouvees', 
+                       'rapport', 'nom', 'date_creation']
+    date_hierarchy = 'date_creation'
+    ordering = ['-date_creation']
+
+    def arrivee_display(self, obj):
+        if obj.arrivee:
+            return ', '.join(map(str, obj.arrivee))
+        return '-'
+    arrivee_display.short_description = 'Arrivee'
 
     def has_add_permission(self, request):
         return False

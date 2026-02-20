@@ -10,6 +10,7 @@ from django.contrib.auth.decorators import login_required
 from django.contrib.auth.models import User
 from django.utils import timezone
 from django.db import transaction, IntegrityError
+from django.db.models import Sum
 
 from gosen.forms import CustomUserCreationForm, UserProfileForm, SubscriptionForm
 from gosen.models import UserProfile, SubscriptionPayment
@@ -275,7 +276,7 @@ def subscription_page(request):
 
 @login_required
 def dashboard_page(request):
-    """Tableau de bord utilisateur"""
+    """Tableau de bord utilisateur avec stats admin pour le staff"""
     try:
         profile = request.user.profile
     except UserProfile.DoesNotExist:
@@ -289,6 +290,61 @@ def dashboard_page(request):
         'total_filtres': profile.nb_filtres_realises,
         'est_abonne': profile.est_abonne,
     }
+
+    # Ajouter les stats admin si l'utilisateur est staff
+    if request.user.is_staff:
+        from gosen.models import UserSession, ActivityLog, UserProfile, SubscriptionPayment
+        
+        maintenant = timezone.now()
+        aujourd_hui = maintenant.date()
+        debut_mois = maintenant.replace(day=1, hour=0, minute=0, second=0, microsecond=0)
+        
+        # Stats utilisateurs
+        total_users = User.objects.filter(is_active=True).count()
+        abonnes = UserProfile.objects.filter(a_un_abonnement=True).select_related('user')
+        total_abonnes = sum(1 for p in abonnes if p.est_abonne)
+        
+        # Sessions actives
+        sessions_actives = UserSession.get_sessions_actives()
+        connectes_maintenant = sessions_actives.count()
+        
+        # Revenus du jour et du mois
+        revenus_today = SubscriptionPayment.objects.filter(
+            statut='complete', date_paiement__gte=aujourd_hui
+        ).aggregate(total=Sum('montant'))['total'] or 0
+        
+        revenus_mois = SubscriptionPayment.objects.filter(
+            statut='complete', date_paiement__gte=debut_mois
+        ).aggregate(total=Sum('montant'))['total'] or 0
+        
+        # Activités récentes
+        activites_recentes = ActivityLog.objects.select_related(
+            'user'
+        ).order_by('-date_creation')[:10]
+        
+        # Sessions data
+        sessions_data = []
+        for session in sessions_actives[:10]:
+            sessions_data.append({
+                'username': session.user.username,
+                'ip': str(session.ip_address),
+                'duree': session.duree_session(),
+            })
+        
+        # Ajouter au contexte
+        context.update({
+            'is_staff': True,
+            'total_users': total_users,
+            'total_abonnes': total_abonnes,
+            'connectes_maintenant': connectes_maintenant,
+            'revenus_today': f"{revenus_today:,.0f}".replace(',', ' '),
+            'revenus_mois': f"{revenus_mois:,.0f}".replace(',', ' '),
+            'activites_recentes': activites_recentes,
+            'sessions_data': sessions_data,
+        })
+    else:
+        context['is_staff'] = False
+
     return render(request, 'gosen/auth/dashboard.html', context)
 
 

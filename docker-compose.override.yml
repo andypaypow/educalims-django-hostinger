@@ -1,0 +1,13 @@
+services:
+  web:
+    volumes:
+      - /root/gosen-filter-dev:/code
+    environment:
+      - DEBUG=True
+      - POSTGRES_DB=gosen_dev
+      - POSTGRES_USER=gosen
+      - POSTGRES_PASSWORD=password
+      - POSTGRES_HOST=db
+      - POSTGRES_PORT=5432
+    depends_on:
+      - db

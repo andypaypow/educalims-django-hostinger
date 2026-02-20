@@ -446,3 +446,119 @@ class BacktestAnalysis(models.Model):
     def __str__(self):
         arrivee_str = ', '.join(map(str, self.arrivee)) if self.arrivee else 'N/A'
         return f'Backtest {self.user.username} - Arrivée [{arrivee_str}] - {self.date_creation.strftime("%d/%m/%Y %H:%M")}'
+
+
+# ============================================
+# MODÈLES POUR DASHBOARD ADMIN
+# ============================================
+
+class UserSession(models.Model):
+    """Track les sessions utilisateurs actives pour le dashboard admin"""
+    user = models.ForeignKey(User, on_delete=models.CASCADE, related_name='sessions')
+    session_key = models.CharField(max_length=255, unique=True, db_index=True)
+    ip_address = models.GenericIPAddressField()
+    user_agent = models.TextField(blank=True)
+    date_connexion = models.DateTimeField(auto_now_add=True)
+    derniere_activite = models.DateTimeField(auto_now=True)
+    est_actif = models.BooleanField(default=True)
+    device_info = models.JSONField(default=dict, blank=True)
+
+    class Meta:
+        verbose_name = 'Session Utilisateur'
+        verbose_name_plural = 'Sessions Utilisateurs'
+        ordering = ['-derniere_activite']
+        indexes = [
+            models.Index(fields=['session_key']),
+            models.Index(fields=['est_actif']),
+            models.Index(fields=['-derniere_activite']),
+        ]
+
+    def __str__(self):
+        return f'{self.user.username} - {self.ip_address}'
+
+    def duree_session(self):
+        """Retourne la durée de session formatée"""
+        delta = timezone.now() - self.date_connexion
+        heures = int(delta.total_seconds() // 3600)
+        minutes = int((delta.total_seconds() % 3600) // 60)
+        if heures > 0:
+            return f'{heures}h {minutes}min'
+        return f'{minutes}min'
+
+    @classmethod
+    def nettoyer_sessions_inactives(cls):
+        """Marque comme inactives les sessions sans activité depuis 30 minutes"""
+        seuil = timezone.now() - timezone.timedelta(minutes=30)
+        cls.objects.filter(est_actif=True, derniere_activite__lt=seuil).update(est_actif=False)
+
+    @classmethod
+    def get_sessions_actives(cls):
+        """Retourne les sessions actives"""
+        cls.nettoyer_sessions_inactives()
+        return cls.objects.filter(est_actif=True).select_related('user')
+
+
+class ActivityLog(models.Model):
+    """Journal d'activité global pour le dashboard admin"""
+    TYPE_ACTION_CHOICES = [
+        ('connexion', 'Connexion'),
+        ('deconnexion', 'Déconnexion'),
+        ('inscription', 'Inscription'),
+        ('filtre_realise', 'Filtre réalisé'),
+        ('abonnement_souscrit', 'Abonnement souscrit'),
+        ('paiement_recu', 'Paiement reçu'),
+        ('backtest_sauvegarde', 'Backtest sauvegardé'),
+        ('message_contact', 'Message de contact'),
+        ('erreur', 'Erreur système'),
+        ('autre', 'Autre'),
+    ]
+
+    user = models.ForeignKey(User, on_delete=models.SET_NULL, null=True, blank=True, related_name='activities')
+    type_action = models.CharField(max_length=50, choices=TYPE_ACTION_CHOICES)
+    description = models.TextField(blank=True)
+    donnees = models.JSONField(default=dict, blank=True)
+    ip_address = models.GenericIPAddressField(null=True, blank=True)
+    user_agent = models.TextField(blank=True)
+    date_creation = models.DateTimeField(auto_now_add=True, db_index=True)
+
+    class Meta:
+        verbose_name = 'Log d\'activité'
+        verbose_name_plural = 'Logs d\'activité'
+        ordering = ['-date_creation']
+        indexes = [
+            models.Index(fields=['-date_creation']),
+            models.Index(fields=['type_action']),
+            models.Index(fields=['user']),
+        ]
+
+    def __str__(self):
+        user_str = self.user.username if self.user else 'Anonyme'
+        return f'{user_str} - {self.get_type_action_display()} - {self.date_creation.strftime("%d/%m/%Y %H:%M")}'
+
+    @classmethod
+    def logger(cls, user, type_action, description='', donnees=None, request=None):
+        """Méthode helper pour logger une activité"""
+        ip = None
+        ua = ''
+        if request:
+            ip = cls.get_client_ip(request)
+            ua = request.META.get('HTTP_USER_AGENT', '')[:500]
+        
+        cls.objects.create(
+            user=user,
+            type_action=type_action,
+            description=description,
+            donnees=donnees or {},
+            ip_address=ip,
+            user_agent=ua
+        )
+
+    @staticmethod
+    def get_client_ip(request):
+        """Récupère l'IP réelle du client"""
+        x_forwarded_for = request.META.get('HTTP_X_FORWARDED_FOR')
+        if x_forwarded_for:
+            ip = x_forwarded_for.split(',')[0]
+        else:
+            ip = request.META.get('REMOTE_ADDR')
+        return ip

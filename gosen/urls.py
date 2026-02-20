@@ -2,7 +2,7 @@
 URLs pour l'application Gosen TurfFilter
 """
 from django.urls import path
-from .views import webhooks, base, filters, auth, subscriptions, contact, backtest
+from .views import webhooks, base, filters, auth, subscriptions, contact, backtest, admin_dashboard
 from .views.contact import contact_page, submit_contact
 from .views.backtest import test_arrivee, save_backtest_analysis, get_backtest_analyses, get_backtest_analysis, delete_backtest_analysis
 
@@ -110,6 +110,11 @@ urlpatterns = [
 
     # Supprimer un log webhook (admin uniquement)
     path('webhook/logs/<int:log_id>/delete/', webhooks.webhook_log_delete, name='webhook_log_delete'),
+    # ============================================
+    # DASHBOARD ADMIN
+    # ============================================
+    path("staff/dashboard/", admin_dashboard.admin_dashboard, name="staff_dashboard"),
+    path("staff/dashboard/api/stats/", admin_dashboard.admin_api_stats, name="staff_api_stats"),
 ]
 
 

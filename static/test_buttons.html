@@ -1,0 +1,87 @@
+<!DOCTYPE html>
+<html>
+<head>
+<style>
+.payment-provider-btn {
+    width: 100%;
+    max-width: 400px;
+    padding: 15px;
+    border: none;
+    border-radius: 10px;
+    color: white;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    text-align: center;
+    text-decoration: none;
+    display: block;
+    margin: 10px auto;
+}
+.payment-provider-btn.moov {
+    background-color: #FF6600;
+}
+.payment-provider-btn.airtel {
+    background-color: #ED1C24;
+}
+body {
+    background-color: #1a1a1a;
+    color: white;
+    padding: 20px;
+    font-family: Arial, sans-serif;
+}
+h2 { color: #00C6FF; }
+</style>
+</head>
+<body>
+<h2>Test des boutons de paiement avec logos</h2>
+<div id="payment-buttons"></div>
+
+<script>
+// Simuler la réponse de l'API
+const logos = {
+    moov_money: '/media/payment_logos/moov-money_PfdPqKg.png',
+    airtel_money: '/media/payment_logos/airtel_money_YGVlE2N.webp'
+};
+
+const paymentUrls = {
+    moov_money: 'https://sumb.cyberschool.ga/?test=moov',
+    airtel_money: 'https://sumb.cyberschool.ga/?test=airtel'
+};
+
+const buttonsContainer = document.getElementById('payment-buttons');
+
+// Bouton Moov
+if (paymentUrls.moov_money) {
+    const moovBtn = document.createElement('a');
+    moovBtn.href = paymentUrls.moov_money;
+    moovBtn.className = 'payment-provider-btn moov';
+    moovBtn.target = '_blank';
+    const moovLogo = logos.moov_money;
+    if (moovLogo) {
+        moovBtn.innerHTML = '<img src="' + moovLogo + '" alt="Moov Money" style="height: 40px; width: auto; vertical-align: middle;" />';
+    } else {
+        moovBtn.innerHTML = '💳 Payer avec Moov Money';
+    }
+    buttonsContainer.appendChild(moovBtn);
+}
+
+// Bouton Airtel
+if (paymentUrls.airtel_money) {
+    const airtelBtn = document.createElement('a');
+    airtelBtn.href = paymentUrls.airtel_money;
+    airtelBtn.className = 'payment-provider-btn airtel';
+    airtelBtn.target = '_blank';
+    const airtelLogo = logos.airtel_money;
+    if (airtelLogo) {
+        airtelBtn.innerHTML = '<img src="' + airtelLogo + '" alt="Airtel Money" style="height: 40px; width: auto; vertical-align: middle;" />';
+    } else {
+        airtelBtn.innerHTML = '💳 Payer avec Airtel Money';
+    }
+    buttonsContainer.appendChild(airtelBtn);
+}
+
+console.log('Boutons créés:', buttonsContainer.innerHTML);
+console.log('Nombre de boutons:', buttonsContainer.children.length);
+</script>
+</body>
+</html>
