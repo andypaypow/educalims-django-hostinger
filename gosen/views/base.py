@@ -3,7 +3,7 @@ from django.http import JsonResponse
 
 
 def index(request):
-    """Vue principale de l'application Gosen TurfFilter"""
+    """Vue principale de l'application Filtre Expert"""
     return render(request, 'gosen/base.html')
 
 

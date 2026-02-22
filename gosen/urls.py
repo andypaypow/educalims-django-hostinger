@@ -1,5 +1,5 @@
 """
-URLs pour l'application Gosen TurfFilter
+URLs pour l'application Filtre Expert
 """
 from django.urls import path
 from .views import webhooks, base, filters, auth, subscriptions, contact, backtest, admin_dashboard
@@ -15,7 +15,7 @@ urlpatterns = [
     # HOME - Application principale
     # ============================================
 
-    # Page d'accueil (application Gosen TurfFilter)
+    # Page d'accueil (application Filtre Expert)
     path('', base.index, name='home'),
     # Page de contact
     path('contact/', contact_page, name='contact'),

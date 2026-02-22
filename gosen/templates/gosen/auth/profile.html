@@ -3,18 +3,18 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Mon Profil - Gosen TurfFilter</title>
-    <style>
+    <title>Mon Profil - Filtre Expert</title>
+    <link rel="stylesheet" href="/static/gosen/css/styles-gabon.css"><style>
         * {
             margin: 0;
             padding: 0;
             box-sizing: border-box;
         }
         body {
-            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-            background: linear-gradient(135deg, #0d0d0d 0%, #1a1a1a 100%);
+            font-family: Poppins, sans-serif;
+            background: var(--bg-primary);
             min-height: 100vh;
-            color: #f0f0f0;
+            color: var(--text-primary);
             padding: 20px;
         }
         .container {
@@ -30,20 +30,20 @@
             border-bottom: 1px solid #333;
         }
         .header h1 {
-            color: #00C6FF;
+            color: var(--gabon-green);
             font-size: 1.8rem;
         }
         .btn-back {
             padding: 10px 20px;
             background: transparent;
-            border: 1px solid #00C6FF;
+            border: 2px solid var(--gabon-blue);
             border-radius: 8px;
-            color: #00C6FF;
+            color: var(--gabon-green);
             cursor: pointer;
             transition: all 0.3s ease;
         }
         .btn-back:hover {
-            background: rgba(0, 198, 255, 0.1);
+            background: var(--gabon-blue);
         }
         .grid {
             display: grid;
@@ -56,13 +56,13 @@
             }
         }
         .card {
-            background-color: #1a1a1a;
+            background: var(--bg-card);
             border-radius: 15px;
             padding: 25px;
-            border: 1px solid #333;
+            border: 2px solid var(--border-color);
         }
         .card h2 {
-            color: #00C6FF;
+            color: var(--gabon-green);
             font-size: 1.3rem;
             margin-bottom: 20px;
             display: flex;
@@ -79,11 +79,11 @@
             border-bottom: none;
         }
         .info-label {
-            color: #888;
+            color: var(--text-secondary);
             font-size: 0.9rem;
         }
         .info-value {
-            color: #f0f0f0;
+            color: var(--text-primary);
             font-weight: 500;
         }
         .status-badge {
@@ -93,21 +93,25 @@
             font-weight: 600;
         }
         .status-active {
-            background-color: rgba(0, 255, 127, 0.2);
-            color: #00FF7F;
+            background: var(--gradient-green);
+            color: white;
         }
         .status-inactive {
-            background-color: rgba(255, 127, 0, 0.2);
-            color: #FF7F00;
+            background: var(--gradient-yellow);
+            color: #000;
         }
+        .subscription-card { background: var(--gradient-green); color: white; }
+        .subscription-card .info-label { color: rgba(255,255,255,0.8); }
+        .subscription-card .info-value { color: white; }
+        .subscription-card h2 { color: white; }
         .subscription-card {
             background: linear-gradient(135deg, rgba(0, 198, 255, 0.1) 0%, rgba(0, 119, 182, 0.1) 100%);
-            border: 1px solid #00C6FF;
+            border: 2px solid var(--gabon-blue);
         }
         .btn-upgrade {
             width: 100%;
             padding: 12px;
-            background: linear-gradient(135deg, #00C6FF 0%, #0077b6 100%);
+            background: var(--gradient-green);
             border: none;
             border-radius: 10px;
             color: white;
@@ -118,7 +122,7 @@
         }
         .btn-upgrade:hover {
             transform: translateY(-2px);
-            box-shadow: 0 5px 15px rgba(0, 198, 255, 0.3);
+            box-shadow: 0 5px 15px rgba(0, 158, 96, 0.4);
         }
         .payments-list {
             margin-top: 20px;
@@ -128,13 +132,13 @@
             border-radius: 10px;
             padding: 15px;
             margin-bottom: 10px;
-            border-left: 3px solid #00C6FF;
+            border-left: 4px solid var(--gabon-blue);
         }
         .payment-item.status-complete {
-            border-left-color: #00FF7F;
+            border-left-color: white;
         }
         .payment-item.status-en_attente {
-            border-left-color: #FF7F00;
+            border-left-color: #000;
         }
         .payment-item.status-echoue {
             border-left-color: #FF007F;
@@ -146,7 +150,7 @@
         }
         .payment-type {
             font-weight: 600;
-            color: #f0f0f0;
+            color: var(--text-primary);
         }
         .payment-status {
             font-size: 0.8rem;
@@ -155,11 +159,11 @@
         }
         .payment-date {
             font-size: 0.85rem;
-            color: #888;
+            color: var(--text-secondary);
         }
         .no-payments {
             text-align: center;
-            color: #888;
+            color: var(--text-secondary);
             padding: 30px;
         }
         .stats-grid {
@@ -176,16 +180,16 @@
         .stat-value {
             font-size: 1.8rem;
             font-weight: 700;
-            color: #00C6FF;
+            color: var(--gabon-green);
         }
         .stat-label {
             font-size: 0.8rem;
-            color: #888;
+            color: var(--text-secondary);
             margin-top: 5px;
         }
     </style>
 </head>
-<body>
+<body>{% include "gosen/auth_navbar.html" %}
     <div class="container">
         <div class="header">
             <h1>Mon Profil</h1>
@@ -296,5 +300,5 @@
             </div>
         </div>
     </div>
-</body>
+<script src="/static/gosen/js/theme.js"></script></body>
 </html>

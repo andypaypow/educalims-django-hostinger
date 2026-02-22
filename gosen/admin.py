@@ -1,5 +1,5 @@
 """
-Administration Django pour l'application Gosen TurfFilter
+Administration Django pour l'application Filtre Expert
 """
 from django.contrib import admin
 from django.contrib.auth.admin import UserAdmin
@@ -567,8 +567,10 @@ class ContactMessageAdmin(admin.ModelAdmin):
     list_display = [
         'id',
         'nom',
+        'whatsapp',
         'email',
         'type_demande',
+        'message',
         'date_creation',
         'est_traite',
     ]
@@ -581,12 +583,14 @@ class ContactMessageAdmin(admin.ModelAdmin):
 
     search_fields = [
         'nom',
+        'whatsapp',
         'email',
         'message',
     ]
 
     readonly_fields = [
         'nom',
+        'whatsapp',
         'email',
         'type_demande',
         'message',

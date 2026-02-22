@@ -474,11 +474,6 @@
                 });
             }
 
-n            function updateStatisticFilterButton() {
-                const statisticExists = document.querySelector('.statistic-filter');
-                const btn = document.getElementById("add-statistic-filter-btn");
-                if(btn) btn.disabled = !!statisticExists;
-            }
             function updateNumericFilterInputs() {
                 const k = parseInt(tailleCombinaisonInput.value);
                 if (isNaN(k) || k < 0) return;
@@ -689,7 +684,9 @@ n            function updateStatisticFilterButton() {
                 else if (type === 'weight') template = weightFilterTemplate(filterIdCounter);
                 else if (type === 'statistic') {
                     template = statisticFilterTemplate(filterIdCounter);
-                else if (type === 'statistic') {                    template = statisticFilterTemplate(filterIdCounter);                    updateStatisticFilterButton();                }
+                    const btn = document.getElementById('add-statistic-filter-btn');
+                    if(btn) btn.disabled = true;
+                } 
                 else if (type === 'alternance') {
                     template = alternanceFilterTemplate(filterIdCounter);
                 }
@@ -702,7 +699,10 @@ n            function updateStatisticFilterButton() {
 
                 newFilter.querySelector('.remove-filter-btn').addEventListener('click', () => {
                     newFilter.remove();
-                    if (type === 'statistic') {                        updateStatisticFilterButton();                    }
+                    if (type === 'statistic') {
+                        const btn = document.getElementById('add-statistic-filter-btn');
+                        if(btn) btn.disabled = false;
+                    }
                     handleInputChange();
                 });
 

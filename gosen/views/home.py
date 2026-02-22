@@ -1,5 +1,5 @@
 """
-Vue pour la page d'accueil de Gosen TurfFilter
+Vue pour la page d'accueil de Filtre Expert
 """
 from django.shortcuts import render
 from django.utils import timezone

@@ -105,7 +105,7 @@ def submit_contact(request):
         # Enregistrer le message
         ContactMessage.objects.create(
             nom=nom,
-            email=whatsapp_complet,  # Stocker dans le champ email pour compatibilité
+            whatsapp=whatsapp_complet,
             type_demande=type_demande,
             message=message
         )

@@ -387,14 +387,16 @@ class Partner(models.Model):
 class ContactMessage(models.Model):
     """Modèle pour les messages de contact des utilisateurs"""
     TYPE_DEMANDE_CHOICES = [
-        ("filtre", "Demande de filtre supplémentaire"),
+        ("don", "Don"),
+        ("partenariat", "Partenariat"),
+        ("acces_gratuit", "Accès gratuit"),
         ("support", "Support technique"),
-        ("partenariat", "Proposition de partenariat"),
         ("autre", "Autre"),
     ]
 
     nom = models.CharField(max_length=200, help_text="Nom de l'utilisateur")
-    email = models.EmailField(help_text="Email de contact")
+    email = models.EmailField(help_text="Email de contact", blank=True, null=True)
+    whatsapp = models.CharField(max_length=20, help_text="Numéro WhatsApp avec indicatif", blank=True, null=True)
     type_demande = models.CharField(max_length=20, choices=TYPE_DEMANDE_CHOICES, default="autre")
     message = models.TextField(help_text="Message de l'utilisateur")
     date_creation = models.DateTimeField(auto_now_add=True)
