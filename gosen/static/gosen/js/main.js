@@ -474,6 +474,11 @@
                 });
             }
 
+n            function updateStatisticFilterButton() {
+                const statisticExists = document.querySelector('.statistic-filter');
+                const btn = document.getElementById("add-statistic-filter-btn");
+                if(btn) btn.disabled = !!statisticExists;
+            }
             function updateNumericFilterInputs() {
                 const k = parseInt(tailleCombinaisonInput.value);
                 if (isNaN(k) || k < 0) return;
@@ -684,9 +689,7 @@
                 else if (type === 'weight') template = weightFilterTemplate(filterIdCounter);
                 else if (type === 'statistic') {
                     template = statisticFilterTemplate(filterIdCounter);
-                    const btn = document.getElementById('add-statistic-filter-btn');
-                    if(btn) btn.disabled = true;
-                } 
+                else if (type === 'statistic') {                    template = statisticFilterTemplate(filterIdCounter);                    updateStatisticFilterButton();                }
                 else if (type === 'alternance') {
                     template = alternanceFilterTemplate(filterIdCounter);
                 }
@@ -699,10 +702,7 @@
 
                 newFilter.querySelector('.remove-filter-btn').addEventListener('click', () => {
                     newFilter.remove();
-                    if (type === 'statistic') {
-                        const btn = document.getElementById('add-statistic-filter-btn');
-                        if(btn) btn.disabled = false;
-                    }
+                    if (type === 'statistic') {                        updateStatisticFilterButton();                    }
                     handleInputChange();
                 });
 
@@ -1238,85 +1238,10 @@ Filtre: ${h3.textContent}
             }
             function restoreFilters(criteria) {
                 document.querySelectorAll(".filter-box").forEach(b => b.remove());
-
-                if (!criteria || !criteria.filters || criteria.filters.length === 0) {
-                    updateSynthesis();
-                    return;
-                }
-
-                clearTimeout(debounceTimer);
-
-                criteria.filters.forEach(filter => {
-                    let filterType;
-
-                    if (filter.type === 'expert') {
-                        filterType = filter.title && filter.title.includes('Expert 2') ? 'advanced' : 'standard';
-                    } else if (filter.type === 'weight') {
-                        filterType = 'weight';
-                    } else if (filter.type === 'alternance') {
-                        filterType = 'alternance';
-                    } else if (filter.type === 'statistic') {
-                        filterType = 'statistic';
-                    } else {
-                        return;
-                    }
-
-                    addFilter(filterType);
-
-                    const filterBoxes = document.querySelectorAll('.filter-box');
-                    const filterBox = filterBoxes[filterBoxes.length - 1];
-
-                    if (!filterBox) return;
-
-                    const enableCheckbox = filterBox.querySelector('.filter-enable');
-                    if (enableCheckbox) enableCheckbox.checked = filter.enabled;
-
-                    if (filter.type === 'expert') {
-                        const chevauxMin = filterBox.querySelector('.chevaux-min');
-                        const groupesMin = filterBox.querySelector('.groupes-min');
-                        if (chevauxMin && filter.params.chevaux_min !== undefined) chevauxMin.value = filter.params.chevaux_min;
-                        if (groupesMin && filter.params.groupes_min !== undefined) groupesMin.value = filter.params.groupes_min;
-                    } else if (filter.type === 'weight') {
-                        const source = filterBox.querySelector('.weight-source');
-                        const poidsMin = filterBox.querySelector('.weight-min');
-                        const poidsMax = filterBox.querySelector('.weight-max');
-                        if (source && filter.params.source) { source.value = filter.params.source; source.dispatchEvent(new Event('change')); }
-                        if (poidsMin && filter.params.poids_min !== undefined) poidsMin.value = filter.params.poids_min;
-                        if (poidsMax && filter.params.poids_max !== undefined) poidsMax.value = filter.params.poids_max;
-                    } else if (filter.type === 'alternance') {
-                        const source = filterBox.querySelector('.alternance-source');
-                        const alternancesMin = filterBox.querySelector('.alternance-min');
-                        const alternancesMax = filterBox.querySelector('.alternance-max');
-                        if (source && filter.params.source) { source.value = filter.params.source; source.dispatchEvent(new Event('change')); }
-                        if (alternancesMin && filter.params.alternances_min !== undefined) alternancesMin.value = filter.params.alternances_min;
-                        if (alternancesMax && filter.params.alternances_max !== undefined) alternancesMax.value = filter.params.alternances_max;
-                    } else if (filter.type === 'statistic') {
-                        const evenOddCheckbox = filterBox.querySelector('[data-subfilter="evenOdd"]');
-                        const evenMin = filterBox.querySelector('.even-min');
-                        const evenMax = filterBox.querySelector('.even-max');
-                        if (evenOddCheckbox && filter.params.evenOdd !== undefined) evenOddCheckbox.checked = filter.params.evenOdd;
-                        if (evenMin && filter.params.even_min !== undefined) evenMin.value = filter.params.even_min;
-                        if (evenMax && filter.params.even_max !== undefined) evenMax.value = filter.params.even_max;
-                        const smallLargeCheckbox = filterBox.querySelector('[data-subfilter="smallLarge"]');
-                        const smallMin = filterBox.querySelector('.small-min');
-                        const smallMax = filterBox.querySelector('.small-max');
-                        const limitInput = filterBox.querySelector('.limit');
-                        if (smallLargeCheckbox && filter.params.smallLarge !== undefined) smallLargeCheckbox.checked = filter.params.smallLarge;
-                        if (smallMin && filter.params.small_min !== undefined) smallMin.value = filter.params.small_min;
-                        if (smallMax && filter.params.small_max !== undefined) smallMax.value = filter.params.small_max;
-                        if (limitInput && filter.params.limit !== undefined) limitInput.value = filter.params.limit;
-                        const consecutiveCheckbox = filterBox.querySelector('[data-subfilter="consecutive"]');
-                        const consecutiveMin = filterBox.querySelector('.consecutive-min');
-                        const consecutiveMax = filterBox.querySelector('.consecutive-max');
-                        if (consecutiveCheckbox && filter.params.consecutive !== undefined) consecutiveCheckbox.checked = filter.params.consecutive;
-                        if (consecutiveMin && filter.params.consecutive_min !== undefined) consecutiveMin.value = filter.params.consecutive_min;
-                        if (consecutiveMax && filter.params.consecutive_max !== undefined) consecutiveMax.value = filter.params.consecutive_max;
-                    }
-                });
-
+                if (!criteria || !criteria.filters) return;
                 updateSynthesis();
             }
-
+            async function viewAnalysisReport(id) {
                 try {
                     const response = await fetch("/api/backtest/load/" + id + "/");
                     const result = await response.json();
