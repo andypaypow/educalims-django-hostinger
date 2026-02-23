@@ -27,6 +27,8 @@ services:
       - db
     environment:
       - DEBUG=True
+      - TELEGRAM_BOT_TOKEN=8713051023:AAGRv9wIwO9Doln2DMczN5om0acqosj64t0
+      - TELEGRAM_CHAT_ID=1646298746
       - POSTGRES_DB=gosen_dev
       - POSTGRES_USER=gosen
       - POSTGRES_PASSWORD=password

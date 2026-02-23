@@ -42,7 +42,11 @@
             </form>
         </div>
         <div class="contact-success-alert" id="contactSuccessBox" style="display: none;">
-            <span>&checkmark;</span><p>Message envoye avec succes !</p>
+            <span class="contact-check-icon">&checkmark;</span>
+            <div class="contact-success-content">
+                <p class="contact-success-title">Message envoye avec succes !</p>
+                <p class="contact-success-message" id="contactResponseMessage"></p>
+            </div>
         </div>
     </div>
 </section>
@@ -64,16 +68,19 @@
 .contact-button-submit{background:var(--gradient-green);color:#fff;border:none;border-radius:8px;padding:14px 24px;font-family:Poppins,sans-serif;font-size:1rem;font-weight:600;cursor:pointer;transition:all 0.3s ease;text-transform:uppercase}
 .contact-button-submit:hover{transform:translateY(-2px);box-shadow:0 6px 20px rgba(0,158,96,0.4);background:var(--gradient-blue)}
 .contact-success-alert{grid-column:1/-1;text-align:center;padding:25px;background:rgba(0,158,96,0.1);border:1px solid var(--gabon-green);border-radius:10px}
-.contact-success-alert span{color:var(--gabon-green);font-size:2rem;margin-right:10px}
-.contact-success-alert p{color:var(--gabon-green);font-size:1.1rem;font-weight:600;margin:0}
+.contact-check-icon{color:var(--gabon-green);font-size:2rem;margin-bottom:10px;display:block}
+.contact-success-content{display:flex;flex-direction:column;align-items:center;gap:8px}
+.contact-success-title{color:var(--gabon-green);font-size:1.2rem;font-weight:700;margin:0}
+.contact-success-message{color:var(--text-primary);font-size:0.95rem;line-height:1.6;margin:0;white-space:pre-line;max-width:600px}
 @media (max-width:768px){
     .contact-grid-layout{grid-template-columns:1fr;gap:25px}
     .contact-main-title{font-size:1.6rem}
     .whatsapp-input-group{flex-direction:column}
+    .contact-success-message{font-size:0.9rem;padding:0 10px}
 }
 </style>
 <script>
-const form=document.getElementById('contactFormInline'),successBox=document.getElementById('contactSuccessBox');
+const form=document.getElementById('contactFormInline'),successBox=document.getElementById('contactSuccessBox'),responseMsg=document.getElementById('contactResponseMessage');
 if(form){
     form.addEventListener('submit',async function(e){
         e.preventDefault();
@@ -90,11 +97,13 @@ if(form){
             if(result.success){
                 form.style.display='none';
                 successBox.style.display='block';
+                responseMsg.textContent=result.reponse||'Merci pour votre message !';
                 setTimeout(()=>{
                     form.reset();
                     form.style.display='flex';
                     successBox.style.display='none';
-                },5000);
+                    responseMsg.textContent='';
+                },10000);
             }else{
                 alert(result.error||'Erreur.');
             }

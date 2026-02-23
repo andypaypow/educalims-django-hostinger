@@ -7,6 +7,7 @@ from django.views.decorators.csrf import csrf_exempt
 from django.core.validators import validate_email
 from django.core.exceptions import ValidationError
 from . import contact as contact_module
+from gosen.telegram_bot import envoyer_message_telegram, formater_message_contact, get_reponse_utilisateur
 import json
 
 from gosen.models import Partner, ContactMessage
@@ -110,7 +111,18 @@ def submit_contact(request):
             message=message
         )
 
-        return JsonResponse({"success": True, "message": "Message envoyé avec succès"})
+        # Envoyer le message sur Telegram
+        message_telegram = formater_message_contact(nom, whatsapp_complet, type_demande, message)
+        envoyer_message_telegram(message_telegram)
+
+        # Récupérer la réponse personnalisée
+        reponse = get_reponse_utilisateur(type_demande)
+
+        return JsonResponse({
+            "success": True, 
+            "message": "Message envoyé avec succès",
+            "reponse": reponse
+        })
 
     except json.JSONDecodeError:
         return JsonResponse({"success": False, "error": "Données JSON invalides"}, status=400)
