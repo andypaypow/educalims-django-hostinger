@@ -45,3 +45,8 @@ def parse_pronostics(request):
             groups.append({'name': name, 'horses': sorted(horses)})
     
     return JsonResponse({'groups': groups})
+
+
+def test_ocr(request):
+    from django.shortcuts import render
+    return render(request, 'gosen/test_ocr.html')

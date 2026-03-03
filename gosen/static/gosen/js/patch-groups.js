@@ -16,8 +16,7 @@
             return;
         }
         
-        const lines = rawText.split('
-').filter(line => line.trim());
+        const lines = rawText.split('\n').filter(line => line.trim());
         const rawGroups = [];
         
         lines.forEach((line, index) => {

@@ -33,6 +33,8 @@ urlpatterns = [
 
     # API pour filtrer les combinaisons
     path('api/filter/', filters.api_filter_combinations, name='api_filter'),
+    # Test OCR
+    path('test-ocr/', base.test_ocr, name='test_ocr'),
 
     # API pour les backtests
     path('api/backtest/test/', test_arrivee, name='api_backtest_test'),

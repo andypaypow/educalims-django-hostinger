@@ -28,7 +28,7 @@
             const takePhotoBtn = document.getElementById('take-photo-btn');
             const closeImageSourceModalBtn = document.getElementById('close-image-source-modal-btn');
 
-            const handleImageFile = async (file) => {
+            const handleImageFile = async (file) => {                console.log("handleImageFile appelé, Tesseract:", typeof Tesseract);
                 if (!file || typeof Tesseract === 'undefined') {
                     if (typeof Tesseract === 'undefined') {
                         console.error('Tesseract.js n\'est pas chargé.');
@@ -40,7 +40,7 @@
 
                 ocrStatus.textContent = 'Analyse de l\'image en cours...';
                 ocrStatus.style.display = 'block';
-                uploadImageBtn.disabled = true;
+                if (!file) return;
 
                 try {
                     const { data: { text } } = await Tesseract.recognize(
