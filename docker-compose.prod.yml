@@ -25,6 +25,8 @@ services:
     environment:
       - DEBUG=False
       - ALLOWED_HOSTS=72.62.181.239,localhost,127.0.0.1,filtreexpert.org,dev.filtreexpert.org,webhook.filtreexpert.org,api.filtreexpert.org
+      - TELEGRAM_BOT_TOKEN=8713051023:AAGRv9wIwO9Doln2DMczN5om0acqosj64t0
+      - TELEGRAM_CHAT_ID=1646298746
       - POSTGRES_DB=gosen_prod
       - POSTGRES_USER=gosen
       - POSTGRES_PASSWORD=${POSTGRES_PASSWORD:-password}
