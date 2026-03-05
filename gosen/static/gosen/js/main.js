@@ -1136,7 +1136,15 @@ Filtre: ${h3.textContent}
                     const data = {
                         num_partants: parseInt(numPartantsInput.value),
                         taille_combinaison: parseInt(tailleCombinaisonInput.value),
-                        pronostics: currentRawGroups,
+                        pronostics: (() => {
+                                const rawGroups = currentRawGroups;
+                                return Array.from(parsedGroupsDiv.children).map((groupDiv, index) => ({
+                                    name: rawGroups[index].name,
+                                    horses: rawGroups[index].horses,
+                                    min: parseInt(groupDiv.querySelector('.group-min').value),
+                                    max: parseInt(groupDiv.querySelector('.group-max').value)
+                                }));
+                            })(),
                         criteres_filtres: collectFilterCriteria(),
                         arrivee: arrivee,
                         combinaisons_filtrees: currentFilteredCombinations,
@@ -1223,7 +1231,15 @@ Filtre: ${h3.textContent}
                         numPartantsInput.value = a.num_partants;
                         tailleCombinaisonInput.value = a.taille_combinaison;
                         pronosticsTextarea.value = formatPronosticsFromData(a.pronostics);
-                        parsePronostics();
+                        const rawGroups = parsePronostics();
+                        renderParsedGroups(rawGroups);
+                        // Re-attach event listeners to the newly created min/max inputs
+                        parsedGroupsDiv.querySelectorAll('.group-min, .group-max').forEach(input => {
+                            input.removeEventListener('input', handleInputChange);
+                            input.addEventListener('input', handleInputChange);
+                        });
+                        // Now restore the min/max values
+                        restoreGroupMinMax(a.pronostics);
                         restoreFilters(a.criteres_filtres);
                         currentFilteredCombinations = a.combinaisons_filtrees;
                         backtestInput.value = a.arrivee.join(", ");
@@ -1232,58 +1248,145 @@ Filtre: ${h3.textContent}
                     } else { alert("Erreur: " + (result.error || "Erreur")); }
                 } catch (e) { console.error(e); alert("Erreur connexion"); }
             }
+            function restoreGroupMinMax(pronostics) {
+                console.log('[RESTORE-GROUP] restoreGroupMinMax called with:', pronostics);
+                if (!pronostics || pronostics.length === 0) {
+                    console.log('[RESTORE-GROUP] No pronostics to restore');
+                    return;
+                }
+                
+                const groupDivs = document.querySelectorAll('.group');
+                console.log('[RESTORE-GROUP] Found', groupDivs.length, 'group divs');
+                pronostics.forEach((group, index) => {
+                    console.log('[RESTORE-GROUP] Processing group', index, ':', group);
+                    if (index < groupDivs.length) {
+                        const minInput = groupDivs[index].querySelector('.group-min');
+                        const maxInput = groupDivs[index].querySelector('.group-max');
+                        if (minInput && group.min !== undefined) {
+                            minInput.value = group.min;
+                            console.log('[RESTORE-GROUP] Set min to', group.min, 'for group', index);
+                            minInput.dispatchEvent(new Event('input', { bubbles: true }));
+                        }
+                        if (maxInput && group.max !== undefined) {
+                            maxInput.value = group.max;
+                            console.log('[RESTORE-GROUP] Set max to', group.max, 'for group', index);
+                            maxInput.dispatchEvent(new Event('input', { bubbles: true }));
+                        }
+                    }
+                });
+            }
+
             function formatPronosticsFromData(pronostics) {
                 if (!pronostics || pronostics.length === 0) return "";
                 return pronostics.map(g => g.name + " : " + g.horses.join(", ")).join("\n");
             }
             function restoreFilters(criteria) {
+                console.log('[RESTORE] Starting restoreFilters');
+                console.log('[RESTORE] criteria:', JSON.stringify(criteria, null, 2));
+
                 // Remove existing filters
                 document.querySelectorAll(".filter-box").forEach(b => b.remove());
 
-                // Get saved filter types
-                const savedTypes = (criteria && criteria.filters)
-                    ? criteria.filters.filter(f => f.enabled).map(f => f.type)
-                    : [];
-
-                // Recreate default filters if not in saved data
-                if (!savedTypes.includes('expert')) {
-                    setTimeout(() => addFilter('standard'), 100);
-                }
-                if (!savedTypes.includes('statistic')) {
-                    setTimeout(() => addFilter('statistic'), 150);
-                }
-                if (!savedTypes.includes('weight')) {
-                    setTimeout(() => addFilter('weight'), 200);
+                if (!criteria || !criteria.filters) {
+                    console.log('[RESTORE] No filters to restore, creating defaults');
+                    setTimeout(() => addFilter('standard'), 50);
+                    setTimeout(() => addFilter('statistic'), 100);
+                    setTimeout(() => addFilter('weight'), 150);
+                    setTimeout(() => {
+                        updateEventListeners();
+                        handleInputChange();
+                    }, 200);
+                    return;
                 }
 
-                const statisticFilterUsed = savedTypes.includes('statistic');
+                // Get saved enabled filter types
+                const savedFilters = criteria.filters.filter(f => f.enabled);
+                const savedTypes = savedFilters.map(f => f.type);
+
+                console.log('[RESTORE] Saved types:', savedTypes);
+                console.log('[RESTORE] Saved filters:', JSON.stringify(savedFilters, null, 2));
+
+                // Track which filters will be created from saves
+                const willCreate = {
+                    expert: savedTypes.includes('expert'),
+                    statistic: savedTypes.includes('statistic'),
+                    weight: savedTypes.includes('weight'),
+                    alternance: savedTypes.includes('alternance')
+                };
+
+                // Disable statistic button if needed
+                const statisticFilterUsed = willCreate.statistic;
                 const statBtn = document.getElementById('add-statistic-filter-btn');
                 if(statBtn) statBtn.disabled = statisticFilterUsed;
 
-                if (!criteria || !criteria.filters) return;
+                // Process filters sequentially with promises
+                let currentIndex = 0;
+                const processNextFilter = () => {
+                    if (currentIndex >= savedFilters.length) {
+                        // All filters processed, now create defaults if needed
+                        let delay = 50;
+                        if (!willCreate.expert) {
+                            setTimeout(() => addFilter('standard'), delay);
+                            delay += 50;
+                        }
+                        if (!willCreate.statistic) {
+                            setTimeout(() => addFilter('statistic'), delay);
+                            delay += 50;
+                        }
+                        if (!willCreate.weight) {
+                            setTimeout(() => addFilter('weight'), delay);
+                        }
 
-                // Restore saved filters with their values
-                criteria.filters.forEach(f => {
-                    if (!f.enabled) return;
+                        // Final update
+                        setTimeout(() => {
+                            console.log('[RESTORE] Final update');
+                            updateEventListeners();
+                            updateNumericFilterInputs();
+                            updateAlternanceFiltersUI();
+                            handleInputChange();
+                        }, delay + 100);
+                        return;
+                    }
+
+                    const f = savedFilters[currentIndex];
+                    currentIndex++;
+
+                    console.log('[RESTORE] Processing filter:', f.type, 'params:', f.params);
+
                     if (f.type === "expert") {
                         const isStandard = f.params && f.params.chevaux_min !== undefined;
                         addFilter(isStandard ? 'standard' : 'advanced');
+
+                        // Wait for DOM to update
                         setTimeout(() => {
                             const boxes = document.querySelectorAll('.filter-box');
-                            const newBox = Array.from(boxes).find(b => b.classList.contains('standard-filter') || b.classList.contains('advanced-filter'));
+                            const newBox = boxes[boxes.length - 1];
+                            console.log('[RESTORE] Expert filter created, boxes count:', boxes.length, 'last box:', newBox);
+
                             if (newBox) {
                                 const enable = newBox.querySelector('.filter-enable');
                                 if (enable) enable.checked = true;
-                                if (f.params.chevaux_min) {
-                                    const minInput = newBox.querySelector('.chevaux-min');
-                                    if (minInput) minInput.value = f.params.chevaux_min;
+
+                                const chevauxInput = newBox.querySelector('.chevaux-min');
+                                const groupesInput = newBox.querySelector('.groupes-min');
+
+                                console.log('[RESTORE] chevauxInput:', chevauxInput, 'groupesInput:', groupesInput);
+                                console.log('[RESTORE] f.params.chevaux_min:', f.params.chevaux_min, 'f.params.groupes_min:', f.params.groupes_min);
+
+                                if (chevauxInput && f.params.chevaux_min !== undefined && f.params.chevaux_min !== null && f.params.chevaux_min !== '') {
+                                    chevauxInput.value = f.params.chevaux_min;
+                                    console.log('[RESTORE] Set chevaux_min to:', chevauxInput.value);
+                                    chevauxInput.dispatchEvent(new Event('input', { bubbles: true }));
                                 }
-                                if (f.params.groupes_min) {
-                                    const minInput = newBox.querySelector('.groupes-min');
-                                    if (minInput) minInput.value = f.params.groupes_min;
+                                if (groupesInput && f.params.groupes_min !== undefined && f.params.groupes_min !== null && f.params.groupes_min !== '') {
+                                    groupesInput.value = f.params.groupes_min;
+                                    console.log('[RESTORE] Set groupes_min to:', groupesInput.value);
+                                    groupesInput.dispatchEvent(new Event('input', { bubbles: true }));
                                 }
                             }
-                        }, 50);
+                            processNextFilter();
+                        }, 100);
+
                     } else if (f.type === "weight") {
                         addFilter('weight');
                         setTimeout(() => {
@@ -1292,20 +1395,25 @@ Filtre: ${h3.textContent}
                             if (newBox) {
                                 const enable = newBox.querySelector('.filter-enable');
                                 if (enable) enable.checked = true;
-                                if (f.params.source) {
-                                    const sourceInput = newBox.querySelector('.weight-source');
-                                    if (sourceInput) sourceInput.value = f.params.source;
+                                const sourceInput = newBox.querySelector('.weight-source');
+                                const minInput = newBox.querySelector('.weight-min');
+                                const maxInput = newBox.querySelector('.weight-max');
+                                if (sourceInput && f.params.source) {
+                                    sourceInput.value = f.params.source;
+                                    sourceInput.dispatchEvent(new Event('change'));
                                 }
-                                if (f.params.poids_min) {
-                                    const minInput = newBox.querySelector('.weight-min');
-                                    if (minInput) minInput.value = f.params.poids_min;
+                                if (minInput && f.params.poids_min !== undefined && f.params.poids_min !== '') {
+                                    minInput.value = f.params.poids_min;
+                                    minInput.dispatchEvent(new Event('input', { bubbles: true }));
                                 }
-                                if (f.params.poids_max) {
-                                    const maxInput = newBox.querySelector('.weight-max');
-                                    if (maxInput) maxInput.value = f.params.poids_max;
+                                if (maxInput && f.params.poids_max !== undefined && f.params.poids_max !== '') {
+                                    maxInput.value = f.params.poids_max;
+                                    maxInput.dispatchEvent(new Event('input', { bubbles: true }));
                                 }
                             }
-                        }, 50);
+                            processNextFilter();
+                        }, 100);
+
                     } else if (f.type === "statistic") {
                         addFilter('statistic');
                         setTimeout(() => {
@@ -1320,10 +1428,8 @@ Filtre: ${h3.textContent}
                                         checkbox.checked = true;
                                         const evenMin = newBox.querySelector('.even-min');
                                         const evenMax = newBox.querySelector('.even-max');
-                                        if (evenMin) evenMin.disabled = false;
-                                        if (evenMax) evenMax.disabled = false;
-                                        if (f.params.even_min) evenMin.value = f.params.even_min;
-                                        if (f.params.even_max) evenMax.value = f.params.even_max;
+                                        if (evenMin) { evenMin.disabled = false; if (f.params.even_min) { evenMin.value = f.params.even_min; evenMin.dispatchEvent(new Event('input', { bubbles: true })); } }
+                                        if (evenMax) { evenMax.disabled = false; if (f.params.even_max) { evenMax.value = f.params.even_max; evenMax.dispatchEvent(new Event('input', { bubbles: true })); } }
                                     }
                                 }
                                 if (f.params.smallLarge) {
@@ -1332,10 +1438,8 @@ Filtre: ${h3.textContent}
                                         checkbox.checked = true;
                                         const smallMin = newBox.querySelector('.small-min');
                                         const smallMax = newBox.querySelector('.small-max');
-                                        if (smallMin) smallMin.disabled = false;
-                                        if (smallMax) smallMax.disabled = false;
-                                        if (f.params.small_min) smallMin.value = f.params.small_min;
-                                        if (f.params.small_max) smallMax.value = f.params.small_max;
+                                        if (smallMin) { smallMin.disabled = false; if (f.params.small_min) { smallMin.value = f.params.small_min; smallMin.dispatchEvent(new Event('input', { bubbles: true })); } }
+                                        if (smallMax) { smallMax.disabled = false; if (f.params.small_max) { smallMax.value = f.params.small_max; smallMax.dispatchEvent(new Event('input', { bubbles: true })); } }
                                     }
                                 }
                                 if (f.params.consecutive) {
@@ -1344,23 +1448,47 @@ Filtre: ${h3.textContent}
                                         checkbox.checked = true;
                                         const consecutiveMin = newBox.querySelector('.consecutive-min');
                                         const consecutiveMax = newBox.querySelector('.consecutive-max');
-                                        if (consecutiveMin) consecutiveMin.disabled = false;
-                                        if (consecutiveMax) consecutiveMax.disabled = false;
-                                        if (f.params.consecutive_min) consecutiveMin.value = f.params.consecutive_min;
-                                        if (f.params.consecutive_max) consecutiveMax.value = f.params.consecutive_max;
+                                        if (consecutiveMin) { consecutiveMin.disabled = false; if (f.params.consecutive_min) { consecutiveMin.value = f.params.consecutive_min; consecutiveMin.dispatchEvent(new Event('input', { bubbles: true })); } }
+                                        if (consecutiveMax) { consecutiveMax.disabled = false; if (f.params.consecutive_max) { consecutiveMax.value = f.params.consecutive_max; consecutiveMax.dispatchEvent(new Event('input', { bubbles: true })); } }
                                     }
                                 }
                             }
-                        }, 50);
-                    }
-                });
+                            processNextFilter();
+                        }, 100);
 
-                setTimeout(() => {
-                    updateEventListeners();
-                    updateNumericFilterInputs();
-                    updateAlternanceFiltersUI();
-                    handleInputChange();
-                }, 200);
+                    } else if (f.type === "alternance") {
+                        addFilter('alternance');
+                        setTimeout(() => {
+                            const boxes = document.querySelectorAll('.filter-box');
+                            const newBox = Array.from(boxes).find(b => b.classList.contains('alternance-filter'));
+                            if (newBox) {
+                                const enable = newBox.querySelector('.filter-enable');
+                                if (enable) enable.checked = true;
+                                const sourceInput = newBox.querySelector('.alternance-source');
+                                const minInput = newBox.querySelector('.alternance-min');
+                                const maxInput = newBox.querySelector('.alternance-max');
+                                if (sourceInput && f.params.source) {
+                                    sourceInput.value = f.params.source;
+                                    sourceInput.dispatchEvent(new Event('change'));
+                                }
+                                if (minInput && f.params.alternances_min !== undefined && f.params.alternances_min !== '') {
+                                    minInput.value = f.params.alternances_min;
+                                    minInput.dispatchEvent(new Event('input', { bubbles: true }));
+                                }
+                                if (maxInput && f.params.alternances_max !== undefined && f.params.alternances_max !== '') {
+                                    maxInput.value = f.params.alternances_max;
+                                    maxInput.dispatchEvent(new Event('input', { bubbles: true }));
+                                }
+                            }
+                            processNextFilter();
+                        }, 100);
+                    } else {
+                        processNextFilter();
+                    }
+                };
+
+                // Start processing
+                processNextFilter();
             }
             async function viewAnalysisReport(id) {
                 try {
@@ -1398,3 +1526,6 @@ Filtre: ${h3.textContent}
             loadPartners();
             loadSavedAnalyses();
             });
+
+            // Rendre les fonctions globalement accessibles
+            window.restoreGroupMinMax = restoreGroupMinMax;

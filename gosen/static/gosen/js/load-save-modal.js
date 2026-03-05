@@ -99,8 +99,12 @@ async function loadFromModal(id) {
                 if (typeof parsePronostics === 'function') {
                     parsePronostics();
                 }
+                if (typeof restoreGroupMinMax === 'function') {
+                    restoreGroupMinMax(s.pronostics);
+                }
             }
             if (typeof restoreFilters === 'function') {
+                console.log('[LOAD] criteres_filtres:', JSON.stringify(s.criteres_filtres, null, 2));
                 restoreFilters(s.criteres_filtres);
             }
             if (typeof currentFilteredCombinations !== 'undefined') {
