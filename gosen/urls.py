@@ -2,7 +2,7 @@
 URLs pour l'application Filtre Expert
 """
 from django.urls import path
-from .views import webhooks, base, filters, auth, subscriptions, contact, backtest, admin_dashboard
+from .views import webhooks, base, filters, auth, subscriptions, contact, backtest, admin_dashboard, sauvegardes
 from .views.contact import contact_page, submit_contact
 from .views.backtest import test_arrivee, save_backtest_analysis, get_backtest_analyses, get_backtest_analysis, delete_backtest_analysis
 

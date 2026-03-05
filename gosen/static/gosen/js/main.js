@@ -1237,9 +1237,130 @@ Filtre: ${h3.textContent}
                 return pronostics.map(g => g.name + " : " + g.horses.join(", ")).join("\n");
             }
             function restoreFilters(criteria) {
+                // Remove existing filters
                 document.querySelectorAll(".filter-box").forEach(b => b.remove());
+
+                // Get saved filter types
+                const savedTypes = (criteria && criteria.filters)
+                    ? criteria.filters.filter(f => f.enabled).map(f => f.type)
+                    : [];
+
+                // Recreate default filters if not in saved data
+                if (!savedTypes.includes('expert')) {
+                    setTimeout(() => addFilter('standard'), 100);
+                }
+                if (!savedTypes.includes('statistic')) {
+                    setTimeout(() => addFilter('statistic'), 150);
+                }
+                if (!savedTypes.includes('weight')) {
+                    setTimeout(() => addFilter('weight'), 200);
+                }
+
+                const statisticFilterUsed = savedTypes.includes('statistic');
+                const statBtn = document.getElementById('add-statistic-filter-btn');
+                if(statBtn) statBtn.disabled = statisticFilterUsed;
+
                 if (!criteria || !criteria.filters) return;
-                updateSynthesis();
+
+                // Restore saved filters with their values
+                criteria.filters.forEach(f => {
+                    if (!f.enabled) return;
+                    if (f.type === "expert") {
+                        const isStandard = f.params && f.params.chevaux_min !== undefined;
+                        addFilter(isStandard ? 'standard' : 'advanced');
+                        setTimeout(() => {
+                            const boxes = document.querySelectorAll('.filter-box');
+                            const newBox = Array.from(boxes).find(b => b.classList.contains('standard-filter') || b.classList.contains('advanced-filter'));
+                            if (newBox) {
+                                const enable = newBox.querySelector('.filter-enable');
+                                if (enable) enable.checked = true;
+                                if (f.params.chevaux_min) {
+                                    const minInput = newBox.querySelector('.chevaux-min');
+                                    if (minInput) minInput.value = f.params.chevaux_min;
+                                }
+                                if (f.params.groupes_min) {
+                                    const minInput = newBox.querySelector('.groupes-min');
+                                    if (minInput) minInput.value = f.params.groupes_min;
+                                }
+                            }
+                        }, 50);
+                    } else if (f.type === "weight") {
+                        addFilter('weight');
+                        setTimeout(() => {
+                            const boxes = document.querySelectorAll('.filter-box');
+                            const newBox = Array.from(boxes).find(b => b.classList.contains('weight-filter'));
+                            if (newBox) {
+                                const enable = newBox.querySelector('.filter-enable');
+                                if (enable) enable.checked = true;
+                                if (f.params.source) {
+                                    const sourceInput = newBox.querySelector('.weight-source');
+                                    if (sourceInput) sourceInput.value = f.params.source;
+                                }
+                                if (f.params.poids_min) {
+                                    const minInput = newBox.querySelector('.weight-min');
+                                    if (minInput) minInput.value = f.params.poids_min;
+                                }
+                                if (f.params.poids_max) {
+                                    const maxInput = newBox.querySelector('.weight-max');
+                                    if (maxInput) maxInput.value = f.params.poids_max;
+                                }
+                            }
+                        }, 50);
+                    } else if (f.type === "statistic") {
+                        addFilter('statistic');
+                        setTimeout(() => {
+                            const boxes = document.querySelectorAll('.filter-box');
+                            const newBox = Array.from(boxes).find(b => b.classList.contains('statistic-filter'));
+                            if (newBox) {
+                                const enable = newBox.querySelector('.filter-enable');
+                                if (enable) enable.checked = true;
+                                if (f.params.evenOdd) {
+                                    const checkbox = newBox.querySelector('[data-subfilter="evenOdd"]');
+                                    if (checkbox) {
+                                        checkbox.checked = true;
+                                        const evenMin = newBox.querySelector('.even-min');
+                                        const evenMax = newBox.querySelector('.even-max');
+                                        if (evenMin) evenMin.disabled = false;
+                                        if (evenMax) evenMax.disabled = false;
+                                        if (f.params.even_min) evenMin.value = f.params.even_min;
+                                        if (f.params.even_max) evenMax.value = f.params.even_max;
+                                    }
+                                }
+                                if (f.params.smallLarge) {
+                                    const checkbox = newBox.querySelector('[data-subfilter="smallLarge"]');
+                                    if (checkbox) {
+                                        checkbox.checked = true;
+                                        const smallMin = newBox.querySelector('.small-min');
+                                        const smallMax = newBox.querySelector('.small-max');
+                                        if (smallMin) smallMin.disabled = false;
+                                        if (smallMax) smallMax.disabled = false;
+                                        if (f.params.small_min) smallMin.value = f.params.small_min;
+                                        if (f.params.small_max) smallMax.value = f.params.small_max;
+                                    }
+                                }
+                                if (f.params.consecutive) {
+                                    const checkbox = newBox.querySelector('[data-subfilter="consecutive"]');
+                                    if (checkbox) {
+                                        checkbox.checked = true;
+                                        const consecutiveMin = newBox.querySelector('.consecutive-min');
+                                        const consecutiveMax = newBox.querySelector('.consecutive-max');
+                                        if (consecutiveMin) consecutiveMin.disabled = false;
+                                        if (consecutiveMax) consecutiveMax.disabled = false;
+                                        if (f.params.consecutive_min) consecutiveMin.value = f.params.consecutive_min;
+                                        if (f.params.consecutive_max) consecutiveMax.value = f.params.consecutive_max;
+                                    }
+                                }
+                            }
+                        }, 50);
+                    }
+                });
+
+                setTimeout(() => {
+                    updateEventListeners();
+                    updateNumericFilterInputs();
+                    updateAlternanceFiltersUI();
+                    handleInputChange();
+                }, 200);
             }
             async function viewAnalysisReport(id) {
                 try {
