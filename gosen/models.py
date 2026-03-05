@@ -683,7 +683,6 @@ class SauvegardeConfiguration(models.Model):
     num_partants = models.IntegerField()
     taille_combinaison = models.IntegerField()
     pronostics = models.JSONField(default=dict)
-    criteres_filtres = models.JSONField(default=dict)
     arrivee = models.JSONField(null=True, blank=True, default=list)
     combinaisons_filtrees = models.JSONField(null=True, blank=True, default=list)
 
@@ -692,76 +691,3 @@ class SauvegardeConfiguration(models.Model):
 
     def __str__(self):
         return self.nom
-EOF
-echo '1. Modele ajoute'
-
-# 2. Copier les fichiers JavaScript
-cp /root/gosen-filter-dev/gosen/static/gosen/js/load-save-modal.js /root/gosen-filter-dev/gosen/static/gosen/js/load-save-modal.js.bak 2>/dev/null || true
-docker cp gosen-dev-web:/code/staticfiles/gosen/js/main.js /root/gosen-filter-dev/gosen/static/gosen/js/main.js.bak
-cp /root/gosen-filter-dev/gosen/static/gosen/js/load-save-modal.js /root/gosen-filter-dev/gosen/static/gosen/js/load-save-modal.js
-
-# 3. Appliquer le fix restoreFilters
-python3 << 'PYEOF'
-content = open('/root/gosen-filter-dev/gosen/static/gosen/js/main.js', 'r').read()
-
-old = '''function restoreFilters(criteria) {
-                document.querySelectorAll(".filter-box").forEach(b => b.remove());
-                if (!criteria || !criteria.filters) return;
-
-                const statisticFilterUsed = criteria.filters.some(f => f.type === "statistic");
-                const statBtn = document.getElementById('add-statistic-filter-btn');
-                if(statBtn) statBtn.disabled = statisticFilterUsed;'''
-
-new = '''function restoreFilters(criteria) {
-                document.querySelectorAll(".filter-box").forEach(b => b.remove());
-
-                const savedTypes = (criteria && criteria.filters)
-                    ? criteria.filters.filter(f => f.enabled).map(f => f.type)
-                    : [];
-
-                if (!savedTypes.includes('expert')) {
-                    setTimeout(() => addFilter('standard'), 100);
-                }
-                if (!savedTypes.includes('statistic')) {
-                    setTimeout(() => addFilter('statistic'), 150);
-                }
-                if (!savedTypes.includes('weight')) {
-                    setTimeout(() => addFilter('weight'), 200);
-                }
-
-                const statisticFilterUsed = savedTypes.includes('statistic');
-                const statBtn = document.getElementById('add-statistic-filter-btn');
-                if(statBtn) statBtn.disabled = statisticFilterUsed;
-
-                if (!criteria || !criteria.filters) return;'''
-
-content = content.replace(old, new)
-open('/root/gosen-filter-dev/gosen/static/gosen/js/main.js', 'w').write(content)
-print('3. restoreFilters modifie')
-PYEOF
-
-# 4. Modifier les URLs
-sed -i 's/from .views import webhooks, base, filters, auth, subscriptions, contact, backtest, admin_dashboard/from .views import webhooks, base, filters, auth, subscriptions, contact, backtest, admin_dashboard, sauvegardes/' /root/gosen-filter-dev/gosen/urls.py
-echo '4. URLs mis a jour'
-
-# 5. Ajouter les routes
-python3 << 'PYEOF'
-with open('/root/gosen-filter-dev/gosen/urls.py', 'r') as f:
-    lines = f.readlines()
-
-new_lines = []
-for i, line in enumerate(lines):
-    new_lines.append(line)
-    if 'api/backtest/delete' in line and 'delete_backtest_analysis' in line:
-        new_lines.append("    path('api/sauvegardes/save/', sauvegardes.sauvegarder_configuration, name='api_sauvegardes_save'),\n")
-        new_lines.append("    path('api/sauvegardes/list/', sauvegardes.lister_sauvegardes, name='api_sauvegardes_list'),\n")
-        new_lines.append("    path('api/sauvegardes/load/<int:sauvegarde_id>/', sauvegardes.charger_sauvegarde, name='api_sauvegardes_load'),\n")
-        new_lines.append("    path('api/sauvegardes/update/<int:sauvegarde_id>/', sauvegardes.modifier_sauvegarde, name='api_sauvegardes_update'),\n")
-        new_lines.append("    path('api/sauvegardes/delete/<int:sauvegarde_id>/', sauvegardes.supprimer_sauvegarde, name='api_sauvegardes_delete'),\n")
-
-with open('/root/gosen-filter-dev/gosen/urls.py', 'w') as f:
-    f.writelines(new_lines)
-print('5. Routes ajoutees')
-PYEOF
-
-echo 'Modifications appliquees'
