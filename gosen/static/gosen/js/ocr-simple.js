@@ -1,4 +1,4 @@
-// Fonctions OCR simples - Gemini API
+// Fonctions OCR - Tesseract uniquement (fiable sur Android)
 function showOCRModal() {
     console.log('[OCR] showOCRModal');
     var modal = document.getElementById('image-source-modal');
@@ -22,158 +22,205 @@ function triggerCameraInput() {
     closeOCRModal();
 }
 
-var GEMINI_API_KEY = 'AIzaSyDXtdx4b-MawFDi8wUfT4DPgSb9iZwOSEs';
+console.log('[OCR] Script charge (Tesseract uniquement - Android fix)');
 
-console.log('[OCR] Script charge (Gemini + Tesseract)');
 setTimeout(function() {
     var fileInput = document.getElementById('image-upload-input');
     var cameraInput = document.getElementById('camera-input');
     var textarea = document.getElementById('pronostics');
+    var status = document.getElementById('ocr-status');
+    var btn = document.getElementById('upload-image-btn');
+
     console.log('[OCR] Init OK');
+
+    // Fonction amelioree pour detecter le type MIME
+    function getMimeType(file) {
+        if (file.type && file.type !== '' && file.type !== 'application/octet-stream') {
+            return file.type;
+        }
+        // Detection par extension
+        var ext = file.name.split('.').pop().toLowerCase();
+        var mimeTypes = {
+            'jpg': 'image/jpeg',
+            'jpeg': 'image/jpeg',
+            'png': 'image/png',
+            'gif': 'image/gif',
+            'webp': 'image/webp',
+            'bmp': 'image/bmp'
+        };
+        return mimeTypes[ext] || 'image/jpeg';
+    }
+
+    // Verifier si le fichier est trop gros
+    function isFileTooLarge(file) {
+        var maxSize = 4 * 1024 * 1024; // 4MB
+        return file.size > maxSize;
+    }
+
+    // Redimensionner l'image si trop grande
+    function resizeImage(file, callback) {
+        var img = new Image();
+        var reader = new FileReader();
+
+        reader.onload = function(e) {
+            img.src = e.target.result;
+        };
+
+        img.onload = function() {
+            var canvas = document.createElement('canvas');
+            var ctx = canvas.getContext('2d');
+
+            // Dimensions max
+            var maxDim = 2000;
+            var width = img.width;
+            var height = img.height;
+
+            if (width > height) {
+                if (width > maxDim) {
+                    height *= maxDim / width;
+                    width = maxDim;
+                }
+            } else {
+                if (height > maxDim) {
+                    width *= maxDim / height;
+                    height = maxDim;
+                }
+            }
+
+            canvas.width = width;
+            canvas.height = height;
+            ctx.drawImage(img, 0, 0, width, height);
+
+            canvas.toBlob(function(blob) {
+                callback(new File([blob], file.name, {
+                    type: 'image/jpeg',
+                    lastModified: Date.now()
+                }));
+            }, 'image/jpeg', 0.85);
+        };
+
+        reader.readAsDataURL(file);
+    }
 
     function processOCR(file) {
         if (!file) return;
 
         console.log('[OCR] Fichier:', file.name, file.size, file.type);
 
-        var status = document.getElementById('ocr-status');
-        var btn = document.getElementById('upload-image-btn');
-
-        if (!status || !textarea) return;
+        if (!status || !textarea) {
+            console.error('[OCR] Elements manquants');
+            return;
+        }
 
         status.style.display = 'block';
         status.style.color = 'var(--primary-color)';
-        status.textContent = 'Analyse Gemini...';
 
-        var reader = new FileReader();
-        reader.onload = function(e) {
-            var base64Data = e.target.result.split(',')[1];
-            console.log('[OCR] Image convertie');
+        // Detection mobile
+        var isMobile = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
+        if (isMobile) {
+            console.log('[OCR] Mobile detecte');
+        }
 
-            var payload = {
-                contents: [{
-                    parts: [
-                        { text: 'Extrais tout le texte de cette image. Retourne SEULEMENT le texte extrait, sans aucun commentaire ni explication. Si aucun texte n est present, retourne une chaine vide.' },
-                        { inline_data: { mime_type: file.type || 'image/png', data: base64Data } }
-                    ]
-                }]
-            };
+        // Verifier type MIME
+        var mimeType = getMimeType(file);
+        console.log('[OCR] Type MIME:', mimeType);
 
-            var models = [
-                'gemini-2.5-flash',
-                'gemini-2.0-flash',
-                'gemini-flash-latest'
-            ];
+        // Verifier taille
+        if (isFileTooLarge(file)) {
+            console.log('[OCR] Fichier trop grand, redimensionnement...');
+            status.textContent = 'Redimensionnement...';
+            resizeImage(file, function(resizedFile) {
+                console.log('[OCR] Fichier redimensionne:', resizedFile.size);
+                doOCR(resizedFile);
+            });
+            return;
+        }
 
-            function tryModel(index) {
-                if (index >= models.length) {
-                    console.warn('[OCR] Tous les modeles Gemini echouent, fallback Tesseract');
-                    status.textContent = 'Fallback Tesseract...';
-                    ocrWithTesseract(file, status, textarea, btn);
-                    return;
-                }
-
-                var model = models[index];
-                var url = 'https://generativelanguage.googleapis.com/v1beta/models/' + model + ':generateContent?key=' + GEMINI_API_KEY;
-                console.log('[OCR] Essai modele:', model);
-
-                fetch(url, {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify(payload)
-                })
-                .then(function(response) {
-                    console.log('[OCR] Gemini', model, 'status:', response.status);
-                    if (response.ok) {
-                        return response.json();
-                    }
-                    if (response.status === 404) {
-                        throw new Error('MODEL_NOT_FOUND');
-                    }
-                    return response.json().then(function(e) { throw new Error(e.error?.message || 'HTTP_' + response.status); });
-                })
-                .then(function(data) {
-                    if (data.error) {
-                        throw new Error(data.error.message);
-                    }
-                    if (data.candidates && data.candidates[0] && data.candidates[0].content) {
-                        var parts = data.candidates[0].content.parts;
-                        var text = '';
-                        for (var i = 0; i < parts.length; i++) {
-                            if (parts[i].text) text += parts[i].text;
-                        }
-                        console.log('[OCR] Gemini', model, 'OK!');
-                        console.log('[OCR] Texte extrait:', text.substring(0, 50));
-                        textarea.value = text.trim();
-                        textarea.dispatchEvent(new Event('input', { bubbles: true }));
-                        status.textContent = 'Extraction reussie !';
-                        status.style.color = 'var(--success-color)';
-                        setTimeout(function() { status.style.display = 'none'; }, 3000);
-                        btn.disabled = false;
-                        if (fileInput) fileInput.value = '';
-                        if (cameraInput) cameraInput.value = '';
-                    } else {
-                        throw new Error('FORMAT_INVALIDE');
-                    }
-                })
-                .catch(function(err) {
-                    if (err.message === 'MODEL_NOT_FOUND') {
-                        console.log('[OCR] Modele', model, 'non trouve, essai suivant...');
-                        tryModel(index + 1);
-                    } else {
-                        console.warn('[OCR] Erreur', model, ':', err.message);
-                        tryModel(index + 1);
-                    }
-                });
-            }
-
-            tryModel(0);
-        };
-        reader.readAsDataURL(file);
+        status.textContent = 'Initialisation...';
+        doOCR(file);
     }
 
-    function ocrWithTesseract(file, status, textarea, btn) {
-        function doOCR() {
+    function doOCR(file) {
+        if (btn) btn.disabled = true;
+
+        // Attendre que Tesseract soit charge
+        function checkTesseract() {
             if (typeof Tesseract === 'undefined') {
-                setTimeout(doOCR, 200);
+                console.log('[OCR] Tesseract pas encore charge, attente...');
+                status.textContent = 'Chargement OCR...';
+                setTimeout(checkTesseract, 500);
                 return;
             }
+            console.log('[OCR] Tesseract ready');
+            runOCR(file);
+        }
 
-            console.log('[OCR] Tesseract start');
-            status.textContent = 'Analyse Tesseract...';
+        function runOCR(file) {
+            status.textContent = 'Analyse en cours...';
+            status.style.color = 'var(--primary-color)';
+
+            var startTime = Date.now();
 
             Tesseract.recognize(file, 'fra', {
                 logger: function(m) {
                     if (m.status === 'recognizing text') {
-                        status.textContent = 'Analyse ' + Math.round(m.progress * 100) + '%';
+                        var progress = Math.round(m.progress * 100);
+                        status.textContent = 'Analyse ' + progress + '%';
+                        console.log('[OCR] Progress:', progress + '%');
+                    } else if (m.status === 'loading tesseract core') {
+                        status.textContent = 'Chargement moteur...';
+                    } else if (m.status === 'initializing tesseract') {
+                        status.textContent = 'Initialisation...';
+                    } else if (m.status === 'initializing api') {
+                        status.textContent = 'Preparation...';
+                    } else if (m.status === 'recognizing text') {
+                        status.textContent = 'Reconnaissance...';
                     }
                 }
-            }).then(function(result) {
-                console.log('[OCR] Tesseract OK');
-                textarea.value = result.data.text;
-                textarea.dispatchEvent(new Event('input', { bubbles: true }));
-                status.textContent = 'Extraction reussie !';
-                status.style.color = 'var(--success-color)';
-                setTimeout(function() { status.style.display = 'none'; }, 3000);
-            }).catch(function(err) {
+            })
+            .then(function(result) {
+                var elapsed = Math.round((Date.now() - startTime) / 1000);
+                console.log('[OCR] Succes en', elapsed, 's');
+                console.log('[OCR] Texte:', result.data.text.substring(0, 100));
+
+                // Afficher le texte extrait
+                var extractedText = result.data.text.trim();
+                if (extractedText) {
+                    textarea.value = extractedText;
+                    textarea.dispatchEvent(new Event('input', { bubbles: true }));
+                    status.textContent = 'Extraction reussie ! (' + elapsed + 's)';
+                    status.style.color = 'var(--success-color)';
+                } else {
+                    status.textContent = 'Aucun texte detecte';
+                    status.style.color = 'var(--warning-color)';
+                }
+
+                setTimeout(function() {
+                    status.style.display = 'none';
+                }, 3000);
+            })
+            .catch(function(err) {
                 console.error('[OCR] Erreur:', err);
-                status.textContent = 'Erreur: ' + (err.message || 'Echec');
+                status.textContent = 'Erreur: ' + (err.message || 'Echec OCR');
                 status.style.color = 'var(--danger-color)';
-            }).finally(function() {
-                btn.disabled = false;
+            })
+            .finally(function() {
+                if (btn) btn.disabled = false;
                 if (fileInput) fileInput.value = '';
                 if (cameraInput) cameraInput.value = '';
             });
         }
 
-        doOCR();
+        checkTesseract();
     }
 
     function openFileSelector() {
         document.getElementById('image-upload-input').click();
     }
 
+    // Event listeners pour textarea
     if (textarea) {
+        // Paste d'image
         textarea.addEventListener('paste', function(e) {
             var items = e.clipboardData.items;
             for (var i = 0; i < items.length; i++) {
@@ -186,15 +233,18 @@ setTimeout(function() {
             }
         });
 
+        // Double clic
         textarea.addEventListener('dblclick', function(e) {
             openFileSelector();
         });
 
+        // Clic droit
         textarea.addEventListener('contextmenu', function(e) {
             e.preventDefault();
             openFileSelector();
         });
 
+        // Appui long (mobile)
         var touchTimer = null;
         textarea.addEventListener('touchstart', function(e) {
             touchTimer = setTimeout(function() {
@@ -204,14 +254,21 @@ setTimeout(function() {
         }, { passive: true });
 
         textarea.addEventListener('touchend', function() {
-            if (touchTimer) { clearTimeout(touchTimer); touchTimer = null; }
+            if (touchTimer) {
+                clearTimeout(touchTimer);
+                touchTimer = null;
+            }
         });
 
         textarea.addEventListener('touchmove', function() {
-            if (touchTimer) { clearTimeout(touchTimer); touchTimer = null; }
+            if (touchTimer) {
+                clearTimeout(touchTimer);
+                touchTimer = null;
+            }
         }, { passive: true });
     }
 
+    // File inputs
     if (fileInput) {
         fileInput.addEventListener('change', function(e) {
             if (e.target.files && e.target.files.length > 0) {
@@ -222,11 +279,11 @@ setTimeout(function() {
 
     if (cameraInput) {
         cameraInput.addEventListener('change', function(e) {
-            if (e.target.files && e.target.files[0]) {
+            if (e.target.files && e.target.files.length > 0) {
                 processOCR(e.target.files[0]);
             }
         });
     }
 
-    console.log('[OCR] Ready - Gemini 2.5 + Tesseract');
+    console.log('[OCR] Ready - Tesseract uniquement');
 }, 1500);
