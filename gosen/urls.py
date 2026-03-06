@@ -4,7 +4,7 @@ URLs pour l'application Filtre Expert
 from django.urls import path
 from .views import webhooks, base, filters, auth, subscriptions, contact, backtest, admin_dashboard, sauvegardes
 from .views.contact import contact_page, submit_contact
-from .views.backtest import test_arrivee, save_backtest_analysis, get_backtest_analyses, get_backtest_analysis, delete_backtest_analysis
+from .views.backtest import test_arrivee, save_backtest_analysis, get_backtest_analyses, get_backtest_analysis, delete_backtest_analysis, update_backtest_analysis
 
 
 app_name = 'gosen'
@@ -42,6 +42,7 @@ urlpatterns = [
     path('api/backtest/list/', get_backtest_analyses, name='api_backtest_list'),
     path('api/backtest/load/<int:analysis_id>/', get_backtest_analysis, name='api_backtest_load'),
     path('api/backtest/delete/<int:analysis_id>/', delete_backtest_analysis, name='api_backtest_delete'),
+    path('api/backtest/update/<int:analysis_id>/', update_backtest_analysis, name='api_backtest_update'),
 
     # ============================================
     # AUTHENTIFICATION ET UTILISATEURS

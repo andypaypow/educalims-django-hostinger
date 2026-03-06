@@ -151,3 +151,51 @@ def delete_backtest_analysis(request, analysis_id):
         return JsonResponse({'success': False, 'error': 'Analyse non trouvée'}, status=404)
     except Exception as e:
         return JsonResponse({'success': False, 'error': str(e)}, status=500)
+
+
+@csrf_exempt
+@require_http_methods(["PATCH"])
+@login_required
+def update_backtest_analysis(request, analysis_id):
+    """Met à jour l'arrivée d'une analyse de backtest"""
+    try:
+        from gosen.models import BacktestAnalysis
+        
+        analysis = BacktestAnalysis.objects.get(id=analysis_id, user=request.user)
+        data = json.loads(request.body)
+        
+        # Mise à jour de l'arrivée
+        if 'arrivee' in data:
+            new_arrivee = data['arrivee']
+            analysis.arrivee = new_arrivee
+            
+            # Recalculer les combinaisons trouvées avec la nouvelle arrivée
+            arrivee_set = set(new_arrivee)
+            combinaisons_trouvees = []
+            
+            for combi in analysis.combinaisons_filtrees:
+                combi_set = set(combi)
+                if arrivee_set.issubset(combi_set):
+                    combinaisons_trouvees.append(combi)
+            
+            analysis.combinaisons_trouvees = combinaisons_trouvees
+            analysis.nombre_trouvees = len(combinaisons_trouvees)
+            
+            # Mettre à jour le rapport
+            analysis.rapport = f"Backtest mis à jour - {len(combinaisons_trouvees)} combinaison(s) trouvée(s) pour l'arrivée {new_arrivee}"
+        
+        # Mise à jour du nom
+        if 'nom' in data:
+            analysis.nom = data['nom']
+        
+        analysis.save()
+        
+        return JsonResponse({
+            'success': True,
+            'message': 'Analyse mise à jour avec succès',
+            'nombre_trouvees': analysis.nombre_trouvees
+        })
+    except BacktestAnalysis.DoesNotExist:
+        return JsonResponse({'success': False, 'error': 'Analyse non trouvée'}, status=404)
+    except Exception as e:
+        return JsonResponse({'success': False, 'error': str(e)}, status=500)
