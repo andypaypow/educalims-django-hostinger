@@ -427,6 +427,7 @@ class BacktestAnalysis(models.Model):
     
     # Arrivée testée
     arrivee = models.JSONField(help_text="Arrivée testée (liste de numéros)")
+    date_course = models.DateField(blank=True, null=True, help_text="Date de la course (optionnel)")
     
     # Résultats du backtest
     combinaisons_filtrees = models.JSONField(help_text="Combinaisons après filtrage")
